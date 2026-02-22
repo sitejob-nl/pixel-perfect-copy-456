@@ -9,6 +9,7 @@ import { ProjectsPage, InvoicesPage } from "@/pages/ProjectsInvoicesPage";
 import QuotesPage from "@/pages/QuotesPage";
 import DataIntelPage from "@/pages/DataIntelPage";
 import ContentPage from "@/pages/ContentPage";
+import AIAgentPage from "@/pages/AIAgentPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
 import type { IconName } from "@/components/erp/ErpIcons";
 
@@ -21,6 +22,7 @@ const pages: Record<string, React.ReactNode> = {
   invoices: <InvoicesPage />,
   quotes: <QuotesPage />,
   dataintel: <DataIntelPage />,
+  aiagent: <AIAgentPage />,
   content: <ContentPage />,
   contracts: <PlaceholderPage title="Contracten" icon="Pen" />,
   demos: <PlaceholderPage title="Demo Generatie" icon="Globe" />,
