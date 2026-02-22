@@ -1,115 +1,95 @@
 
 
-# AI Agent met Claude + Apify MCP - Implementatieplan
+# Fix AI Agent: Resultaten Opslaan + Output Correct Tonen
 
-Bouw een AI chat interface in het SiteJob platform die Anthropic's Claude gebruikt met de Apify MCP server. Gebruikers kunnen via een chatvenster opdrachten geven aan Claude, die toegang heeft tot alle geconfigureerde Apify Actors (Google Places, Instagram, LinkedIn, TikTok, YouTube, Facebook, Trustpilot, web scraping, etc.).
+## Twee problemen worden opgelost
 
----
+**Probleem 1: Output niet zichtbaar na scrape**
+De streaming parser in `AIAgentPage.tsx` vangt alleen `text_delta` events op. Maar wanneer Claude MCP tools gebruikt, stuurt Anthropic ook `mcp_tool_result` content blocks met de scrape-resultaten. Deze worden nu genegeerd, waardoor Claude de data wel ontvangt maar de gebruiker alleen de samenvatting ziet -- of helemaal niets als Claude geen tekst-antwoord genereert na de tool call.
 
-## Wat er wordt gebouwd
+De fix: ook `content_block_start` events van type `mcp_tool_result` loggen, en eventuele `text_delta`'s binnen tool result blocks meenemen in de output.
 
-Een nieuwe pagina "AI Agent" in de sidebar onder Intelligence, met:
-- Een chat interface (berichten sturen, antwoorden ontvangen)
-- Claude als AI backend via Anthropic's Messages API
-- Apify MCP server gekoppeld zodat Claude alle scrapers/tools kan gebruiken
-- Chat historie per sessie
-- Tool-gebruik zichtbaar in de UI (welke Actor wordt aangeroepen, resultaten)
+**Probleem 2: Chat verdwijnt bij navigatie**
+Alles staat in `useState` -- bij refresh of wegnavigeren is alles weg. Dit wordt opgelost met een `ai_chat_sessions` tabel in de database.
 
 ---
 
-## Stap 1: Secrets toevoegen
+## Stap 1: Database tabel `ai_chat_sessions`
 
-Twee API keys zijn nodig:
-- **ANTHROPIC_API_KEY** - voor Anthropic Messages API calls
-- **APIFY_TOKEN** - voor authenticatie bij de Apify MCP server
+Nieuwe migratie:
 
-Deze worden als Supabase secrets opgeslagen en gebruikt in de edge function.
+```sql
+CREATE TABLE ai_chat_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  title text NOT NULL DEFAULT 'Nieuw gesprek',
+  messages jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
 
----
+ALTER TABLE ai_chat_sessions ENABLE ROW LEVEL SECURITY;
 
-## Stap 2: Edge Function - `ai-agent`
+CREATE POLICY "Org member access" ON ai_chat_sessions
+  FOR ALL USING (organization_id IN (SELECT user_organization_ids()));
 
-**Nieuw bestand:** `supabase/functions/ai-agent/index.ts`
+CREATE POLICY "Service role full access" ON ai_chat_sessions
+  FOR ALL USING (auth.role() = 'service_role');
 
-Deze edge function:
-- Ontvangt chat berichten van de frontend
-- Stuurt ze door naar Anthropic's Messages API (`https://api.anthropic.com/v1/messages`)
-- Voegt de Apify MCP server configuratie toe met alle geselecteerde tools:
-
-```text
-mcp_servers: [{
-  type: "url",
-  url: "https://mcp.apify.com/?tools=actors,docs,experimental,runs,storage,apify/rag-web-browser,compass/crawler-google-places,apify/instagram-scraper,apify/website-content-crawler,clockworks/tiktok-scraper,streamers/youtube-scraper,dev_fusion/Linkedin-Profile-Scraper,code_crafter/leads-finder,nikita-sviridenko/trustpilot-reviews-scraper,apify/facebook-ads-scraper,apify/facebook-pages-scraper,apify/facebook-posts-scraper,apify/instagram-profile-scraper,apify/instagram-post-scraper,apify/web-scraper",
-  name: "apify",
-  authorization_token: APIFY_TOKEN
-}]
+CREATE TRIGGER handle_updated_at
+  BEFORE UPDATE ON ai_chat_sessions
+  FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
 ```
 
-- Gebruikt `anthropic-beta: mcp-client-2025-04-04` header
-- Streamt responses terug naar de frontend
-- Behoudt conversation history (messages array)
+---
+
+## Stap 2: Fix streaming parser voor MCP tool results
+
+In `AIAgentPage.tsx`, de event parser uitbreiden:
+
+- Bij `content_block_start` met type `mcp_tool_result`: markeer de bijbehorende tool als "done"
+- Vang ook `input_json_delta` events op (voor tool input weergave)
+- Zorg dat na alle tool calls, de tekst-output correct wordt samengevoegd
+- Voeg een fallback toe: als na het streamen `fullText` leeg is maar er waren tool uses, toon een melding "Tools uitgevoerd, wacht op samenvatting..."
 
 ---
 
-## Stap 3: Chat UI Pagina
+## Stap 3: Hook `useAiChatSessions`
 
-**Nieuw bestand:** `src/pages/AIAgentPage.tsx`
+Nieuw bestand: `src/hooks/useAiChatSessions.ts`
 
-Chat interface met:
-- Berichten lijst (user + assistant) in ERP styling
-- Input veld + verzend knop
-- Streaming response weergave
-- Tool-gebruik indicator (wanneer Claude een Apify Actor aanroept, toon naam + status)
-- Laadindicator tijdens verwerking
-- Systeem prompt configureerbaar (bijv. "Je bent een data intelligence assistent voor SiteJob...")
+- `useAiChatSessions()` -- haalt lijst op van sessies voor huidige org, gesorteerd op updated_at desc
+- `useCreateChatSession()` -- maakt nieuwe sessie aan bij eerste bericht
+- `useUpdateChatSession()` -- slaat messages array op na elk antwoord
+- `useDeleteChatSession()` -- verwijdert een sessie
 
 ---
 
-## Stap 4: Integratie in navigatie
+## Stap 4: AIAgentPage.tsx uitbreiden met persistentie + sessie-sidebar
 
-**Wijzigingen:**
-- `src/components/erp/ErpSidebar.tsx` - nieuw menu-item "AI Agent" onder Intelligence
-- `src/pages/Index.tsx` - route toevoegen voor de nieuwe pagina
-- `supabase/config.toml` - nieuwe edge function registreren met `verify_jwt = false`
+Wijzigingen aan de pagina:
+
+- **Sessie sidebar** (links, smal): lijst van eerdere gesprekken met titel en datum
+- **Auto-save**: bij eerste bericht wordt een sessie aangemaakt (titel = eerste 50 tekens). Na elk assistant antwoord wordt de messages array geupdate in de database
+- **Sessie laden**: klik op een eerder gesprek om de messages te laden
+- **Nieuw gesprek**: reset state en maak een nieuwe sessie aan bij het eerste bericht
+- **Sessie verwijderen**: swipe of delete knop per sessie
 
 ---
 
 ## Technische Details
 
 **Nieuwe bestanden:**
-```text
-supabase/functions/ai-agent/index.ts
-src/pages/AIAgentPage.tsx
-```
+- `src/hooks/useAiChatSessions.ts`
 
 **Gewijzigde bestanden:**
-```text
-src/components/erp/ErpSidebar.tsx
-src/pages/Index.tsx
-supabase/config.toml
-```
+- `src/pages/AIAgentPage.tsx` (streaming parser fix + sessie sidebar + auto-save)
 
-**Vereiste secrets:**
-- `ANTHROPIC_API_KEY` - Anthropic API key (te vinden op console.anthropic.com)
-- `APIFY_TOKEN` - Apify API token (te vinden op console.apify.com -> Integrations)
+**Database:**
+- 1 nieuwe tabel: `ai_chat_sessions`
+- 2 RLS policies
+- 1 trigger (updated_at)
 
-**Architectuur:**
-```text
-Frontend (chat UI)
-    |
-    v
-Edge Function (ai-agent)
-    |
-    +---> Anthropic Messages API
-              |
-              +---> Apify MCP Server
-                        |
-                        +---> Google Places Crawler
-                        +---> Instagram Scraper
-                        +---> LinkedIn Scraper
-                        +---> Web Scraper
-                        +---> ... (alle tools)
-```
-
-**Geschatte berichten:** 2-3 om alles te implementeren (secrets, edge function, UI).
+**Volgorde:** Stap 1 (migratie) dan Stap 2+3+4 (code wijzigingen, parallel)
 
