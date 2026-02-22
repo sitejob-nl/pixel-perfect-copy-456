@@ -1,95 +1,60 @@
 
 
-# Fix AI Agent: Resultaten Opslaan + Output Correct Tonen
+# Fix AI Agent: Resultaten zichtbaar maken na MCP tool calls
 
-## Twee problemen worden opgelost
+## Diagnose
 
-**Probleem 1: Output niet zichtbaar na scrape**
-De streaming parser in `AIAgentPage.tsx` vangt alleen `text_delta` events op. Maar wanneer Claude MCP tools gebruikt, stuurt Anthropic ook `mcp_tool_result` content blocks met de scrape-resultaten. Deze worden nu genegeerd, waardoor Claude de data wel ontvangt maar de gebruiker alleen de samenvatting ziet -- of helemaal niets als Claude geen tekst-antwoord genereert na de tool call.
+De database bevat je laatste sessie ("Scrape de Instagram van @nike") maar het assistant-antwoord is slechts: *"Ik ga de Instagram van @nike voor je scrapen..."* -- gevolgd door de tool als "done", maar zonder daadwerkelijke scrape-resultaten.
 
-De fix: ook `content_block_start` events van type `mcp_tool_result` loggen, en eventuele `text_delta`'s binnen tool result blocks meenemen in de output.
+**Oorzaak:** Na de MCP tool call moet de Apify Instagram scraper een actor starten, pagina's scrapen, en resultaten terug sturen via het MCP protocol. Dit kan 1-3 minuten duren. Daarna moet Claude de resultaten samenvatten in een nieuw text block. De Supabase Edge Function heeft een standaard timeout van ~150 seconden, maar de hele keten (Apify actor run + MCP communicatie + Claude samenvatting) kan deze limiet overschrijden, waardoor de stream halverwege wordt afgekapt. Het eerdere "fallback" bericht treedt dan in werking.
 
-**Probleem 2: Chat verdwijnt bij navigatie**
-Alles staat in `useState` -- bij refresh of wegnavigeren is alles weg. Dit wordt opgelost met een `ai_chat_sessions` tabel in de database.
+## Stap 1: Betere streaming timeout handling in de Edge Function
 
----
+De edge function stuurt momenteel de stream gewoon door. We verbeteren dit door:
+- Een expliciete keep-alive heartbeat niet nodig (de stream is al SSE)
+- Maar we moeten zorgen dat de edge function niet vroegtijdig stopt
 
-## Stap 1: Database tabel `ai_chat_sessions`
+In `supabase/config.toml` de wall clock timeout verhogen:
 
-Nieuwe migratie:
-
-```sql
-CREATE TABLE ai_chat_sessions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id uuid NOT NULL,
-  user_id uuid NOT NULL,
-  title text NOT NULL DEFAULT 'Nieuw gesprek',
-  messages jsonb NOT NULL DEFAULT '[]'::jsonb,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
-ALTER TABLE ai_chat_sessions ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Org member access" ON ai_chat_sessions
-  FOR ALL USING (organization_id IN (SELECT user_organization_ids()));
-
-CREATE POLICY "Service role full access" ON ai_chat_sessions
-  FOR ALL USING (auth.role() = 'service_role');
-
-CREATE TRIGGER handle_updated_at
-  BEFORE UPDATE ON ai_chat_sessions
-  FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+```toml
+[functions.ai-agent]
+verify_jwt = false
 ```
 
----
+Helaas kan de wall_clock niet in config.toml worden ingesteld voor Supabase hosted functions (max is ~150s automatisch). 
 
-## Stap 2: Fix streaming parser voor MCP tool results
+**Alternatieve aanpak:** De edge function moet de Anthropic response volledig doorsturen en niet bufferen. Dit werkt al correct. Het probleem zit dan in de **client-side parsing** of in een **stilte-timeout** in de browser `fetch()`.
 
-In `AIAgentPage.tsx`, de event parser uitbreiden:
+## Stap 2: Client-side timeout en reconnect verbeteren
 
-- Bij `content_block_start` met type `mcp_tool_result`: markeer de bijbehorende tool als "done"
-- Vang ook `input_json_delta` events op (voor tool input weergave)
-- Zorg dat na alle tool calls, de tekst-output correct wordt samengevoegd
-- Voeg een fallback toe: als na het streamen `fullText` leeg is maar er waren tool uses, toon een melding "Tools uitgevoerd, wacht op samenvatting..."
+In `AIAgentPage.tsx`:
 
----
+- Verwijder eventuele impliciete timeouts op de fetch call
+- Voeg een `AbortController` toe met een langere timeout (5 minuten) zodat de browser de verbinding niet voortijdig verbreekt
+- Voeg visuele feedback toe tijdens lange MCP tool runs ("Tool draait... dit kan 1-2 minuten duren")
 
-## Stap 3: Hook `useAiChatSessions`
+## Stap 3: Logging toevoegen aan de streaming parser
 
-Nieuw bestand: `src/hooks/useAiChatSessions.ts`
+Tijdelijk `console.log` statements toevoegen in de event parser om exact te zien welke events binnenkomen en waar de stream stopt. Dit helpt bij het debuggen:
 
-- `useAiChatSessions()` -- haalt lijst op van sessies voor huidige org, gesorteerd op updated_at desc
-- `useCreateChatSession()` -- maakt nieuwe sessie aan bij eerste bericht
-- `useUpdateChatSession()` -- slaat messages array op na elk antwoord
-- `useDeleteChatSession()` -- verwijdert een sessie
+- Log elk `content_block_start` event met type
+- Log elke `content_block_delta` met type en lengte
+- Log `message_stop` en `message_delta` events
+- Log wanneer de stream `done` is
 
----
+## Stap 4: Edge Function - response passthrough verbeteren
 
-## Stap 4: AIAgentPage.tsx uitbreiden met persistentie + sessie-sidebar
-
-Wijzigingen aan de pagina:
-
-- **Sessie sidebar** (links, smal): lijst van eerdere gesprekken met titel en datum
-- **Auto-save**: bij eerste bericht wordt een sessie aangemaakt (titel = eerste 50 tekens). Na elk assistant antwoord wordt de messages array geupdate in de database
-- **Sessie laden**: klik op een eerder gesprek om de messages te laden
-- **Nieuw gesprek**: reset state en maak een nieuwe sessie aan bij het eerste bericht
-- **Sessie verwijderen**: swipe of delete knop per sessie
-
----
+In `supabase/functions/ai-agent/index.ts`:
+- Voeg logging toe om te zien hoelang de Anthropic call duurt
+- Log wanneer de response stream begint en eindigt
+- Zorg ervoor dat de response headers correct zijn voor lange streams
 
 ## Technische Details
 
-**Nieuwe bestanden:**
-- `src/hooks/useAiChatSessions.ts`
-
 **Gewijzigde bestanden:**
-- `src/pages/AIAgentPage.tsx` (streaming parser fix + sessie sidebar + auto-save)
+- `supabase/functions/ai-agent/index.ts` (logging + timeout awareness)
+- `src/pages/AIAgentPage.tsx` (AbortController met 5 min timeout + debug logging + betere UX voor lange tool runs)
 
-**Database:**
-- 1 nieuwe tabel: `ai_chat_sessions`
-- 2 RLS policies
-- 1 trigger (updated_at)
+**Geen database wijzigingen nodig** -- de tabel en hook werken al correct.
 
-**Volgorde:** Stap 1 (migratie) dan Stap 2+3+4 (code wijzigingen, parallel)
-
+**Volgorde:** Stap 3 en 4 tegelijk (logging), dan Stap 2 (client fixes), dan testen.
