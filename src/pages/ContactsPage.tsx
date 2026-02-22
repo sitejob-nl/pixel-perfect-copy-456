@@ -2,8 +2,9 @@ import { useState } from "react";
 import { PageHeader, ErpButton, ErpCard, FilterButton, Avatar, Badge, Dot, Chip, TH, TD, TR } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { stageColors, stageLabels, tierColors } from "@/data/mockData";
-import { useContacts } from "@/hooks/useContacts";
+import { useContacts, type ContactWithCompany } from "@/hooks/useContacts";
 import CreateContactDialog from "@/components/erp/CreateContactDialog";
+import ContactDetailDialog from "@/components/erp/ContactDetailDialog";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
@@ -11,6 +12,7 @@ export default function ContactsPage() {
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<ContactWithCompany | null>(null);
 
   const { data: contacts = [], isLoading, error } = useContacts();
 
@@ -78,7 +80,7 @@ export default function ContactsPage() {
                 const tier = c.temperature ?? "warm";
                 const stage = c.lifecycle_stage ?? "lead";
                 return (
-                  <TR key={c.id}>
+                  <TR key={c.id} onClick={() => setSelectedContact(c)}>
                     <TD>
                       <div className="flex items-center gap-[10px]">
                         <Avatar name={`${c.first_name} ${c.last_name ?? ""}`} id={c.id.charCodeAt(0)} />
@@ -116,6 +118,7 @@ export default function ContactsPage() {
       )}
 
       <CreateContactDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ContactDetailDialog contact={selectedContact} open={!!selectedContact} onOpenChange={(open) => { if (!open) setSelectedContact(null); }} />
     </div>
   );
 }

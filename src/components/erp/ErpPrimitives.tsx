@@ -174,9 +174,9 @@ export function TD({ children, className }: { children: React.ReactNode; classNa
   );
 }
 
-export function TR({ children }: { children: React.ReactNode }) {
+export function TR({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
   return (
-    <tr className="cursor-pointer hover:bg-erp-hover transition-colors duration-75">
+    <tr onClick={onClick} className="cursor-pointer hover:bg-erp-hover transition-colors duration-75">
       {children}
     </tr>
   );
