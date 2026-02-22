@@ -6,6 +6,7 @@ import ContactsPage from "@/pages/ContactsPage";
 import PipelinePage from "@/pages/PipelinePage";
 import CompaniesPage from "@/pages/CompaniesPage";
 import { ProjectsPage, InvoicesPage } from "@/pages/ProjectsInvoicesPage";
+import QuotesPage from "@/pages/QuotesPage";
 import DataIntelPage from "@/pages/DataIntelPage";
 import ContentPage from "@/pages/ContentPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
@@ -18,9 +19,9 @@ const pages: Record<string, React.ReactNode> = {
   pipeline: <PipelinePage />,
   projects: <ProjectsPage />,
   invoices: <InvoicesPage />,
+  quotes: <QuotesPage />,
   dataintel: <DataIntelPage />,
   content: <ContentPage />,
-  quotes: <PlaceholderPage title="Offertes" icon="File" />,
   contracts: <PlaceholderPage title="Contracten" icon="Pen" />,
   demos: <PlaceholderPage title="Demo Generatie" icon="Globe" />,
   whatsapp: <PlaceholderPage title="WhatsApp" icon="Msg" />,
