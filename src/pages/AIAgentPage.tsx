@@ -116,6 +116,10 @@ export default function AIAgentPage() {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+      // 5 minute timeout for long-running MCP tool calls (e.g. Apify scrapers)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
+
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/ai-agent`,
         {
@@ -129,6 +133,7 @@ export default function AIAgentPage() {
             messages: apiMessages,
             system: SYSTEM_PROMPT,
           }),
+          signal: controller.signal,
         }
       );
 
@@ -165,6 +170,7 @@ export default function AIAgentPage() {
 
             if (event.type === "content_block_start") {
               const block = event.content_block;
+              console.log("[AI Stream] content_block_start:", block?.type, block?.name || "");
               if (block?.type === "mcp_tool_use") {
                 currentBlockType = "mcp_tool_use";
                 const toolName = block.name || "tool";
@@ -179,7 +185,7 @@ export default function AIAgentPage() {
                 });
               } else if (block?.type === "mcp_tool_result") {
                 currentBlockType = "mcp_tool_result";
-                // Mark the last running tool as done when we get its result
+                console.log("[AI Stream] Tool result received, marking tool as done");
                 if (toolUses?.some((t) => t.status === "running")) {
                   toolUses = toolUses?.map((t, i) =>
                     i === toolUses!.length - 1 && t.status === "running"
@@ -203,7 +209,7 @@ export default function AIAgentPage() {
             }
 
             if (event.type === "content_block_stop") {
-              // Mark any remaining running tools as done
+              console.log("[AI Stream] content_block_stop, blockType was:", currentBlockType);
               if (toolUses?.some((t) => t.status === "running")) {
                 toolUses = toolUses?.map((t) =>
                   t.status === "running" ? { ...t, status: "done" } : t
@@ -220,9 +226,17 @@ export default function AIAgentPage() {
               currentBlockType = null;
             }
 
+            if (event.type === "message_delta") {
+              console.log("[AI Stream] message_delta:", event.delta?.stop_reason);
+            }
+
+            if (event.type === "message_stop") {
+              console.log("[AI Stream] message_stop - stream complete");
+            }
+
             if (event.type === "content_block_delta") {
-              // Capture text_delta from any block type (text or mcp_tool_result)
               if (event.delta?.type === "text_delta" && event.delta.text) {
+                console.log("[AI Stream] text_delta, length:", event.delta.text.length, "block:", currentBlockType);
                 fullText += event.delta.text;
                 setMessages((prev) => {
                   const updated = [...prev];
@@ -233,6 +247,8 @@ export default function AIAgentPage() {
                   };
                   return updated;
                 });
+              } else if (event.delta?.type === "input_json_delta") {
+                // Tool input streaming - ignore for display
               }
             }
           } catch {
@@ -263,6 +279,8 @@ export default function AIAgentPage() {
       // Save to database
       const sid = await saveSession(finalMessages, activeSessionId);
       if (sid) setActiveSessionId(sid);
+
+      clearTimeout(timeoutId);
     } catch (error: any) {
       const errorMessages: ChatMessage[] = [
         ...newMessages,
