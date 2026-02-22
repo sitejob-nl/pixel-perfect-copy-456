@@ -1,61 +1,82 @@
 
 
-# Fix AI Agent: Keep-alive tijdens MCP tool execution
+# Fix: MCP Tool Resultaten Opvangen en Tonen
 
-## Probleem (bevestigd door data)
+## Het echte probleem
 
-De database toont twee sessies waarin de tool als "done" staat, maar zonder resultaatdata. De edge function respondeerde na 6 seconden (stream-headers), maar daarna pauzeert de stream terwijl Apify de actor draait (30-120 seconden). Tijdens deze stilte stuurt Anthropic geen data, waardoor de verbinding wordt verbroken door een idle timeout (van Supabase edge infra of de browser).
+De Anthropic API stuurt `mcp_tool_result` content **inline** in het `content_block_start` event, niet via streaming deltas. Het ziet er zo uit:
 
-## Oplossing: Keep-alive heartbeat in de Edge Function
-
-De edge function moet een `TransformStream` gebruiken die:
-1. De Anthropic response stream doorgeeft
-2. Elke 10 seconden een SSE comment (`: heartbeat`) stuurt als er geen data binnenkomt
-3. De heartbeat stopt zodra er weer data komt of de stream eindigt
-
-Dit voorkomt dat idle timeouts de verbinding verbreken.
-
-## Stap 1: Edge Function - TransformStream met heartbeat
-
-In `supabase/functions/ai-agent/index.ts`:
-
-```
-Huidige flow:
-  Client -> Edge Function -> Anthropic (stream passthrough)
-
-Nieuwe flow:
-  Client -> Edge Function -> TransformStream (heartbeat) -> Anthropic stream
+```text
+content_block_start: {
+  "type": "mcp_tool_result",
+  "content": [
+    { "type": "text", "text": "...alle scraped data..." }
+  ]
+}
 ```
 
-De TransformStream:
-- Leest chunks van de Anthropic response body
-- Stuurt ze direct door naar de client
-- Start een interval timer (elke 10 seconden)
-- Als er 10 seconden geen data is geweest, stuurt een `: keepalive\n\n` comment (dit is een geldige SSE comment die door parsers wordt genegeerd)
-- Stopt de timer bij stream close
+De huidige parser kijkt alleen naar `content_block_delta` events met `text_delta` -- daardoor worden de tool resultaten volledig genegeerd. De "done" status wordt wel correct gezet, maar de daadwerkelijke data verdwijnt.
 
-## Stap 2: Client-side parser - heartbeat comments negeren
+Na de tool result stuurt Claude mogelijk een samenvattend text block, maar als dat er niet is (of als het alleen de tool result bevat), dan zie je alleen de initiële tekst.
 
-In `src/pages/AIAgentPage.tsx`:
+## Oplossing
 
-De SSE parser filtert al op `data: ` prefix, dus `: keepalive` comments worden automatisch genegeerd. Geen wijziging nodig.
+### Stap 1: mcp_tool_result content opvangen in de parser
 
-Wel toevoegen: een log wanneer de stream eindigt (`reader.read()` geeft `done: true`) zodat we kunnen bevestigen dat de stream volledig is afgerond.
+In `src/pages/AIAgentPage.tsx`, bij het `content_block_start` event voor `mcp_tool_result`:
+- Lees `event.content_block.content` (een array van content items)
+- Extraheer alle text items en sla ze op in een `toolResults` variabele
+- Voeg de tool resultaat tekst toe aan het assistant bericht
 
-## Stap 3: Verifieer de volledige flow
+### Stap 2: Tool resultaten opslaan in het bericht
 
-Na deployment testen met "Scrape de Instagram van @nike" en in de console kijken naar:
-- `[AI Stream] content_block_start: text` (initiele tekst)
-- `[AI Stream] content_block_start: mcp_tool_use` (tool start)
-- `[AI Stream] content_block_start: mcp_tool_result` (tool klaar)
-- `[AI Stream] content_block_start: text` (samenvatting met resultaten)
-- `[AI Stream] message_stop`
+Voeg een `toolResults` veld toe aan de `ChatMessage` interface in `useAiChatSessions.ts`:
+```
+toolResults?: { toolName: string; content: string }[];
+```
+
+Sla de tool result content op zodat het ook bij herladen zichtbaar is.
+
+### Stap 3: Tool resultaten tonen in de UI
+
+In de message rendering, na de tool use indicators:
+- Toon een uitklapbaar "Resultaten" blok per tool
+- Gebruik een collapsible/accordion met de tool naam als header
+- Render de content als Markdown (scraped data is vaak gestructureerd)
+- Beperk de hoogte met een scroll area (max ~300px) omdat scraped data groot kan zijn
+
+### Stap 4: Fallback tekst verbeteren
+
+Als de stream eindigt en `fullText` alleen de initiële tekst bevat maar er WEL `toolResults` zijn:
+- Combineer de initiële tekst met een samenvatting: "De tool heeft resultaten opgeleverd (zie hieronder)."
+- Toon een "Samenvatten" knop die een follow-up bericht stuurt: "Vat de resultaten van de vorige tool call samen"
 
 ## Technische Details
 
 **Gewijzigde bestanden:**
-- `supabase/functions/ai-agent/index.ts` -- TransformStream met 10s heartbeat interval
-- `src/pages/AIAgentPage.tsx` -- log toevoegen bij stream end
+- `src/hooks/useAiChatSessions.ts` -- `toolResults` veld toevoegen aan `ChatMessage` interface
+- `src/pages/AIAgentPage.tsx` -- parser aanpassen + UI voor tool resultaten + fallback logica
 
-**Geen database wijzigingen nodig.**
+**Geen database wijzigingen nodig** -- het `messages` veld is JSONB en accepteert het nieuwe veld automatisch.
 
+**Parser wijziging (kern van de fix):**
+
+Bij `content_block_start` met type `mcp_tool_result`:
+```
+// Huidige code: markeert alleen tool als "done"
+
+// Nieuwe code: ook content extracten
+if (block.content && Array.isArray(block.content)) {
+  const resultText = block.content
+    .filter(c => c.type === "text")
+    .map(c => c.text)
+    .join("\n");
+  // Sla op als toolResult
+}
+```
+
+**UI weergave:**
+- Collapsible sectie onder elke tool indicator
+- Header: "Resultaten van [tool-naam]" met chevron
+- Body: ScrollArea met Markdown-rendered content
+- Standaard ingeklapt als de tekst > 500 karakters is, anders uitgeklapt
