@@ -7,6 +7,9 @@ const corsHeaders = {
 const MCP_URL =
   "https://mcp.apify.com/?tools=actors,docs,experimental,runs,storage,apify/rag-web-browser,compass/crawler-google-places,apify/instagram-scraper,apify/website-content-crawler,clockworks/tiktok-scraper,streamers/youtube-scraper,dev_fusion/Linkedin-Profile-Scraper,code_crafter/leads-finder,nikita-sviridenko/trustpilot-reviews-scraper,apify/facebook-ads-scraper,apify/facebook-pages-scraper,apify/facebook-posts-scraper,apify/instagram-profile-scraper,apify/instagram-post-scraper,apify/web-scraper";
 
+const HEARTBEAT_INTERVAL_MS = 10_000;
+const HEARTBEAT_COMMENT = new TextEncoder().encode(": keepalive\n\n");
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -76,10 +79,62 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("[ai-agent] Streaming response back to client...");
+    if (!response.body) {
+      return new Response(
+        JSON.stringify({ error: "No response body from Anthropic" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Stream the response back
-    return new Response(response.body, {
+    console.log("[ai-agent] Starting heartbeat stream proxy...");
+
+    // Create a TransformStream that injects keepalive comments during idle periods
+    const upstream = response.body.getReader();
+    let heartbeatTimer: number | undefined;
+    let lastDataTime = Date.now();
+
+    const readable = new ReadableStream({
+      async start(controller) {
+        // Start heartbeat interval
+        heartbeatTimer = setInterval(() => {
+          const idleMs = Date.now() - lastDataTime;
+          if (idleMs >= HEARTBEAT_INTERVAL_MS) {
+            try {
+              controller.enqueue(HEARTBEAT_COMMENT);
+              console.log(`[ai-agent] Sent keepalive after ${Math.round(idleMs / 1000)}s idle`);
+            } catch {
+              // Stream already closed
+              clearInterval(heartbeatTimer);
+            }
+          }
+        }, HEARTBEAT_INTERVAL_MS) as unknown as number;
+
+        try {
+          while (true) {
+            const { done, value } = await upstream.read();
+            if (done) {
+              console.log(`[ai-agent] Upstream stream ended. Total time: ${Date.now() - startTime}ms`);
+              clearInterval(heartbeatTimer);
+              controller.close();
+              break;
+            }
+            lastDataTime = Date.now();
+            controller.enqueue(value);
+          }
+        } catch (err) {
+          console.error("[ai-agent] Stream read error:", err);
+          clearInterval(heartbeatTimer);
+          controller.error(err);
+        }
+      },
+      cancel() {
+        console.log("[ai-agent] Client disconnected");
+        clearInterval(heartbeatTimer);
+        upstream.cancel();
+      },
+    });
+
+    return new Response(readable, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/event-stream",
