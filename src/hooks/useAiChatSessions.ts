@@ -7,6 +7,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   toolUses?: { name: string; status: "running" | "done" | "error" }[];
+  toolResults?: { toolName: string; content: string }[];
 }
 
 export interface AiChatSession {
