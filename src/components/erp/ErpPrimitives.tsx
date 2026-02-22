@@ -158,7 +158,7 @@ export function ErpTabs({ items, active, onChange }: {
   );
 }
 
-export function TH({ children }: { children: React.ReactNode }) {
+export function TH({ children }: { children?: React.ReactNode }) {
   return (
     <th className="text-left px-4 py-[11px] text-[10.5px] font-semibold uppercase tracking-wider text-erp-text3 border-b border-erp-border0 bg-erp-bg3">
       {children}
