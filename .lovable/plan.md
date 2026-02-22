@@ -1,177 +1,115 @@
 
 
-# SiteJob ERP v2 - Uitgebreid Implementatieplan
+# AI Agent met Claude + Apify MCP - Implementatieplan
 
-## Huidige Staat
-
-Het project heeft momenteel:
-- Donker enterprise UI-design met sidebar navigatie
-- Pagina's met **mock data**: Dashboard, Pipeline, Projecten, Facturen, Data Intelligence, Content
-- **Contacten pagina** verbonden met Supabase (ophalen + aanmaken)
-- Supabase authenticatie (login/registratie/wachtwoord reset)
-- Database schema met 20+ tabellen (contacts, companies, deals, projects, invoices, etc.)
-- Multi-tenant RLS policies op alle tabellen via `organization_id`
-
-Wat nog NIET werkt: na registratie heeft een gebruiker geen organisatie, dus alle data is onzichtbaar door RLS.
+Bouw een AI chat interface in het SiteJob platform die Anthropic's Claude gebruikt met de Apify MCP server. Gebruikers kunnen via een chatvenster opdrachten geven aan Claude, die toegang heeft tot alle geconfigureerde Apify Actors (Google Places, Instagram, LinkedIn, TikTok, YouTube, Facebook, Trustpilot, web scraping, etc.).
 
 ---
 
-## Fase 0: Onboarding + Organisatie Setup (Prioriteit: BLOKKEREND)
+## Wat er wordt gebouwd
 
-Zonder organisatie werkt niets. Dit moet eerst.
-
-**Stappen:**
-1. Maak een onboarding flow die na eerste login een organisatie aanmaakt
-2. Koppel de gebruiker als `owner` in `organization_members`
-3. Maak standaard pipeline stages aan voor de nieuwe organisatie
-4. Redirect naar dashboard na voltooiing
-
-**Technisch:**
-- Nieuwe pagina `OnboardingPage.tsx` met organisatie naam/slug invoer
-- Edge function of client-side insert voor organisatie + member record
-- Update `Index.tsx` om te checken of gebruiker een organisatie heeft
+Een nieuwe pagina "AI Agent" in de sidebar onder Intelligence, met:
+- Een chat interface (berichten sturen, antwoorden ontvangen)
+- Claude als AI backend via Anthropic's Messages API
+- Apify MCP server gekoppeld zodat Claude alle scrapers/tools kan gebruiken
+- Chat historie per sessie
+- Tool-gebruik zichtbaar in de UI (welke Actor wordt aangeroepen, resultaten)
 
 ---
 
-## Fase 1: CRM Kern - Alle Pagina's Verbinden met Supabase
+## Stap 1: Secrets toevoegen
 
-### 1A. Bedrijven (Companies) pagina
-- Nieuwe `CompaniesPage.tsx` met echte data uit `companies` tabel
-- CRUD: aanmaken, bewerken, verwijderen
-- Zoeken en filteren op naam, branche, stad
-- Koppeling tonen met contacten
+Twee API keys zijn nodig:
+- **ANTHROPIC_API_KEY** - voor Anthropic Messages API calls
+- **APIFY_TOKEN** - voor authenticatie bij de Apify MCP server
 
-### 1B. Pipeline pagina verbinden
-- Hook `useDeals.ts` voor deals + pipeline_stages uit Supabase
-- Deals ophalen met stage info, contact en bedrijf
-- Nieuwe deal aanmaken via dialog
-- Deal verplaatsen tussen stages (drag-and-drop of klik)
-
-### 1C. Dashboard verbinden met echte data
-- Stats ophalen: pipeline waarde (SUM deals.value), open deals count, MRR (SUM subscriptions.monthly_amount)
-- Recente activiteiten uit `activities` tabel
-- Pipeline verdeling berekenen uit deals + stages
-
-### 1D. Contacten pagina uitbreiden
-- Contact detail view/edit dialog
-- Contact verwijderen
-- Bedrijf koppelen aan contact
-- Activiteiten timeline per contact
+Deze worden als Supabase secrets opgeslagen en gebruikt in de edge function.
 
 ---
 
-## Fase 2: Projecten + Facturatie
+## Stap 2: Edge Function - `ai-agent`
 
-### 2A. Projecten pagina verbinden
-- Hook `useProjects.ts` voor CRUD
-- Project aanmaken met nummer generatie (via `generate_document_number` functie)
-- Status wijzigen, voortgang bijhouden
-- Koppeling met contact/bedrijf/deal
+**Nieuw bestand:** `supabase/functions/ai-agent/index.ts`
 
-### 2B. Facturen pagina verbinden
-- Hook `useInvoices.ts` voor CRUD
-- Factuur aanmaken met automatische nummering
-- Factuurregels beheren (`invoice_lines` tabel)
-- Status flow: concept -> verstuurd -> betaald
-- BTW berekening (21% standaard)
+Deze edge function:
+- Ontvangt chat berichten van de frontend
+- Stuurt ze door naar Anthropic's Messages API (`https://api.anthropic.com/v1/messages`)
+- Voegt de Apify MCP server configuratie toe met alle geselecteerde tools:
 
-### 2C. Offertes pagina
-- Nieuwe `QuotesPage.tsx` (nu placeholder)
-- Hook `useQuotes.ts` voor CRUD
-- Offerteregels beheren (`quote_lines`)
-- Offerte omzetten naar factuur
+```text
+mcp_servers: [{
+  type: "url",
+  url: "https://mcp.apify.com/?tools=actors,docs,experimental,runs,storage,apify/rag-web-browser,compass/crawler-google-places,apify/instagram-scraper,apify/website-content-crawler,clockworks/tiktok-scraper,streamers/youtube-scraper,dev_fusion/Linkedin-Profile-Scraper,code_crafter/leads-finder,nikita-sviridenko/trustpilot-reviews-scraper,apify/facebook-ads-scraper,apify/facebook-pages-scraper,apify/facebook-posts-scraper,apify/instagram-profile-scraper,apify/instagram-post-scraper,apify/web-scraper",
+  name: "apify",
+  authorization_token: APIFY_TOKEN
+}]
+```
 
----
-
-## Fase 3: Data Intelligence
-
-### 3A. Data Sources beheer
-- CRUD voor `data_sources` tabel
-- Configuratie per provider (Apify actor ID, input params, targeting)
-- Schedule instellen (cron expressie)
-
-### 3B. Scrape Runs verbinden
-- Echte data uit `scrape_runs` tabel ipv mock data
-- Run details met raw_leads resultaten
-- Handmatige run trigger (voorbereiding voor edge function)
-
-### 3C. Lead Enrichment weergave
-- Enrichment data tonen bij contacten
-- Score breakdown visualisatie
-- Tech stack, Google rating, AI insights
-
-### 3D. Scoring Rules verbinden
-- CRUD voor `scoring_rules` tabel
-- Regels aanmaken/bewerken/verwijderen
-- Echte data ipv hardcoded tabel
-
-### 3E. Outreach Sequences
-- CRUD voor `outreach_sequences` tabel
-- Enrollments beheren per contact
-- Sequence stappen configureren
+- Gebruikt `anthropic-beta: mcp-client-2025-04-04` header
+- Streamt responses terug naar de frontend
+- Behoudt conversation history (messages array)
 
 ---
 
-## Fase 4: Content Kalender
+## Stap 3: Chat UI Pagina
 
-- Verbind met `content_calendar` tabel
-- CRUD voor content items
-- Filter op platform, status
-- Kalender weergave (optioneel)
+**Nieuw bestand:** `src/pages/AIAgentPage.tsx`
 
----
-
-## Fase 5: Communicatie + WhatsApp
-
-- WhatsApp pagina bouwen (nu placeholder)
-- Activiteiten timeline component (herbruikbaar voor contacts, deals, projects)
-- Notities toevoegen aan contacten/deals
+Chat interface met:
+- Berichten lijst (user + assistant) in ERP styling
+- Input veld + verzend knop
+- Streaming response weergave
+- Tool-gebruik indicator (wanneer Claude een Apify Actor aanroept, toon naam + status)
+- Laadindicator tijdens verwerking
+- Systeem prompt configureerbaar (bijv. "Je bent een data intelligence assistent voor SiteJob...")
 
 ---
 
-## Fase 6: Geavanceerde Features
+## Stap 4: Integratie in navigatie
 
-### 6A. Edge Functions
-- `scrape-run`: Apify Actor aansturen (vereist APIFY_API_KEY secret)
-- `scrape-callback`: Webhook voor Apify resultaten
-- `scrape-process`: Deduplicatie + scoring pipeline
-- `scoring-recalculate`: Lead score herberekenen
-
-### 6B. Contracten pagina
-- Contracten beheer uit `quotes` tabel (contract type)
-- Digitale handtekening flow (toekomstig)
-
-### 6C. Audit Logging
-- Automatische audit trail bij mutaties
-- Audit log viewer voor admins
+**Wijzigingen:**
+- `src/components/erp/ErpSidebar.tsx` - nieuw menu-item "AI Agent" onder Intelligence
+- `src/pages/Index.tsx` - route toevoegen voor de nieuwe pagina
+- `supabase/config.toml` - nieuwe edge function registreren met `verify_jwt = false`
 
 ---
 
-## Aanbevolen Implementatie Volgorde
+## Technische Details
 
-| Stap | Wat | Geschatte berichten |
-|------|-----|---------------------|
-| 1 | Fase 0: Onboarding flow | 2-3 |
-| 2 | Fase 1A: Bedrijven pagina | 2-3 |
-| 3 | Fase 1B: Pipeline verbinden | 2-3 |
-| 4 | Fase 1C: Dashboard verbinden | 2-3 |
-| 5 | Fase 1D: Contacten uitbreiden | 2-3 |
-| 6 | Fase 2A: Projecten verbinden | 2-3 |
-| 7 | Fase 2B: Facturen verbinden | 2-3 |
-| 8 | Fase 2C: Offertes pagina | 2-3 |
-| 9 | Fase 3A-E: Data Intelligence | 3-5 |
-| 10 | Fase 4: Content kalender | 1-2 |
-| 11 | Fase 5-6: Geavanceerd | 3-5 |
+**Nieuwe bestanden:**
+```text
+supabase/functions/ai-agent/index.ts
+src/pages/AIAgentPage.tsx
+```
 
-**Totaal: ~25-35 berichten** om alles stap voor stap uit te werken.
+**Gewijzigde bestanden:**
+```text
+src/components/erp/ErpSidebar.tsx
+src/pages/Index.tsx
+supabase/config.toml
+```
 
----
+**Vereiste secrets:**
+- `ANTHROPIC_API_KEY` - Anthropic API key (te vinden op console.anthropic.com)
+- `APIFY_TOKEN` - Apify API token (te vinden op console.apify.com -> Integrations)
 
-## Belangrijke Technische Overwegingen
+**Architectuur:**
+```text
+Frontend (chat UI)
+    |
+    v
+Edge Function (ai-agent)
+    |
+    +---> Anthropic Messages API
+              |
+              +---> Apify MCP Server
+                        |
+                        +---> Google Places Crawler
+                        +---> Instagram Scraper
+                        +---> LinkedIn Scraper
+                        +---> Web Scraper
+                        +---> ... (alle tools)
+```
 
-- **Multi-tenancy**: Elke insert moet `organization_id` bevatten, opgehaald via `organization_members` voor de ingelogde gebruiker
-- **RLS**: Alle tabellen hebben al correcte policies; code moet alleen zorgen dat `organization_id` wordt meegegeven bij inserts
-- **Herbruikbare patronen**: Het `useContacts.ts` hook-patroon wordt hergebruikt voor alle entiteiten (deals, projects, invoices, etc.)
-- **Document nummering**: De `generate_document_number` database functie wordt gebruikt voor projecten, offertes en facturen
-- **Type safety**: Na elke schema wijziging worden de Supabase types automatisch bijgewerkt
+**Geschatte berichten:** 2-3 om alles te implementeren (secrets, edge function, UI).
 
