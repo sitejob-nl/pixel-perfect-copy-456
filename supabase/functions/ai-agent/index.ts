@@ -50,6 +50,9 @@ Deno.serve(async (req) => {
       body.system = system;
     }
 
+    const startTime = Date.now();
+    console.log("[ai-agent] Starting Anthropic API call...");
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -61,14 +64,19 @@ Deno.serve(async (req) => {
       body: JSON.stringify(body),
     });
 
+    const elapsed = Date.now() - startTime;
+    console.log(`[ai-agent] Anthropic responded in ${elapsed}ms, status: ${response.status}`);
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Anthropic API error:", response.status, errorText);
+      console.error("[ai-agent] Anthropic API error:", response.status, errorText);
       return new Response(
         JSON.stringify({ error: `Anthropic API error: ${response.status}`, details: errorText }),
         { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("[ai-agent] Streaming response back to client...");
 
     // Stream the response back
     return new Response(response.body, {
