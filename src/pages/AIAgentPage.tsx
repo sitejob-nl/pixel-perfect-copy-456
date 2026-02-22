@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Icons } from "@/components/erp/ErpIcons";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -148,9 +149,11 @@ export default function AIAgentPage() {
       const decoder = new TextDecoder();
       let fullText = "";
       let toolUses: ChatMessage["toolUses"] = [];
+      let toolResults: ChatMessage["toolResults"] = [];
       let buffer = "";
       // Track which content block indices are text vs tool_result
       let currentBlockType: string | null = null;
+      let lastToolName: string | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -177,6 +180,7 @@ export default function AIAgentPage() {
               if (block?.type === "mcp_tool_use") {
                 currentBlockType = "mcp_tool_use";
                 const toolName = block.name || "tool";
+                lastToolName = toolName;
                 toolUses = [...(toolUses || []), { name: toolName, status: "running" }];
                 setMessages((prev) => {
                   const updated = [...prev];
@@ -189,6 +193,28 @@ export default function AIAgentPage() {
               } else if (block?.type === "mcp_tool_result") {
                 currentBlockType = "mcp_tool_result";
                 console.log("[AI Stream] Tool result received, marking tool as done");
+                
+                // Extract tool result content inline
+                if (block.content && Array.isArray(block.content)) {
+                  const resultText = block.content
+                    .filter((c: any) => c.type === "text")
+                    .map((c: any) => c.text)
+                    .join("\n");
+                  if (resultText) {
+                    const toolName = lastToolName || "tool";
+                    toolResults = [...(toolResults || []), { toolName, content: resultText }];
+                    console.log("[AI Stream] Captured tool result for", toolName, "length:", resultText.length);
+                    setMessages((prev) => {
+                      const updated = [...prev];
+                      updated[updated.length - 1] = {
+                        ...updated[updated.length - 1],
+                        toolResults: [...(toolResults || [])],
+                      };
+                      return updated;
+                    });
+                  }
+                }
+                
                 if (toolUses?.some((t) => t.status === "running")) {
                   toolUses = toolUses?.map((t, i) =>
                     i === toolUses!.length - 1 && t.status === "running"
@@ -200,6 +226,7 @@ export default function AIAgentPage() {
                     updated[updated.length - 1] = {
                       ...updated[updated.length - 1],
                       toolUses: [...(toolUses || [])],
+                      toolResults: [...(toolResults || [])],
                     };
                     return updated;
                   });
@@ -262,9 +289,12 @@ export default function AIAgentPage() {
 
       // Final update with fallback
       const hadTools = toolUses && toolUses.length > 0;
+      const hadResults = toolResults && toolResults.length > 0;
       const finalContent =
         fullText ||
-        (hadTools
+        (hadTools && hadResults
+          ? "De tools zijn uitgevoerd. Bekijk de resultaten hieronder."
+          : hadTools
           ? "✅ Tools zijn uitgevoerd. De resultaten zijn verwerkt door de AI — als er geen samenvatting verscheen, probeer dan een follow-up vraag te stellen."
           : "(Geen antwoord ontvangen)");
 
@@ -274,6 +304,7 @@ export default function AIAgentPage() {
           role: "assistant",
           content: finalContent,
           toolUses: toolUses?.map((t) => ({ ...t, status: "done" as const })),
+          toolResults: hadResults ? toolResults : undefined,
         },
       ];
 
@@ -459,6 +490,28 @@ export default function AIAgentPage() {
                         )}
                         <span className="text-erp-text2 font-mono">{tool.name}</span>
                       </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Tool results - collapsible */}
+                {msg.toolResults && msg.toolResults.length > 0 && (
+                  <div className="mb-2 space-y-1">
+                    {msg.toolResults.map((result, j) => (
+                      <Collapsible key={j} defaultOpen={result.content.length <= 500}>
+                        <CollapsibleTrigger className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-md bg-erp-bg3/50 hover:bg-erp-bg3 transition-colors w-full text-left group">
+                          <Icons.ChevDown className="w-3 h-3 text-erp-text3 transition-transform -rotate-90 group-data-[state=open]:rotate-0" />
+                          <span className="text-erp-text2 font-mono">Resultaten van {result.toolName}</span>
+                          <span className="text-erp-text3 ml-auto">{(result.content.length / 1024).toFixed(1)}KB</span>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <ScrollArea className="max-h-[300px] mt-1 rounded-md bg-erp-bg4 p-3">
+                            <div className="prose prose-sm prose-invert max-w-none text-[11px] [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5 [&_code]:bg-erp-bg3 [&_code]:px-1 [&_code]:rounded [&_pre]:bg-erp-bg3 [&_pre]:p-2 [&_pre]:rounded">
+                              <ReactMarkdown>{result.content}</ReactMarkdown>
+                            </div>
+                          </ScrollArea>
+                        </CollapsibleContent>
+                      </Collapsible>
                     ))}
                   </div>
                 )}
