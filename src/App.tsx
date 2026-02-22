@@ -4,17 +4,20 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useOrganization } from "@/hooks/useOrganization";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
+  const { data: orgData, isLoading: orgLoading } = useOrganization();
 
-  if (loading) {
+  if (loading || orgLoading) {
     return (
       <div className="min-h-screen bg-erp-bg0 flex items-center justify-center">
         <div className="text-erp-text2 text-sm">Laden...</div>
@@ -24,6 +27,35 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (!session) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // No organization yet → onboarding
+  if (!orgData) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function OnboardingRoute({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth();
+  const { data: orgData, isLoading: orgLoading } = useOrganization();
+
+  if (loading || orgLoading) {
+    return (
+      <div className="min-h-screen bg-erp-bg0 flex items-center justify-center">
+        <div className="text-erp-text2 text-sm">Laden...</div>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Already has org → go to dashboard
+  if (orgData) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
@@ -57,6 +89,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
