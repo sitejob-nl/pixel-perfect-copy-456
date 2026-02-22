@@ -1,6 +1,16 @@
 import { Icons } from "@/components/erp/ErpIcons";
+import { useAuth } from "@/contexts/AuthContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export default function ErpHeader() {
+  const { user, signOut } = useAuth();
+
+  const initials = (() => {
+    const name = user?.user_metadata?.full_name || user?.email || "";
+    if (name.includes("@")) return name.slice(0, 2).toUpperCase();
+    return name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase() || "??";
+  })();
+
   return (
     <header className="h-[52px] min-h-[52px] border-b border-erp-border0 flex items-center justify-between px-5 bg-erp-bg1">
       <div className="flex items-center gap-[7px] bg-erp-bg3 rounded-lg px-3 py-[6px] border border-erp-border0 w-[300px]">
@@ -15,9 +25,21 @@ export default function ErpHeader() {
           <Icons.Bell className="w-[18px] h-[18px]" />
           <span className="absolute top-[5px] right-[5px] w-[7px] h-[7px] rounded-full bg-erp-red border-2 border-erp-bg1" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center text-xs font-semibold text-white ml-[6px] cursor-pointer">
-          KG
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center text-xs font-semibold text-white ml-[6px] cursor-pointer">
+              {initials}
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-erp-bg2 border-erp-border0 text-erp-text0">
+            <DropdownMenuItem className="text-xs text-erp-text3 focus:bg-erp-hover" disabled>
+              {user?.email}
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-xs cursor-pointer focus:bg-erp-hover" onClick={() => signOut()}>
+              <Icons.LogOut className="w-3.5 h-3.5 mr-2" /> Uitloggen
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
