@@ -4,6 +4,7 @@ import ErpHeader from "@/components/erp/ErpHeader";
 import DashboardPage from "@/pages/DashboardPage";
 import ContactsPage from "@/pages/ContactsPage";
 import PipelinePage from "@/pages/PipelinePage";
+import CompaniesPage from "@/pages/CompaniesPage";
 import { ProjectsPage, InvoicesPage } from "@/pages/ProjectsInvoicesPage";
 import DataIntelPage from "@/pages/DataIntelPage";
 import ContentPage from "@/pages/ContentPage";
@@ -13,12 +14,12 @@ import type { IconName } from "@/components/erp/ErpIcons";
 const pages: Record<string, React.ReactNode> = {
   dashboard: <DashboardPage />,
   contacts: <ContactsPage />,
+  companies: <CompaniesPage />,
   pipeline: <PipelinePage />,
   projects: <ProjectsPage />,
   invoices: <InvoicesPage />,
   dataintel: <DataIntelPage />,
   content: <ContentPage />,
-  companies: <PlaceholderPage title="Bedrijven" icon="Building" />,
   quotes: <PlaceholderPage title="Offertes" icon="File" />,
   contracts: <PlaceholderPage title="Contracten" icon="Pen" />,
   demos: <PlaceholderPage title="Demo Generatie" icon="Globe" />,
