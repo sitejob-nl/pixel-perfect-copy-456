@@ -1,0 +1,110 @@
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { Icons, type IconName } from "@/components/erp/ErpIcons";
+import { Dot } from "@/components/erp/ErpPrimitives";
+
+interface NavItem {
+  k: string;
+  l: string;
+  i: IconName;
+  b?: string;
+  dot?: boolean;
+}
+
+interface NavSection {
+  l: string;
+  items: NavItem[];
+}
+
+const nav: NavSection[] = [
+  { l: "Overzicht", items: [{ k: "dashboard", l: "Dashboard", i: "Home" }] },
+  { l: "CRM", items: [
+    { k: "contacts", l: "Contacten", i: "Users", b: "8" },
+    { k: "companies", l: "Bedrijven", i: "Building" },
+    { k: "pipeline", l: "Pipeline", i: "Kanban", b: "7" },
+  ]},
+  { l: "Projecten", items: [
+    { k: "projects", l: "Projecten", i: "Folder" },
+    { k: "quotes", l: "Offertes", i: "File" },
+    { k: "invoices", l: "Facturen", i: "Receipt" },
+    { k: "contracts", l: "Contracten", i: "Pen" },
+  ]},
+  { l: "Intelligence", items: [
+    { k: "dataintel", l: "Data Intelligence", i: "Zap", dot: true },
+    { k: "demos", l: "Demo's", i: "Globe" },
+    { k: "content", l: "Content", i: "Calendar" },
+  ]},
+  { l: "Communicatie", items: [
+    { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
+  ]},
+];
+
+export default function ErpSidebar({ activePage, onNavigate }: { activePage: string; onNavigate: (page: string) => void }) {
+  const [hov, setHov] = useState<string | null>(null);
+
+  return (
+    <aside className="w-[248px] min-w-[248px] h-full bg-erp-bg1 border-r border-erp-border0 flex flex-col">
+      {/* Logo */}
+      <div className="px-4 pt-[18px] pb-[14px] border-b border-erp-border0">
+        <div className="flex items-center gap-[10px]">
+          <div className="w-[34px] h-[34px] rounded-[9px] bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" fill="#fff" fillOpacity="0.9"/>
+              <path d="M12 12V22M12 12L4 7M12 12l8-5" stroke="hsl(225, 93%, 64%)" strokeWidth="1.5"/>
+            </svg>
+          </div>
+          <div>
+            <div className="text-base font-bold tracking-tight leading-tight">SiteJob</div>
+            <div className="text-[10.5px] text-erp-text3 font-medium mt-[1px]">ERP Platform</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 p-[10px_8px] overflow-y-auto">
+        {nav.map(sec => (
+          <div key={sec.l} className="mb-[18px]">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">{sec.l}</div>
+            {sec.items.map(it => {
+              const Icon = Icons[it.i];
+              const active = activePage === it.k;
+              const hover = hov === it.k && !active;
+              return (
+                <div
+                  key={it.k}
+                  onClick={() => onNavigate(it.k)}
+                  onMouseEnter={() => setHov(it.k)}
+                  onMouseLeave={() => setHov(null)}
+                  className={cn(
+                    "flex items-center gap-[9px] px-[10px] py-[7px] rounded-lg cursor-pointer text-[13px] transition-all duration-100",
+                    active ? "text-erp-text0 bg-erp-bg3 font-medium" : hover ? "text-erp-text1 bg-erp-hover" : "text-erp-text2"
+                  )}
+                >
+                  <Icon className="w-[18px] h-[18px]" />
+                  <span className="flex-1">{it.l}</span>
+                  {it.b && (
+                    <span className={cn(
+                      "text-[10.5px] font-semibold px-[7px] py-[1px] rounded-[10px]",
+                      active ? "bg-erp-blue/10 text-erp-blue" : "bg-erp-bg4 text-erp-text3"
+                    )}>{it.b}</span>
+                  )}
+                  {it.dot && <Dot color="hsl(160, 67%, 52%)" size={6} />}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="px-3 py-3 border-t border-erp-border0 flex items-center gap-[10px]">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center text-[11px] font-bold text-white">SJ</div>
+        <div className="flex-1">
+          <div className="text-[13px] font-semibold">SiteJob B.V.</div>
+          <div className="text-[10.5px] text-erp-text3">Professional</div>
+        </div>
+        <span className="text-erp-text3 cursor-pointer flex"><Icons.Settings className="w-[17px] h-[17px]" /></span>
+      </div>
+    </aside>
+  );
+}
