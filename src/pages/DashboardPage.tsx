@@ -1,11 +1,14 @@
+import { useState } from "react";
 import { StatCard, ErpCard, Dot, Chip, PageHeader, ErpButton, fmt } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
+import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
 
 export default function DashboardPage() {
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   // Pipeline value + open deals
   const { data: dealStats } = useQuery({
     queryKey: ["dashboard-deals"],
@@ -142,6 +145,7 @@ export default function DashboardPage() {
         <ErpCard className="p-5">
           <div className="flex justify-between mb-[14px]">
             <span className="text-[15px] font-semibold">Recente activiteit</span>
+            <ErpButton onClick={() => setActivityDialogOpen(true)}><Icons.Plus className="w-3.5 h-3.5" /> Loggen</ErpButton>
           </div>
           {activities.length === 0 && (
             <div className="text-sm text-erp-text3 py-4">Nog geen activiteiten.</div>
@@ -160,6 +164,8 @@ export default function DashboardPage() {
           ))}
         </ErpCard>
       </div>
+
+      <CreateActivityDialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen} />
     </div>
   );
 }
