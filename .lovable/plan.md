@@ -1,82 +1,68 @@
 
 
-# Fix: MCP Tool Resultaten Opvangen en Tonen
+# Fix Build Errors: Snelstart Type Mismatches
 
-## Het echte probleem
+## Wat er nu is opgezet voor Snelstart
 
-De Anthropic API stuurt `mcp_tool_result` content **inline** in het `content_block_start` event, niet via streaming deltas. Het ziet er zo uit:
+**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
 
-```text
-content_block_start: {
-  "type": "mcp_tool_result",
-  "content": [
-    { "type": "text", "text": "...alle scraped data..." }
-  ]
-}
+**Frontend:**
+- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
+- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
+- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
+
+**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
+
+## Root Cause van de Build Errors
+
+De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
+
+## Fix (2 bestanden)
+
+### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
+
+Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
+
+Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
+```
+// FOUT: profiles heeft geen organization_id
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("organization_id")
+  .eq("id", user.id)
+  .single();
+
+// FIX: gebruik organization_members
+const { data: membership } = await supabase
+  .from("organization_members")
+  .select("organization_id")
+  .eq("user_id", user.id)
+  .eq("is_active", true)
+  .limit(1)
+  .single();
 ```
 
-De huidige parser kijkt alleen naar `content_block_delta` events met `text_delta` -- daardoor worden de tool resultaten volledig genegeerd. De "done" status wordt wel correct gezet, maar de daadwerkelijke data verdwijnt.
-
-Na de tool result stuurt Claude mogelijk een samenvattend text block, maar als dat er niet is (of als het alleen de tool result bevat), dan zie je alleen de initiële tekst.
-
-## Oplossing
-
-### Stap 1: mcp_tool_result content opvangen in de parser
-
-In `src/pages/AIAgentPage.tsx`, bij het `content_block_start` event voor `mcp_tool_result`:
-- Lees `event.content_block.content` (een array van content items)
-- Extraheer alle text items en sla ze op in een `toolResults` variabele
-- Voeg de tool resultaat tekst toe aan het assistant bericht
-
-### Stap 2: Tool resultaten opslaan in het bericht
-
-Voeg een `toolResults` veld toe aan de `ChatMessage` interface in `useAiChatSessions.ts`:
+Voor de tabellen die niet in types staan, cast naar `any`:
 ```
-toolResults?: { toolName: string; content: string }[];
+const { data, error } = await (supabase as any)
+  .from("snelstart_config")
+  ...
 ```
 
-Sla de tool result content op zodat het ook bij herladen zichtbaar is.
+### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
 
-### Stap 3: Tool resultaten tonen in de UI
-
-In de message rendering, na de tool use indicators:
-- Toon een uitklapbaar "Resultaten" blok per tool
-- Gebruik een collapsible/accordion met de tool naam als header
-- Render de content als Markdown (scraped data is vaak gestructureerd)
-- Beperk de hoogte met een scroll area (max ~300px) omdat scraped data groot kan zijn
-
-### Stap 4: Fallback tekst verbeteren
-
-Als de stream eindigt en `fullText` alleen de initiële tekst bevat maar er WEL `toolResults` zijn:
-- Combineer de initiële tekst met een samenvatting: "De tool heeft resultaten opgeleverd (zie hieronder)."
-- Toon een "Samenvatten" knop die een follow-up bericht stuurt: "Vat de resultaten van de vorige tool call samen"
-
-## Technische Details
-
-**Gewijzigde bestanden:**
-- `src/hooks/useAiChatSessions.ts` -- `toolResults` veld toevoegen aan `ChatMessage` interface
-- `src/pages/AIAgentPage.tsx` -- parser aanpassen + UI voor tool resultaten + fallback logica
-
-**Geen database wijzigingen nodig** -- het `messages` veld is JSONB en accepteert het nieuwe veld automatisch.
-
-**Parser wijziging (kern van de fix):**
-
-Bij `content_block_start` met type `mcp_tool_result`:
+Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
 ```
-// Huidige code: markeert alleen tool als "done"
-
-// Nieuwe code: ook content extracten
-if (block.content && Array.isArray(block.content)) {
-  const resultText = block.content
-    .filter(c => c.type === "text")
-    .map(c => c.text)
-    .join("\n");
-  // Sla op als toolResult
-}
+const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
+const actorId = providerConfig?.actorId || "";
 ```
 
-**UI weergave:**
-- Collapsible sectie onder elke tool indicator
-- Header: "Resultaten van [tool-naam]" met chevron
-- Body: ScrollArea met Markdown-rendered content
-- Standaard ingeklapt als de tekst > 500 karakters is, anders uitgeklapt
+### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
+
+De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
+
+## Bestanden
+
+- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
+- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
+
