@@ -68,6 +68,27 @@ export function useOutreachSequences() {
   });
 }
 
+export function useStartScrapeRun() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      data_source_id: string;
+      organization_id: string;
+      actor_input: Record<string, unknown>;
+    }) => {
+      const { data, error } = await supabase.functions.invoke("run-scraper", {
+        body: params,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["scrape-runs"] });
+      qc.invalidateQueries({ queryKey: ["data-sources"] });
+    },
+  });
+}
+
 export function useDeleteScoringRule() {
   const qc = useQueryClient();
   return useMutation({

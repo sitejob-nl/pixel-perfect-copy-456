@@ -1,19 +1,35 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader, ErpButton, ErpCard, StatCard, ErpTabs, Dot, Badge, Chip, TH, TD, TR, fmt } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { tierColors } from "@/data/mockData";
 import { useScrapeRuns, useScoringRules, useOutreachSequences, useDeleteScoringRule } from "@/hooks/useDataIntel";
+import { useOrganization } from "@/hooks/useOrganization";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import RunScraperDialog from "@/components/erp/RunScraperDialog";
 
 export default function DataIntelPage() {
   const [tab, setTab] = useState("runs");
+  const [showRunDialog, setShowRunDialog] = useState(false);
 
+  const { data: org } = useOrganization();
   const { data: scrapeRuns = [] } = useScrapeRuns();
   const { data: scoringRules = [] } = useScoringRules();
   const { data: sequences = [] } = useOutreachSequences();
   const deleteScoringRule = useDeleteScoringRule();
+  const queryClient = useQueryClient();
+
+  // Auto-refresh scrape runs when any are still running
+  const hasRunning = scrapeRuns.some(r => r.status === "running");
+  useEffect(() => {
+    if (!hasRunning) return;
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["scrape-runs"] });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [hasRunning, queryClient]);
 
   // Stats from scrape runs
   const totalLeads = scrapeRuns.reduce((a, r) => a + (r.raw_results_count ?? 0), 0);
@@ -32,21 +48,31 @@ export default function DataIntelPage() {
   };
 
   const formatTime = (date: string | null) => {
-    if (!date) return "—";
-    try { return formatDistanceToNow(new Date(date), { addSuffix: true, locale: nl }); } catch { return "—"; }
+    if (!date) return "\u2014";
+    try { return formatDistanceToNow(new Date(date), { addSuffix: true, locale: nl }); } catch { return "\u2014"; }
   };
 
   return (
     <div className="animate-fade-up max-w-[1200px]">
       <PageHeader title="Data Intelligence" desc="Scraping, scoring & outreach pipeline">
-        <ErpButton primary><Icons.Zap className="w-4 h-4" /> Nieuwe run</ErpButton>
+        <ErpButton primary onClick={() => setShowRunDialog(true)}>
+          <Icons.Zap className="w-4 h-4" /> Nieuwe run
+        </ErpButton>
       </PageHeader>
+
+      {org?.organization_id && (
+        <RunScraperDialog
+          open={showRunDialog}
+          onOpenChange={setShowRunDialog}
+          organizationId={org.organization_id}
+        />
+      )}
 
       <div className="grid grid-cols-4 gap-[14px] mb-6">
         <StatCard label="Leads gevonden" value={String(totalLeads)} change={`${scrapeRuns.length} runs`} up />
         <StatCard label="Hot leads" value={String(totalHot)} change="hoge score" up />
-        <StatCard label="Import ratio" value={`${importRatio}%`} change={`${totalImported} geïmporteerd`} up />
-        <StatCard label="Kosten" value={totalCost.toFixed(2)} prefix="€" change={totalLeads > 0 ? `€${(totalCost / totalLeads).toFixed(3)} per lead` : "—"} up />
+        <StatCard label="Import ratio" value={`${importRatio}%`} change={`${totalImported} ge\u00efmporteerd`} up />
+        <StatCard label="Kosten" value={totalCost.toFixed(2)} prefix="\u20ac" change={totalLeads > 0 ? `\u20ac${(totalCost / totalLeads).toFixed(3)} per lead` : "\u2014"} up />
       </div>
 
       <ErpTabs items={[["runs", "Scrape Runs"], ["scoring", "Scoring Rules"], ["outreach", "Outreach"]]} active={tab} onChange={setTab} />
@@ -54,7 +80,9 @@ export default function DataIntelPage() {
       {tab === "runs" && (
         <div className="flex flex-col gap-[6px]">
           {scrapeRuns.length === 0 && (
-            <ErpCard className="p-8 text-center text-erp-text3 text-sm">Nog geen scrape runs.</ErpCard>
+            <ErpCard className="p-8 text-center text-erp-text3 text-sm">
+              Nog geen scrape runs. Klik op <strong>"Nieuwe run"</strong> om te starten.
+            </ErpCard>
           )}
           {scrapeRuns.map(r => (
             <ErpCard key={r.id} className="px-5 py-[14px] flex items-center gap-4" hover>
@@ -76,7 +104,7 @@ export default function DataIntelPage() {
                 </div>
               )}
               <div className="text-center min-w-[50px]">
-                <div className="text-[13px] font-semibold text-erp-text2">€{Number(r.cost_euros ?? 0).toFixed(2)}</div>
+                <div className="text-[13px] font-semibold text-erp-text2">\u20ac{Number(r.cost_euros ?? 0).toFixed(2)}</div>
                 <div className="text-[10px] text-erp-text3">Kosten</div>
               </div>
               {r.status === "running" && (
@@ -100,7 +128,7 @@ export default function DataIntelPage() {
                   <TD className="font-medium">{r.name}</TD>
                   <TD><code className="text-[11px] text-erp-blue bg-erp-blue/10 px-[7px] py-[2px] rounded">{r.field_path}</code></TD>
                   <TD><Chip>{r.operator}</Chip></TD>
-                  <TD className="text-erp-text2">{r.value ?? "—"}</TD>
+                  <TD className="text-erp-text2">{r.value ?? "\u2014"}</TD>
                   <TD><span className={`font-bold ${r.score_delta >= 0 ? "text-erp-green" : "text-erp-red"}`}>{r.score_delta >= 0 ? "+" : ""}{r.score_delta}</span></TD>
                   <TD><Chip>{r.category ?? "general"}</Chip></TD>
                   <TD>
