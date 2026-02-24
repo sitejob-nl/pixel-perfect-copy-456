@@ -65,9 +65,9 @@ export function StatCard({ label, value, prefix = "", change, up }: {
         up ? "text-erp-green" : "text-erp-red"
       )}>
         {up ? (
-          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
         ) : (
-          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+          <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>
         )}
         {change}
       </div>
@@ -99,17 +99,19 @@ export function PageHeader({ title, desc, children }: { title: string; desc?: st
   );
 }
 
-export function ErpButton({ children, primary, onClick }: {
-  children: React.ReactNode; primary?: boolean; onClick?: () => void;
+export function ErpButton({ children, primary, onClick, disabled }: {
+  children: React.ReactNode; primary?: boolean; onClick?: () => void; disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       className={cn(
         "flex items-center gap-[6px] px-4 py-2 rounded-lg text-[13px] font-medium cursor-pointer transition-all duration-100",
         primary
           ? "bg-erp-blue text-white border-none hover:brightness-110"
-          : "bg-erp-bg3 text-erp-text0 border border-erp-border1 hover:bg-erp-hover"
+          : "bg-erp-bg3 text-erp-text0 border border-erp-border1 hover:bg-erp-hover",
+        disabled && "opacity-50 cursor-not-allowed"
       )}
     >
       {children}

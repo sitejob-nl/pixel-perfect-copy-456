@@ -18,26 +18,34 @@ interface NavSection {
 
 const nav: NavSection[] = [
   { l: "Overzicht", items: [{ k: "dashboard", l: "Dashboard", i: "Home" }] },
-  { l: "CRM", items: [
-    { k: "contacts", l: "Contacten", i: "Users", b: "8" },
-    { k: "companies", l: "Bedrijven", i: "Building" },
-    { k: "pipeline", l: "Pipeline", i: "Kanban", b: "7" },
-  ]},
-  { l: "Projecten", items: [
-    { k: "projects", l: "Projecten", i: "Folder" },
-    { k: "quotes", l: "Offertes", i: "File" },
-    { k: "invoices", l: "Facturen", i: "Receipt" },
-    { k: "contracts", l: "Contracten", i: "Pen" },
-  ]},
-  { l: "Intelligence", items: [
-    { k: "dataintel", l: "Data Intelligence", i: "Zap", dot: true },
-    { k: "aiagent", l: "AI Agent", i: "Bot", dot: true },
-    { k: "demos", l: "Demo's", i: "Globe" },
-    { k: "content", l: "Content", i: "Calendar" },
-  ]},
-  { l: "Communicatie", items: [
-    { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
-  ]},
+  {
+    l: "CRM", items: [
+      { k: "contacts", l: "Contacten", i: "Users", b: "8" },
+      { k: "companies", l: "Bedrijven", i: "Building" },
+      { k: "pipeline", l: "Pipeline", i: "Kanban", b: "7" },
+    ]
+  },
+  {
+    l: "Projecten", items: [
+      { k: "projects", l: "Projecten", i: "Folder" },
+      { k: "quotes", l: "Offertes", i: "File" },
+      { k: "invoices", l: "Facturen", i: "Receipt" },
+      { k: "contracts", l: "Contracten", i: "Pen" },
+    ]
+  },
+  {
+    l: "Intelligence", items: [
+      { k: "dataintel", l: "Data Intelligence", i: "Zap", dot: true },
+      { k: "aiagent", l: "AI Agent", i: "Bot", dot: true },
+      { k: "demos", l: "Demo's", i: "Globe" },
+      { k: "content", l: "Content", i: "Calendar" },
+    ]
+  },
+  {
+    l: "Communicatie", items: [
+      { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
+    ]
+  },
 ];
 
 export default function ErpSidebar({ activePage, onNavigate }: { activePage: string; onNavigate: (page: string) => void }) {
@@ -50,8 +58,8 @@ export default function ErpSidebar({ activePage, onNavigate }: { activePage: str
         <div className="flex items-center gap-[10px]">
           <div className="w-[34px] h-[34px] rounded-[9px] bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" fill="#fff" fillOpacity="0.9"/>
-              <path d="M12 12V22M12 12L4 7M12 12l8-5" stroke="hsl(225, 93%, 64%)" strokeWidth="1.5"/>
+              <path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" fill="#fff" fillOpacity="0.9" />
+              <path d="M12 12V22M12 12L4 7M12 12l8-5" stroke="hsl(225, 93%, 64%)" strokeWidth="1.5" />
             </svg>
           </div>
           <div>
@@ -104,7 +112,7 @@ export default function ErpSidebar({ activePage, onNavigate }: { activePage: str
           <div className="text-[13px] font-semibold">SiteJob B.V.</div>
           <div className="text-[10.5px] text-erp-text3">Professional</div>
         </div>
-        <span className="text-erp-text3 cursor-pointer flex"><Icons.Settings className="w-[17px] h-[17px]" /></span>
+        <span className="text-erp-text3 cursor-pointer flex" onClick={() => onNavigate("settings")}><Icons.Settings className="w-[17px] h-[17px]" /></span>
       </div>
     </aside>
   );
