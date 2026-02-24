@@ -48,8 +48,8 @@ export default function DataIntelPage() {
   };
 
   const formatTime = (date: string | null) => {
-    if (!date) return "\u2014";
-    try { return formatDistanceToNow(new Date(date), { addSuffix: true, locale: nl }); } catch { return "\u2014"; }
+    if (!date) return "—";
+    try { return formatDistanceToNow(new Date(date), { addSuffix: true, locale: nl }); } catch { return "—"; }
   };
 
   return (
@@ -71,8 +71,8 @@ export default function DataIntelPage() {
       <div className="grid grid-cols-4 gap-[14px] mb-6">
         <StatCard label="Leads gevonden" value={String(totalLeads)} change={`${scrapeRuns.length} runs`} up />
         <StatCard label="Hot leads" value={String(totalHot)} change="hoge score" up />
-        <StatCard label="Import ratio" value={`${importRatio}%`} change={`${totalImported} ge\u00efmporteerd`} up />
-        <StatCard label="Kosten" value={totalCost.toFixed(2)} prefix="\u20ac" change={totalLeads > 0 ? `\u20ac${(totalCost / totalLeads).toFixed(3)} per lead` : "\u2014"} up />
+        <StatCard label="Import ratio" value={`${importRatio}%`} change={`${totalImported} geïmporteerd`} up />
+        <StatCard label="Kosten" value={totalCost.toFixed(2)} prefix="€" change={totalLeads > 0 ? `€${(totalCost / totalLeads).toFixed(3)} per lead` : "—"} up />
       </div>
 
       <ErpTabs items={[["runs", "Scrape Runs"], ["scoring", "Scoring Rules"], ["outreach", "Outreach"]]} active={tab} onChange={setTab} />
@@ -90,9 +90,8 @@ export default function DataIntelPage() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-erp-text0 mb-[3px]">{r.data_sources?.name ?? "Onbekende bron"}</div>
                 <div className="flex gap-[10px] items-center">
-                  <span className={`text-[10px] font-bold tracking-wider px-2 py-[2px] rounded uppercase ${
-                    r.data_sources?.provider === "apify" ? "text-erp-green bg-erp-green/10" : "text-erp-amber bg-erp-amber/10"
-                  }`}>{r.data_sources?.provider ?? "?"}</span>
+                  <span className={`text-[10px] font-bold tracking-wider px-2 py-[2px] rounded uppercase ${r.data_sources?.provider === "apify" ? "text-erp-green bg-erp-green/10" : "text-erp-amber bg-erp-amber/10"
+                    }`}>{r.data_sources?.provider ?? "?"}</span>
                   <span className="text-xs text-erp-text3">{formatTime(r.created_at)}</span>
                 </div>
               </div>
@@ -104,7 +103,7 @@ export default function DataIntelPage() {
                 </div>
               )}
               <div className="text-center min-w-[50px]">
-                <div className="text-[13px] font-semibold text-erp-text2">\u20ac{Number(r.cost_euros ?? 0).toFixed(2)}</div>
+                <div className="text-[13px] font-semibold text-erp-text2">€{Number(r.cost_euros ?? 0).toFixed(2)}</div>
                 <div className="text-[10px] text-erp-text3">Kosten</div>
               </div>
               {r.status === "running" && (
@@ -128,7 +127,7 @@ export default function DataIntelPage() {
                   <TD className="font-medium">{r.name}</TD>
                   <TD><code className="text-[11px] text-erp-blue bg-erp-blue/10 px-[7px] py-[2px] rounded">{r.field_path}</code></TD>
                   <TD><Chip>{r.operator}</Chip></TD>
-                  <TD className="text-erp-text2">{r.value ?? "\u2014"}</TD>
+                  <TD className="text-erp-text2">{r.value ?? "—"}</TD>
                   <TD><span className={`font-bold ${r.score_delta >= 0 ? "text-erp-green" : "text-erp-red"}`}>{r.score_delta >= 0 ? "+" : ""}{r.score_delta}</span></TD>
                   <TD><Chip>{r.category ?? "general"}</Chip></TD>
                   <TD>
