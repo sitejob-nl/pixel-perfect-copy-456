@@ -23,7 +23,8 @@ export default function RunScraperDialog({ open, onOpenChange, organizationId }:
     const startRun = useStartScrapeRun();
 
     const selectedSource = dataSources?.find((s: any) => s.id === selectedSourceId);
-    const actorId = selectedSource?.provider_config?.actorId || "";
+    const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
+    const actorId = providerConfig?.actorId || "";
 
     // Build actor input based on the selected actor type
     const buildActorInput = () => {

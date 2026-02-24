@@ -234,6 +234,7 @@ export type Database = {
           organization_id: string
           phone: string | null
           postal_code: string | null
+          snelstart_id: string | null
           updated_at: string
           website: string | null
         }
@@ -260,6 +261,7 @@ export type Database = {
           organization_id: string
           phone?: string | null
           postal_code?: string | null
+          snelstart_id?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -286,6 +288,7 @@ export type Database = {
           organization_id?: string
           phone?: string | null
           postal_code?: string | null
+          snelstart_id?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -852,6 +855,7 @@ export type Database = {
           payment_type: string | null
           project_id: string | null
           quote_id: string | null
+          snelstart_id: string | null
           status: string
           subtotal: number | null
           total_amount: number | null
@@ -881,6 +885,7 @@ export type Database = {
           payment_type?: string | null
           project_id?: string | null
           quote_id?: string | null
+          snelstart_id?: string | null
           status?: string
           subtotal?: number | null
           total_amount?: number | null
@@ -910,6 +915,7 @@ export type Database = {
           payment_type?: string | null
           project_id?: string | null
           quote_id?: string | null
+          snelstart_id?: string | null
           status?: string
           subtotal?: number | null
           total_amount?: number | null
@@ -1765,6 +1771,7 @@ export type Database = {
           signature_url: string | null
           signed_at: string | null
           signed_by: string | null
+          snelstart_id: string | null
           status: string
           subtotal: number | null
           total_amount: number | null
@@ -1790,6 +1797,7 @@ export type Database = {
           signature_url?: string | null
           signed_at?: string | null
           signed_by?: string | null
+          snelstart_id?: string | null
           status?: string
           subtotal?: number | null
           total_amount?: number | null
@@ -1815,6 +1823,7 @@ export type Database = {
           signature_url?: string | null
           signed_at?: string | null
           signed_by?: string | null
+          snelstart_id?: string | null
           status?: string
           subtotal?: number | null
           total_amount?: number | null
@@ -2127,6 +2136,135 @@ export type Database = {
             columns: ["triggered_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snelstart_config: {
+        Row: {
+          app_short_name: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          koppel_sleutel: string | null
+          last_sync_at: string | null
+          organization_id: string
+          subscription_key: string | null
+          sync_interval: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          app_short_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          koppel_sleutel?: string | null
+          last_sync_at?: string | null
+          organization_id: string
+          subscription_key?: string | null
+          sync_interval?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          app_short_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          koppel_sleutel?: string | null
+          last_sync_at?: string | null
+          organization_id?: string
+          subscription_key?: string | null
+          sync_interval?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snelstart_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snelstart_entity_map: {
+        Row: {
+          entity_type: string
+          id: string
+          last_synced_at: string | null
+          organization_id: string
+          sitejob_id: string
+          snelstart_id: string
+        }
+        Insert: {
+          entity_type: string
+          id?: string
+          last_synced_at?: string | null
+          organization_id: string
+          sitejob_id: string
+          snelstart_id: string
+        }
+        Update: {
+          entity_type?: string
+          id?: string
+          last_synced_at?: string | null
+          organization_id?: string
+          sitejob_id?: string
+          snelstart_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snelstart_entity_map_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      snelstart_sync_log: {
+        Row: {
+          completed_at: string | null
+          direction: string
+          entity_type: string
+          error_details: Json | null
+          id: string
+          organization_id: string
+          records_failed: number | null
+          records_synced: number | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          direction?: string
+          entity_type: string
+          error_details?: Json | null
+          id?: string
+          organization_id: string
+          records_failed?: number | null
+          records_synced?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          direction?: string
+          entity_type?: string
+          error_details?: Json | null
+          id?: string
+          organization_id?: string
+          records_failed?: number | null
+          records_synced?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "snelstart_sync_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
