@@ -1,27 +1,32 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// Fetch snelstart config for current user's org
+async function getOrganizationId() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("organization_id")
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+    .limit(1)
+    .maybeSingle();
+
+  return membership?.organization_id || null;
+}
+
 export function useSnelstartConfig() {
   return useQuery({
     queryKey: ["snelstart-config"],
     queryFn: async () => {
-      // Get user's org
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const orgId = await getOrganizationId();
+      if (!orgId) return null;
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.organization_id) return null;
-
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("snelstart_config")
         .select("*")
-        .eq("organization_id", profile.organization_id)
+        .eq("organization_id", orgId)
         .maybeSingle();
 
       if (error) throw error;
@@ -30,7 +35,6 @@ export function useSnelstartConfig() {
   });
 }
 
-// Save/update snelstart config
 export function useSaveSnelstartConfig() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -39,23 +43,14 @@ export function useSaveSnelstartConfig() {
       app_short_name?: string;
       sync_interval?: string;
     }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const orgId = await getOrganizationId();
+      if (!orgId) throw new Error("No organization");
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.organization_id) throw new Error("No organization");
-
-      // Upsert
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("snelstart_config")
         .upsert(
           {
-            organization_id: profile.organization_id,
+            organization_id: orgId,
             ...config,
             updated_at: new Date().toISOString(),
           },
@@ -73,7 +68,6 @@ export function useSaveSnelstartConfig() {
   });
 }
 
-// Trigger a sync action via edge function
 export function useSnelstartSync() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -91,26 +85,17 @@ export function useSnelstartSync() {
   });
 }
 
-// Fetch sync logs
 export function useSnelstartSyncLog() {
   return useQuery({
     queryKey: ["snelstart-sync-log"],
     queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      const orgId = await getOrganizationId();
+      if (!orgId) return [];
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.organization_id) return [];
-
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("snelstart_sync_log")
         .select("*")
-        .eq("organization_id", profile.organization_id)
+        .eq("organization_id", orgId)
         .order("started_at", { ascending: false })
         .limit(20);
 
