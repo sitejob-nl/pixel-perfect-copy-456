@@ -1,68 +1,85 @@
 
 
-# Fix Build Errors: Snelstart Type Mismatches
+# SiteJob Frontend Security & Architecture Fixes
 
-## Wat er nu is opgezet voor Snelstart
+Dit document bevat het volledige plan op basis van het geüploade bestand. Er zijn 5 werkpakketten.
 
-**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
+---
 
-**Frontend:**
-- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
-- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
-- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
+## 1. Alle hooks: orgId in queryKey + enabled guard (8 bestanden)
 
-**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
+Elk van deze hooks mist `useOrganization()` voor cache-scoping. Fix: importeer `useOrganization`, haal `orgId` op, voeg toe aan `queryKey` en `enabled: !!orgId`.
 
-## Root Cause van de Build Errors
+| Hook | queryKey wordt |
+|------|---------------|
+| `useContacts.ts` | `["contacts", orgId]` |
+| `useDeals.ts` | `["deals", orgId]` + `["pipeline_stages", orgId]` |
+| `useCompanies.ts` | `["companies", orgId]` |
+| `useProjects.ts` | `["projects", orgId]` |
+| `useQuotes.ts` | `["quotes", orgId]` |
+| `useInvoices.ts` | `["invoices", orgId]` |
+| `useActivities.ts` | `["activities", orgId, ...]` |
+| `useDataIntel.ts` | alle queries krijgen orgId |
 
-De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
+`useSnelstart.ts`: verwijder `getOrganizationId()` helper + `(supabase as any)` casts, gebruik `useOrganization()`.
 
-## Fix (2 bestanden)
+---
 
-### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
+## 2. DashboardPage: orgId in inline queries
 
-Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
+De 4 inline `useQuery` calls in `DashboardPage.tsx` krijgen `orgId` in queryKey + `enabled: !!orgId`.
 
-Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
-```
-// FOUT: profiles heeft geen organization_id
-const { data: profile } = await supabase
-  .from("profiles")
-  .select("organization_id")
-  .eq("id", user.id)
-  .single();
+---
 
-// FIX: gebruik organization_members
-const { data: membership } = await supabase
-  .from("organization_members")
-  .select("organization_id")
-  .eq("user_id", user.id)
-  .eq("is_active", true)
-  .limit(1)
-  .single();
-```
+## 3. AIAgentPage: volledige stream parser rewrite
 
-Voor de tabellen die niet in types staan, cast naar `any`:
-```
-const { data, error } = await (supabase as any)
-  .from("snelstart_config")
-  ...
-```
+De backend stuurt nu custom SSE events (`text`, `tool_start`, `tool_done`, `done`, `error`) in plaats van Anthropic's native format.
 
-### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
+Wijzigingen:
+- **Auth header**: vervang `Bearer ${anonKey}` door `Bearer ${session.access_token}` (+ `apikey: anonKey`)
+- **System prompt**: update naar nieuwe versie (zonder MCP referenties)
+- **Parser**: verwijder alle `content_block_start/delta/stop` + `mcp_tool_use/result` logica. Vervang door simpele SSE event handler per type
+- **Cleanup**: verwijder `currentBlockType`, `lastToolName`, `toolResults` state, 5-min timeout, Collapsible tool result UI
+- **UI teksten**: "MCP" verwijderen uit footer/header teksten
+- **ChatMessage interface**: verwijder `toolResults` veld (niet meer nodig)
 
-Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
-```
-const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
-const actorId = providerConfig?.actorId || "";
-```
+---
 
-### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
+## 4. Plan limiet error handling in Create dialogs (7 bestanden)
 
-De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
+In de catch blocks van alle Create dialogs, detecteer "limit reached" in de error message en toon een specifieke toast ("Plan limiet bereikt / Upgrade je plan").
 
-## Bestanden
+Bestanden: `CreateContactDialog`, `CreateCompanyDialog`, `CreateDealDialog`, `CreateProjectDialog`, `CreateQuoteDialog`, `CreateInvoiceDialog`, `CreateActivityDialog`.
 
-- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
-- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
+---
+
+## 5. API Keys Settings (nieuw)
+
+### 5a. Nieuwe hook: `src/hooks/useApiKeys.ts`
+- `useApiKeyStatus()` — haalt key status op via `manage-api-keys` edge function
+- `useSetApiKey()` — slaat een key versleuteld op
+- `useVerifyApiKey()` — verifieert een key
+- `useDeleteApiKey()` — verwijdert een key
+
+### 5b. SettingsPage uitbreiden
+- Nieuwe "API Keys" tab toevoegen
+- Per key (Anthropic + Apify): status, input, opslaan/verifiëren/verwijderen knoppen
+- Alleen zichtbaar voor owners/admins
+
+### 5c. AIAgentPage: missing-key banner
+- Toon waarschuwing als Anthropic key niet ingesteld is
+
+---
+
+## Bestandenlijst (21 bestanden)
+
+**Hooks (orgId fix):** useContacts, useDeals, useCompanies, useProjects, useQuotes, useInvoices, useActivities, useDataIntel, useSnelstart
+
+**Pages:** DashboardPage, AIAgentPage, SettingsPage
+
+**Dialogs:** CreateContactDialog, CreateCompanyDialog, CreateDealDialog, CreateProjectDialog, CreateQuoteDialog, CreateInvoiceDialog, CreateActivityDialog
+
+**Nieuw:** `src/hooks/useApiKeys.ts`
+
+**Interface update:** `src/hooks/useAiChatSessions.ts` (verwijder `toolResults`)
 
