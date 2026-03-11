@@ -48,6 +48,11 @@ const nav: NavSection[] = [
       { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
     ]
   },
+  {
+    l: "Integraties", items: [
+      { k: "webhooks", l: "Webhooks", i: "Zap" },
+    ]
+  },
 ];
 
 // Map sidebar keys to module column names
