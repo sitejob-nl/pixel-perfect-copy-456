@@ -148,6 +148,7 @@ export default function AdminPage() {
                 <tbody>
                   {users?.map((u) => {
                     const orgList = (u.organizations as Json[] | null) ?? [];
+                    const isSA = (u as any).is_super_admin;
                     return (
                       <tr key={u.id} className="border-b border-erp-border0 hover:bg-erp-hover transition-colors">
                         <td className="px-4 py-3 font-medium text-erp-text0">{u.full_name || "—"}</td>
