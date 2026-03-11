@@ -31,6 +31,8 @@ export function useSaveSnelstartConfig() {
       subscription_key?: string;
       app_short_name?: string;
       sync_interval?: string;
+      koppel_sleutel?: string;
+      is_active?: boolean;
     }) => {
       const orgId = org?.organization_id;
       if (!orgId) throw new Error("No organization");
