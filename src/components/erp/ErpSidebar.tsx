@@ -2,6 +2,8 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icons, type IconName } from "@/components/erp/ErpIcons";
 import { Dot } from "@/components/erp/ErpPrimitives";
+import { useOrgModules } from "@/hooks/useOrgModules";
+import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 
 interface NavItem {
   k: string;
@@ -48,8 +50,30 @@ const nav: NavSection[] = [
   },
 ];
 
+// Map sidebar keys to module column names
+const moduleMap: Record<string, string> = {
+  projects: "mod_projects",
+  quotes: "mod_quotes",
+  invoices: "mod_invoices",
+  contracts: "mod_contracts",
+  content: "mod_content_calendar",
+  whatsapp: "mod_whatsapp",
+  dataintel: "mod_data_sources",
+  aiagent: "mod_ai_agent",
+  demos: "mod_demos",
+};
+
 export default function ErpSidebar({ activePage, onNavigate }: { activePage: string; onNavigate: (page: string) => void }) {
   const [hov, setHov] = useState<string | null>(null);
+  const { data: modules } = useOrgModules();
+  const { data: isSuperAdmin } = useIsSuperAdmin();
+
+  const isModuleEnabled = (pageKey: string) => {
+    const moduleKey = moduleMap[pageKey];
+    if (!moduleKey) return true; // core module
+    if (!modules) return true; // loading
+    return (modules as any)[moduleKey] === true;
+  };
 
   return (
     <aside className="w-[248px] min-w-[248px] h-full bg-erp-bg1 border-r border-erp-border0 flex flex-col">
@@ -71,38 +95,62 @@ export default function ErpSidebar({ activePage, onNavigate }: { activePage: str
 
       {/* Nav */}
       <nav className="flex-1 p-[10px_8px] overflow-y-auto">
-        {nav.map(sec => (
-          <div key={sec.l} className="mb-[18px]">
-            <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">{sec.l}</div>
-            {sec.items.map(it => {
-              const Icon = Icons[it.i];
-              const active = activePage === it.k;
-              const hover = hov === it.k && !active;
-              return (
-                <div
-                  key={it.k}
-                  onClick={() => onNavigate(it.k)}
-                  onMouseEnter={() => setHov(it.k)}
-                  onMouseLeave={() => setHov(null)}
-                  className={cn(
-                    "flex items-center gap-[9px] px-[10px] py-[7px] rounded-lg cursor-pointer text-[13px] transition-all duration-100",
-                    active ? "text-erp-text0 bg-erp-bg3 font-medium" : hover ? "text-erp-text1 bg-erp-hover" : "text-erp-text2"
-                  )}
-                >
-                  <Icon className="w-[18px] h-[18px]" />
-                  <span className="flex-1">{it.l}</span>
-                  {it.b && (
-                    <span className={cn(
-                      "text-[10.5px] font-semibold px-[7px] py-[1px] rounded-[10px]",
-                      active ? "bg-erp-blue/10 text-erp-blue" : "bg-erp-bg4 text-erp-text3"
-                    )}>{it.b}</span>
-                  )}
-                  {it.dot && <Dot color="hsl(160, 67%, 52%)" size={6} />}
-                </div>
-              );
-            })}
+        {nav.map(sec => {
+          const visibleItems = sec.items.filter(it => isModuleEnabled(it.k));
+          if (visibleItems.length === 0) return null;
+          return (
+            <div key={sec.l} className="mb-[18px]">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">{sec.l}</div>
+              {visibleItems.map(it => {
+                const Icon = Icons[it.i];
+                const active = activePage === it.k;
+                const hover = hov === it.k && !active;
+                return (
+                  <div
+                    key={it.k}
+                    onClick={() => onNavigate(it.k)}
+                    onMouseEnter={() => setHov(it.k)}
+                    onMouseLeave={() => setHov(null)}
+                    className={cn(
+                      "flex items-center gap-[9px] px-[10px] py-[7px] rounded-lg cursor-pointer text-[13px] transition-all duration-100",
+                      active ? "text-erp-text0 bg-erp-bg3 font-medium" : hover ? "text-erp-text1 bg-erp-hover" : "text-erp-text2"
+                    )}
+                  >
+                    <Icon className="w-[18px] h-[18px]" />
+                    <span className="flex-1">{it.l}</span>
+                    {it.b && (
+                      <span className={cn(
+                        "text-[10.5px] font-semibold px-[7px] py-[1px] rounded-[10px]",
+                        active ? "bg-erp-blue/10 text-erp-blue" : "bg-erp-bg4 text-erp-text3"
+                      )}>{it.b}</span>
+                    )}
+                    {it.dot && <Dot color="hsl(160, 67%, 52%)" size={6} />}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+
+        {/* Super Admin link */}
+        {isSuperAdmin && (
+          <div className="mb-[18px]">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">Admin</div>
+            <div
+              onClick={() => onNavigate("admin")}
+              onMouseEnter={() => setHov("admin")}
+              onMouseLeave={() => setHov(null)}
+              className={cn(
+                "flex items-center gap-[9px] px-[10px] py-[7px] rounded-lg cursor-pointer text-[13px] transition-all duration-100",
+                activePage === "admin" ? "text-erp-text0 bg-erp-bg3 font-medium" : hov === "admin" ? "text-erp-text1 bg-erp-hover" : "text-erp-text2"
+              )}
+            >
+              <Icons.Shield className="w-[18px] h-[18px]" />
+              <span className="flex-1">Super Admin</span>
+              <Dot color="hsl(25, 95%, 53%)" size={6} />
+            </div>
           </div>
-        ))}
+        )}
       </nav>
 
       {/* Footer */}
