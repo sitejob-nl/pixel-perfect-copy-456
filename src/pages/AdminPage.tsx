@@ -164,7 +164,7 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          {u.is_super_admin && (
+                          {isSA && (
                             <span className="text-[11px] px-2 py-0.5 rounded-full bg-erp-orange/15 text-erp-orange font-medium">
                               Super Admin
                             </span>
