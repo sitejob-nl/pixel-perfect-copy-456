@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import type { Database } from "@/integrations/supabase/types";
 
 type DealRow = Database["public"]["Tables"]["deals"]["Row"];
@@ -13,8 +14,12 @@ export interface DealWithRelations extends DealRow {
 }
 
 export function usePipelineStages() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["pipeline_stages"],
+    queryKey: ["pipeline_stages", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pipeline_stages")
@@ -27,8 +32,12 @@ export function usePipelineStages() {
 }
 
 export function useDeals() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["deals"],
+    queryKey: ["deals", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import type { Database } from "@/integrations/supabase/types";
 
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
@@ -13,8 +14,12 @@ export interface InvoiceWithLines extends InvoiceRow {
 }
 
 export function useInvoices() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["invoices"],
+    queryKey: ["invoices", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")

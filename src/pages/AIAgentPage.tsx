@@ -2,9 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Icons } from "@/components/erp/ErpIcons";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import {
   useAiChatSessions,
   useCreateChatSession,
@@ -15,7 +15,7 @@ import {
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 
-const SYSTEM_PROMPT = `Je bent de SiteJob AI Agent — een krachtige data intelligence assistent ingebouwd in het SiteJob ERP platform. Je hebt toegang tot diverse Apify scrapers en tools via MCP.
+const SYSTEM_PROMPT = `Je bent de SiteJob AI Agent — een krachtige data intelligence assistent ingebouwd in het SiteJob ERP platform. Je hebt toegang tot diverse Apify scrapers en tools.
 
 Je kunt onder andere:
 - Google Places doorzoeken op bedrijven in specifieke regio's en industrieën
@@ -23,7 +23,7 @@ Je kunt onder andere:
 - Websites crawlen en content extraheren
 - Trustpilot reviews ophalen
 - Leads vinden op basis van criteria
-- Web pagina's doorzoeken met RAG browser
+- Web pagina's doorzoeken
 
 Antwoord altijd in het Nederlands tenzij anders gevraagd. Wees behulpzaam, concreet en actiegericht. Wanneer je tools gebruikt, leg kort uit wat je doet.`;
 
@@ -36,10 +36,23 @@ export default function AIAgentPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  const { data: org } = useOrganization();
   const { data: sessions } = useAiChatSessions();
   const createSession = useCreateChatSession();
   const updateSession = useUpdateChatSession();
   const deleteSession = useDeleteChatSession();
+
+  // Check if Anthropic key is set
+  const [keyStatus, setKeyStatus] = useState<{ anthropic_key_set: boolean } | null>(null);
+  useEffect(() => {
+    if (!org?.organization_id) return;
+    supabase
+      .from("organization_api_keys")
+      .select("anthropic_key_set")
+      .eq("organization_id", org.organization_id)
+      .maybeSingle()
+      .then(({ data }) => setKeyStatus(data as any));
+  }, [org?.organization_id]);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -117,9 +130,10 @@ export default function AIAgentPage() {
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      // 5 minute timeout for long-running MCP tool calls (e.g. Apify scrapers)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
+      // Get user's access token for authenticated requests
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) throw new Error("Niet ingelogd. Log opnieuw in.");
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/ai-agent`,
@@ -127,14 +141,13 @@ export default function AIAgentPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${anonKey}`,
+            Authorization: `Bearer ${accessToken}`,
             apikey: anonKey,
           },
           body: JSON.stringify({
             messages: apiMessages,
             system: SYSTEM_PROMPT,
           }),
-          signal: controller.signal,
         }
       );
 
@@ -149,24 +162,20 @@ export default function AIAgentPage() {
       const decoder = new TextDecoder();
       let fullText = "";
       let toolUses: ChatMessage["toolUses"] = [];
-      let toolResults: ChatMessage["toolResults"] = [];
       let buffer = "";
-      // Track which content block indices are text vs tool_result
-      let currentBlockType: string | null = null;
-      let lastToolName: string | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) {
-          console.log("[AI Stream] Reader done — stream fully completed");
-          break;
-        }
+        if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
 
         for (const line of lines) {
+          // Handle named SSE events: "event: <type>\ndata: <payload>"
+          if (line.startsWith("event:")) continue; // skip event line, data follows
+
           if (!line.startsWith("data: ")) continue;
           const data = line.slice(6).trim();
           if (data === "[DONE]") continue;
@@ -174,13 +183,23 @@ export default function AIAgentPage() {
           try {
             const event = JSON.parse(data);
 
-            if (event.type === "content_block_start") {
-              const block = event.content_block;
-              console.log("[AI Stream] content_block_start:", block?.type, block?.name || "");
-              if (block?.type === "mcp_tool_use") {
-                currentBlockType = "mcp_tool_use";
-                const toolName = block.name || "tool";
-                lastToolName = toolName;
+            switch (event.type) {
+              case "text": {
+                fullText += event.text || "";
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = {
+                    ...updated[updated.length - 1],
+                    content: fullText,
+                    toolUses: [...(toolUses || [])],
+                  };
+                  return updated;
+                });
+                break;
+              }
+
+              case "tool_start": {
+                const toolName = event.tool || "tool";
                 toolUses = [...(toolUses || []), { name: toolName, status: "running" }];
                 setMessages((prev) => {
                   const updated = [...prev];
@@ -190,57 +209,10 @@ export default function AIAgentPage() {
                   };
                   return updated;
                 });
-              } else if (block?.type === "mcp_tool_result") {
-                currentBlockType = "mcp_tool_result";
-                console.log("[AI Stream] Tool result received, marking tool as done");
-                
-                // Extract tool result content inline
-                if (block.content && Array.isArray(block.content)) {
-                  const resultText = block.content
-                    .filter((c: any) => c.type === "text")
-                    .map((c: any) => c.text)
-                    .join("\n");
-                  if (resultText) {
-                    const toolName = lastToolName || "tool";
-                    toolResults = [...(toolResults || []), { toolName, content: resultText }];
-                    console.log("[AI Stream] Captured tool result for", toolName, "length:", resultText.length);
-                    setMessages((prev) => {
-                      const updated = [...prev];
-                      updated[updated.length - 1] = {
-                        ...updated[updated.length - 1],
-                        toolResults: [...(toolResults || [])],
-                      };
-                      return updated;
-                    });
-                  }
-                }
-                
-                if (toolUses?.some((t) => t.status === "running")) {
-                  toolUses = toolUses?.map((t, i) =>
-                    i === toolUses!.length - 1 && t.status === "running"
-                      ? { ...t, status: "done" }
-                      : t
-                  );
-                  setMessages((prev) => {
-                    const updated = [...prev];
-                    updated[updated.length - 1] = {
-                      ...updated[updated.length - 1],
-                      toolUses: [...(toolUses || [])],
-                      toolResults: [...(toolResults || [])],
-                    };
-                    return updated;
-                  });
-                }
-              } else if (block?.type === "text") {
-                currentBlockType = "text";
-              } else {
-                currentBlockType = block?.type || null;
+                break;
               }
-            }
 
-            if (event.type === "content_block_stop") {
-              console.log("[AI Stream] content_block_stop, blockType was:", currentBlockType);
-              if (toolUses?.some((t) => t.status === "running")) {
+              case "tool_done": {
                 toolUses = toolUses?.map((t) =>
                   t.status === "running" ? { ...t, status: "done" } : t
                 );
@@ -252,50 +224,51 @@ export default function AIAgentPage() {
                   };
                   return updated;
                 });
+                break;
               }
-              currentBlockType = null;
-            }
 
-            if (event.type === "message_delta") {
-              console.log("[AI Stream] message_delta:", event.delta?.stop_reason);
-            }
+              case "error": {
+                throw new Error(event.message || "Onbekende fout van de AI agent");
+              }
 
-            if (event.type === "message_stop") {
-              console.log("[AI Stream] message_stop - stream complete");
-            }
+              case "done": {
+                // Stream complete
+                break;
+              }
 
-            if (event.type === "content_block_delta") {
-              if (event.delta?.type === "text_delta" && event.delta.text) {
-                console.log("[AI Stream] text_delta, length:", event.delta.text.length, "block:", currentBlockType);
-                fullText += event.delta.text;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    ...updated[updated.length - 1],
-                    content: fullText,
-                    toolUses: [...(toolUses || [])],
-                  };
-                  return updated;
-                });
-              } else if (event.delta?.type === "input_json_delta") {
-                // Tool input streaming - ignore for display
+              // Legacy Anthropic format fallback
+              case "content_block_delta": {
+                if (event.delta?.type === "text_delta" && event.delta.text) {
+                  fullText += event.delta.text;
+                  setMessages((prev) => {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = {
+                      ...updated[updated.length - 1],
+                      content: fullText,
+                      toolUses: [...(toolUses || [])],
+                    };
+                    return updated;
+                  });
+                }
+                break;
               }
             }
-          } catch {
-            // ignore parse errors for partial chunks
+          } catch (e) {
+            if (e instanceof Error && e.message !== "Onbekende fout van de AI agent") {
+              // ignore parse errors for partial chunks
+            } else {
+              throw e;
+            }
           }
         }
       }
 
-      // Final update with fallback
+      // Final update
       const hadTools = toolUses && toolUses.length > 0;
-      const hadResults = toolResults && toolResults.length > 0;
       const finalContent =
         fullText ||
-        (hadTools && hadResults
-          ? "De tools zijn uitgevoerd. Bekijk de resultaten hieronder."
-          : hadTools
-          ? "✅ Tools zijn uitgevoerd. De resultaten zijn verwerkt door de AI — als er geen samenvatting verscheen, probeer dan een follow-up vraag te stellen."
+        (hadTools
+          ? "✅ Tools zijn uitgevoerd. De resultaten zijn verwerkt."
           : "(Geen antwoord ontvangen)");
 
       const finalMessages: ChatMessage[] = [
@@ -304,7 +277,6 @@ export default function AIAgentPage() {
           role: "assistant",
           content: finalContent,
           toolUses: toolUses?.map((t) => ({ ...t, status: "done" as const })),
-          toolResults: hadResults ? toolResults : undefined,
         },
       ];
 
@@ -313,8 +285,6 @@ export default function AIAgentPage() {
       // Save to database
       const sid = await saveSession(finalMessages, activeSessionId);
       if (sid) setActiveSessionId(sid);
-
-      clearTimeout(timeoutId);
     } catch (error: any) {
       const errorMessages: ChatMessage[] = [
         ...newMessages,
@@ -334,6 +304,8 @@ export default function AIAgentPage() {
       sendMessage();
     }
   };
+
+  const missingKey = keyStatus !== null && !keyStatus.anthropic_key_set;
 
   return (
     <div className="flex h-full max-h-[calc(100vh-90px)]">
@@ -404,7 +376,7 @@ export default function AIAgentPage() {
             <div>
               <h1 className="text-[15px] font-semibold text-erp-text0">AI Agent</h1>
               <p className="text-[11px] text-erp-text3">
-                Claude + Apify MCP · Google Places, Instagram, LinkedIn, Web Scraping & meer
+                Claude + Apify · Google Places, Instagram, LinkedIn, Web Scraping & meer
               </p>
             </div>
           </div>
@@ -415,6 +387,14 @@ export default function AIAgentPage() {
             Nieuw gesprek
           </button>
         </div>
+
+        {/* Missing API key banner */}
+        {missingKey && (
+          <div className="mx-4 mt-3 px-4 py-3 rounded-lg bg-erp-orange/10 border border-erp-orange/30 text-[13px] text-erp-orange flex items-center gap-2">
+            <span>⚠️</span>
+            <span>Anthropic API key is niet ingesteld. Ga naar <strong>Instellingen → API Keys</strong> om deze te configureren.</span>
+          </div>
+        )}
 
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto py-4 px-4 space-y-4">
@@ -494,28 +474,6 @@ export default function AIAgentPage() {
                   </div>
                 )}
 
-                {/* Tool results - collapsible */}
-                {msg.toolResults && msg.toolResults.length > 0 && (
-                  <div className="mb-2 space-y-1">
-                    {msg.toolResults.map((result, j) => (
-                      <Collapsible key={j} defaultOpen={result.content.length <= 500}>
-                        <CollapsibleTrigger className="flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-md bg-erp-bg3/50 hover:bg-erp-bg3 transition-colors w-full text-left group">
-                          <Icons.ChevDown className="w-3 h-3 text-erp-text3 transition-transform -rotate-90 group-data-[state=open]:rotate-0" />
-                          <span className="text-erp-text2 font-mono">Resultaten van {result.toolName}</span>
-                          <span className="text-erp-text3 ml-auto">{(result.content.length / 1024).toFixed(1)}KB</span>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <ScrollArea className="max-h-[300px] mt-1 rounded-md bg-erp-bg4 p-3">
-                            <div className="prose prose-sm prose-invert max-w-none text-[11px] [&_p]:my-1 [&_ul]:my-1 [&_li]:my-0.5 [&_code]:bg-erp-bg3 [&_code]:px-1 [&_code]:rounded [&_pre]:bg-erp-bg3 [&_pre]:p-2 [&_pre]:rounded">
-                              <ReactMarkdown>{result.content}</ReactMarkdown>
-                            </div>
-                          </ScrollArea>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    ))}
-                  </div>
-                )}
-
                 {msg.role === "assistant" && msg.content ? (
                   <div className="prose prose-sm prose-invert max-w-none [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_li]:my-0.5 [&_code]:bg-erp-bg4 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[12px] [&_pre]:bg-erp-bg4 [&_pre]:p-3 [&_pre]:rounded-lg [&_a]:text-erp-blue-light">
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -577,7 +535,7 @@ export default function AIAgentPage() {
             </button>
           </div>
           <p className="text-[10px] text-erp-text3 mt-2 text-center">
-            Claude Sonnet 4 · Apify MCP · Shift+Enter voor nieuwe regel
+            Claude Sonnet 4 · Apify Tools · Shift+Enter voor nieuwe regel
           </p>
         </div>
       </div>

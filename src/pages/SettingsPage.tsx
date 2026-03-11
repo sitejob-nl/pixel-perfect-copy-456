@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import SnelstartSettings from "@/components/erp/SnelstartSettings";
+import ApiKeysSettings from "@/components/erp/ApiKeysSettings";
 
 const tabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️" },
+  { key: "api-keys", label: "API Keys", icon: "🔑" },
   { key: "snelstart", label: "Snelstart", icon: "🔗" },
   { key: "notificaties", label: "Notificaties", icon: "🔔" },
   { key: "account", label: "Account", icon: "👤" },
@@ -12,7 +14,7 @@ const tabs = [
 type TabKey = (typeof tabs)[number]["key"];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("snelstart");
+  const [activeTab, setActiveTab] = useState<TabKey>("algemeen");
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -41,6 +43,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab Content */}
+      {activeTab === "api-keys" && <ApiKeysSettings />}
+
       {activeTab === "snelstart" && <SnelstartSettings />}
 
       {activeTab === "algemeen" && (

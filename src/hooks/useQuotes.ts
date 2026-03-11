@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import type { Database } from "@/integrations/supabase/types";
 
 type QuoteRow = Database["public"]["Tables"]["quotes"]["Row"];
@@ -13,8 +14,12 @@ export interface QuoteWithLines extends QuoteRow {
 }
 
 export function useQuotes() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["quotes"],
+    queryKey: ["quotes", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("quotes")

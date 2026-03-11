@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import type { Database } from "@/integrations/supabase/types";
 
 type ActivityRow = Database["public"]["Tables"]["activities"]["Row"];
@@ -22,8 +23,12 @@ interface ActivityFilters {
 }
 
 export function useActivities(filters?: ActivityFilters) {
+    const { data: org } = useOrganization();
+    const orgId = org?.organization_id;
+
     return useQuery({
-        queryKey: ["activities", filters],
+        queryKey: ["activities", orgId, filters],
+        enabled: !!orgId,
         queryFn: async () => {
             let query = supabase
                 .from("activities")

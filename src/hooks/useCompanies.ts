@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import type { Database } from "@/integrations/supabase/types";
 
 type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
@@ -7,8 +8,12 @@ type CompanyInsert = Database["public"]["Tables"]["companies"]["Insert"];
 type CompanyUpdate = Database["public"]["Tables"]["companies"]["Update"];
 
 export function useCompanies() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["companies"],
+    queryKey: ["companies", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("companies")

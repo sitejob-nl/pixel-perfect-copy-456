@@ -3,15 +3,20 @@ import { StatCard, ErpCard, Dot, Chip, PageHeader, ErpButton, fmt } from "@/comp
 import { Icons } from "@/components/erp/ErpIcons";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
 
 export default function DashboardPage() {
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   // Pipeline value + open deals
   const { data: dealStats } = useQuery({
-    queryKey: ["dashboard-deals"],
+    queryKey: ["dashboard-deals", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
@@ -23,7 +28,8 @@ export default function DashboardPage() {
 
   // MRR from subscriptions
   const { data: subscriptions } = useQuery({
-    queryKey: ["dashboard-mrr"],
+    queryKey: ["dashboard-mrr", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("subscriptions")
@@ -34,9 +40,9 @@ export default function DashboardPage() {
     },
   });
 
-
   const { data: hotCount } = useQuery({
-    queryKey: ["dashboard-hot-count"],
+    queryKey: ["dashboard-hot-count", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { count, error } = await supabase
         .from("contacts")
@@ -49,7 +55,8 @@ export default function DashboardPage() {
 
   // Recent activities
   const { data: activities = [] } = useQuery({
-    queryKey: ["dashboard-activities"],
+    queryKey: ["dashboard-activities", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("activities")
