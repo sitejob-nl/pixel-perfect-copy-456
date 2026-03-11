@@ -11,6 +11,7 @@ import DataIntelPage from "@/pages/DataIntelPage";
 import ContentPage from "@/pages/ContentPage";
 import AIAgentPage from "@/pages/AIAgentPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import WebhooksPage from "@/pages/WebhooksPage";
 import AdminPage from "@/pages/AdminPage";
 import SettingsPage from "@/pages/SettingsPage";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
