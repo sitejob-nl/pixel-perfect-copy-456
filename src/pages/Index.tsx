@@ -11,6 +11,9 @@ import DataIntelPage from "@/pages/DataIntelPage";
 import ContentPage from "@/pages/ContentPage";
 import AIAgentPage from "@/pages/AIAgentPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import AdminPage from "@/pages/AdminPage";
+import SettingsPage from "@/pages/SettingsPage";
+import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import type { IconName } from "@/components/erp/ErpIcons";
 
 const pages: Record<string, React.ReactNode> = {
@@ -27,10 +30,16 @@ const pages: Record<string, React.ReactNode> = {
   contracts: <PlaceholderPage title="Contracten" icon="Pen" />,
   demos: <PlaceholderPage title="Demo Generatie" icon="Globe" />,
   whatsapp: <PlaceholderPage title="WhatsApp" icon="Msg" />,
+  settings: <SettingsPage />,
 };
 
 const Index = () => {
   const [activePage, setActivePage] = useState("dashboard");
+  const { data: isSuperAdmin } = useIsSuperAdmin();
+
+  const resolvedPage = activePage === "admin"
+    ? (isSuperAdmin ? <AdminPage /> : <PlaceholderPage title="Geen toegang" icon="Home" />)
+    : (pages[activePage] || <PlaceholderPage title={activePage} icon="Home" />);
 
   return (
     <div className="flex h-screen w-full bg-erp-bg0 text-erp-text0 overflow-hidden">
@@ -38,7 +47,7 @@ const Index = () => {
       <main className="flex-1 flex flex-col overflow-hidden">
         <ErpHeader />
         <div className="flex-1 overflow-auto p-[22px]" key={activePage}>
-          {pages[activePage] || <PlaceholderPage title={activePage} icon="Home" />}
+          {resolvedPage}
         </div>
       </main>
     </div>
