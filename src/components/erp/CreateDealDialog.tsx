@@ -37,7 +37,11 @@ export default function CreateDealDialog({ open, onOpenChange }: { open: boolean
       setTitle(""); setValue(""); setStageId(""); setContactId(""); setCompanyId("");
       onOpenChange(false);
     } catch (err: any) {
-      toast({ title: "Fout", description: err.message, variant: "destructive" });
+      if (err.message?.toLowerCase().includes("limit reached")) {
+        toast({ title: "Plan limiet bereikt", description: "Upgrade je plan om meer deals toe te voegen.", variant: "destructive" });
+      } else {
+        toast({ title: "Fout", description: err.message, variant: "destructive" });
+      }
     }
   };
 

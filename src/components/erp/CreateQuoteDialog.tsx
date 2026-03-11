@@ -93,7 +93,13 @@ export default function CreateQuoteDialog({ open, onOpenChange }: Props) {
           onOpenChange(false);
           setContactId(null); setLineDesc(""); setLineQty("1"); setLinePrice(""); setNotes("");
         },
-        onError: (err) => toast.error(`Fout: ${err.message}`),
+        onError: (err) => {
+          if (err.message?.toLowerCase().includes("limit reached")) {
+            toast.error("Plan limiet bereikt. Upgrade je plan om meer offertes toe te voegen.");
+          } else {
+            toast.error(`Fout: ${err.message}`);
+          }
+        },
       }
     );
   };

@@ -94,7 +94,13 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
           setName(""); setDescription(""); setStatus("intake"); setPriority("medium");
           setCompanyId(null); setContactId(null); setEstimatedValue("");
         },
-        onError: (err) => toast.error(`Fout: ${err.message}`),
+        onError: (err) => {
+          if (err.message?.toLowerCase().includes("limit reached")) {
+            toast.error("Plan limiet bereikt. Upgrade je plan om meer projecten toe te voegen.");
+          } else {
+            toast.error(`Fout: ${err.message}`);
+          }
+        },
       }
     );
   };
