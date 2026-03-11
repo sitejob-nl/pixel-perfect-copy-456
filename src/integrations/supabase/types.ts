@@ -4287,50 +4287,98 @@ export type Database = {
       }
       webhook_endpoints: {
         Row: {
+          api_key_hash: string | null
+          api_key_prefix: string | null
           auto_assign_to: string | null
           created_at: string
+          dedup_action: string | null
+          dedup_field: string | null
           default_source: string | null
           default_status: string | null
           default_temperature: string | null
+          default_values: Json | null
+          description: string | null
           endpoint_key: string
           field_mapping: Json | null
+          field_mappings: Json | null
           id: string
           is_active: boolean | null
+          last_received_at: string | null
           name: string
           organization_id: string
+          sample_payload: Json | null
+          source_platform: string | null
           target_action: string
+          target_table: string | null
+          test_mode: boolean | null
+          total_failed: number | null
+          total_processed: number | null
+          total_received: number | null
+          transform_rules: Json | null
           updated_at: string
           verify_token: string | null
         }
         Insert: {
+          api_key_hash?: string | null
+          api_key_prefix?: string | null
           auto_assign_to?: string | null
           created_at?: string
+          dedup_action?: string | null
+          dedup_field?: string | null
           default_source?: string | null
           default_status?: string | null
           default_temperature?: string | null
+          default_values?: Json | null
+          description?: string | null
           endpoint_key?: string
           field_mapping?: Json | null
+          field_mappings?: Json | null
           id?: string
           is_active?: boolean | null
+          last_received_at?: string | null
           name: string
           organization_id: string
+          sample_payload?: Json | null
+          source_platform?: string | null
           target_action: string
+          target_table?: string | null
+          test_mode?: boolean | null
+          total_failed?: number | null
+          total_processed?: number | null
+          total_received?: number | null
+          transform_rules?: Json | null
           updated_at?: string
           verify_token?: string | null
         }
         Update: {
+          api_key_hash?: string | null
+          api_key_prefix?: string | null
           auto_assign_to?: string | null
           created_at?: string
+          dedup_action?: string | null
+          dedup_field?: string | null
           default_source?: string | null
           default_status?: string | null
           default_temperature?: string | null
+          default_values?: Json | null
+          description?: string | null
           endpoint_key?: string
           field_mapping?: Json | null
+          field_mappings?: Json | null
           id?: string
           is_active?: boolean | null
+          last_received_at?: string | null
           name?: string
           organization_id?: string
+          sample_payload?: Json | null
+          source_platform?: string | null
           target_action?: string
+          target_table?: string | null
+          test_mode?: boolean | null
+          total_failed?: number | null
+          total_processed?: number | null
+          total_received?: number | null
+          transform_rules?: Json | null
           updated_at?: string
           verify_token?: string | null
         }
@@ -4367,42 +4415,76 @@ export type Database = {
       }
       webhook_logs: {
         Row: {
+          company_id: string | null
           contact_id: string | null
           created_at: string
+          deal_id: string | null
           endpoint_id: string
           error_message: string | null
+          headers: Json | null
           id: string
           ip_address: string | null
+          is_duplicate: boolean | null
+          is_test: boolean | null
           mapped_data: Json | null
+          mapped_to_id: string | null
+          mapped_to_table: string | null
           organization_id: string
           payload: Json
+          processing_time_ms: number | null
+          source_platform: string | null
           status: string | null
         }
         Insert: {
+          company_id?: string | null
           contact_id?: string | null
           created_at?: string
+          deal_id?: string | null
           endpoint_id: string
           error_message?: string | null
+          headers?: Json | null
           id?: string
           ip_address?: string | null
+          is_duplicate?: boolean | null
+          is_test?: boolean | null
           mapped_data?: Json | null
+          mapped_to_id?: string | null
+          mapped_to_table?: string | null
           organization_id: string
           payload: Json
+          processing_time_ms?: number | null
+          source_platform?: string | null
           status?: string | null
         }
         Update: {
+          company_id?: string | null
           contact_id?: string | null
           created_at?: string
+          deal_id?: string | null
           endpoint_id?: string
           error_message?: string | null
+          headers?: Json | null
           id?: string
           ip_address?: string | null
+          is_duplicate?: boolean | null
+          is_test?: boolean | null
           mapped_data?: Json | null
+          mapped_to_id?: string | null
+          mapped_to_table?: string | null
           organization_id?: string
           payload?: Json
+          processing_time_ms?: number | null
+          source_platform?: string | null
           status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "webhook_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "webhook_logs_contact_id_fkey"
             columns: ["contact_id"]
@@ -4422,6 +4504,20 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_logs_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_logs_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
             referencedColumns: ["id"]
           },
           {
@@ -4446,6 +4542,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      webhook_source_templates: {
+        Row: {
+          created_at: string
+          default_field_mappings: Json
+          default_transform_rules: Json
+          description: string | null
+          display_name: string
+          documentation_url: string | null
+          icon: string | null
+          id: string
+          payload_example: Json | null
+          platform: string
+          supports_verification: boolean | null
+          verification_method: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_field_mappings?: Json
+          default_transform_rules?: Json
+          description?: string | null
+          display_name: string
+          documentation_url?: string | null
+          icon?: string | null
+          id?: string
+          payload_example?: Json | null
+          platform: string
+          supports_verification?: boolean | null
+          verification_method?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_field_mappings?: Json
+          default_transform_rules?: Json
+          description?: string | null
+          display_name?: string
+          documentation_url?: string | null
+          icon?: string | null
+          id?: string
+          payload_example?: Json | null
+          platform?: string
+          supports_verification?: boolean | null
+          verification_method?: string | null
+        }
+        Relationships: []
+      }
+      webhook_target_fields: {
+        Row: {
+          description: string | null
+          field_label: string
+          field_name: string
+          field_type: string
+          id: string
+          is_common: boolean | null
+          is_required: boolean | null
+          target_table: string
+        }
+        Insert: {
+          description?: string | null
+          field_label: string
+          field_name: string
+          field_type?: string
+          id?: string
+          is_common?: boolean | null
+          is_required?: boolean | null
+          target_table: string
+        }
+        Update: {
+          description?: string | null
+          field_label?: string
+          field_name?: string
+          field_type?: string
+          id?: string
+          is_common?: boolean | null
+          is_required?: boolean | null
+          target_table?: string
+        }
+        Relationships: []
       }
       website_scrapes: {
         Row: {
@@ -5164,6 +5338,10 @@ export type Database = {
         Args: { p_entity: string; p_org_id: string; p_prefix: string }
         Returns: string
       }
+      generate_webhook_api_key: {
+        Args: { p_endpoint_id: string }
+        Returns: string
+      }
       is_super_admin: { Args: never; Returns: boolean }
       org_module_enabled: {
         Args: { p_module: string; p_org_id: string }
@@ -5175,6 +5353,7 @@ export type Database = {
       }
       user_organization_ids: { Args: never; Returns: string[] }
       user_role_in_org: { Args: { p_org_id: string }; Returns: string }
+      verify_webhook_api_key: { Args: { p_api_key: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

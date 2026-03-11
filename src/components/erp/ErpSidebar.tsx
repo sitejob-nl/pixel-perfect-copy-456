@@ -48,6 +48,11 @@ const nav: NavSection[] = [
       { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
     ]
   },
+  {
+    l: "Integraties", items: [
+      { k: "webhooks", l: "Webhooks", i: "Zap" },
+    ]
+  },
 ];
 
 // Map sidebar keys to module column names
@@ -61,6 +66,7 @@ const moduleMap: Record<string, string> = {
   dataintel: "mod_data_sources",
   aiagent: "mod_ai_agent",
   demos: "mod_demos",
+  webhooks: "mod_webhooks",
 };
 
 export default function ErpSidebar({ activePage, onNavigate }: { activePage: string; onNavigate: (page: string) => void }) {
