@@ -2,3 +2,6 @@ project_id = "fuvpmxxihmpustftzvgk"
 
 [functions.ai-agent]
 verify_jwt = false
+
+[functions.manage-api-keys]
+verify_jwt = false
