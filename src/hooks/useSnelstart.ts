@@ -1,32 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-async function getOrganizationId() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .eq("is_active", true)
-    .limit(1)
-    .maybeSingle();
-
-  return membership?.organization_id || null;
-}
+import { useOrganization } from "@/hooks/useOrganization";
 
 export function useSnelstartConfig() {
-  return useQuery({
-    queryKey: ["snelstart-config"],
-    queryFn: async () => {
-      const orgId = await getOrganizationId();
-      if (!orgId) return null;
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
 
+  return useQuery({
+    queryKey: ["snelstart-config", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("snelstart_config")
         .select("*")
-        .eq("organization_id", orgId)
+        .eq("organization_id", orgId!)
         .maybeSingle();
 
       if (error) throw error;
@@ -37,13 +24,15 @@ export function useSnelstartConfig() {
 
 export function useSaveSnelstartConfig() {
   const queryClient = useQueryClient();
+  const { data: org } = useOrganization();
+
   return useMutation({
     mutationFn: async (config: {
       subscription_key?: string;
       app_short_name?: string;
       sync_interval?: string;
     }) => {
-      const orgId = await getOrganizationId();
+      const orgId = org?.organization_id;
       if (!orgId) throw new Error("No organization");
 
       const { data, error } = await (supabase as any)
@@ -86,16 +75,17 @@ export function useSnelstartSync() {
 }
 
 export function useSnelstartSyncLog() {
-  return useQuery({
-    queryKey: ["snelstart-sync-log"],
-    queryFn: async () => {
-      const orgId = await getOrganizationId();
-      if (!orgId) return [];
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
 
+  return useQuery({
+    queryKey: ["snelstart-sync-log", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("snelstart_sync_log")
         .select("*")
-        .eq("organization_id", orgId)
+        .eq("organization_id", orgId!)
         .order("started_at", { ascending: false })
         .limit(20);
 

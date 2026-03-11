@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import type { Database } from "@/integrations/supabase/types";
 
 type ContactRow = Database["public"]["Tables"]["contacts"]["Row"];
@@ -10,8 +11,12 @@ export interface ContactWithCompany extends ContactRow {
 }
 
 export function useContacts() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["contacts"],
+    queryKey: ["contacts", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")

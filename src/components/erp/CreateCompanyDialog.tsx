@@ -38,7 +38,11 @@ export default function CreateCompanyDialog({ open, onOpenChange }: { open: bool
       setForm({});
       onOpenChange(false);
     } catch (err: any) {
-      toast({ title: "Fout", description: err.message, variant: "destructive" });
+      if (err.message?.toLowerCase().includes("limit reached")) {
+        toast({ title: "Plan limiet bereikt", description: "Upgrade je plan om meer bedrijven toe te voegen.", variant: "destructive" });
+      } else {
+        toast({ title: "Fout", description: err.message, variant: "destructive" });
+      }
     }
   };
 

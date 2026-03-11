@@ -110,7 +110,13 @@ export default function CreateInvoiceDialog({ open, onOpenChange }: Props) {
           setCustomerName(""); setCustomerEmail(""); setContactId(null); setProjectId(null);
           setLineDesc(""); setLineQty("1"); setLinePrice("");
         },
-        onError: (err) => toast.error(`Fout: ${err.message}`),
+        onError: (err) => {
+          if (err.message?.toLowerCase().includes("limit reached")) {
+            toast.error("Plan limiet bereikt. Upgrade je plan om meer facturen toe te voegen.");
+          } else {
+            toast.error(`Fout: ${err.message}`);
+          }
+        },
       }
     );
   };

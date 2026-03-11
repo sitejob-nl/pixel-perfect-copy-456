@@ -7,7 +7,6 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   toolUses?: { name: string; status: "running" | "done" | "error" }[];
-  toolResults?: { toolName: string; content: string }[];
 }
 
 export interface AiChatSession {
@@ -29,12 +28,12 @@ export function useAiChatSessions() {
     enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("ai_chat_sessions" as any)
+        .from("ai_chat_sessions")
         .select("*")
         .eq("organization_id", orgId!)
         .order("updated_at", { ascending: false });
       if (error) throw error;
-      return (data as any[]) as AiChatSession[];
+      return data as unknown as AiChatSession[];
     },
   });
 }
@@ -47,7 +46,7 @@ export function useCreateChatSession() {
   return useMutation({
     mutationFn: async ({ title, messages }: { title: string; messages: ChatMessage[] }) => {
       const { data, error } = await supabase
-        .from("ai_chat_sessions" as any)
+        .from("ai_chat_sessions")
         .insert({
           organization_id: org!.organization_id,
           user_id: user!.id,
@@ -73,7 +72,7 @@ export function useUpdateChatSession() {
       const update: any = { messages: JSON.parse(JSON.stringify(messages)) };
       if (title) update.title = title;
       const { error } = await supabase
-        .from("ai_chat_sessions" as any)
+        .from("ai_chat_sessions")
         .update(update)
         .eq("id", id);
       if (error) throw error;
@@ -90,7 +89,7 @@ export function useDeleteChatSession() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from("ai_chat_sessions" as any)
+        .from("ai_chat_sessions")
         .delete()
         .eq("id", id);
       if (error) throw error;

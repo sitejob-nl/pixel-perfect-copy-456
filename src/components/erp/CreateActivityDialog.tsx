@@ -112,7 +112,11 @@ export default function CreateActivityDialog({ open, onOpenChange, defaultContac
                     resetForm();
                 },
                 onError: (err) => {
-                    toast.error(`Fout: ${err.message}`);
+                    if (err.message?.toLowerCase().includes("limit reached")) {
+                        toast.error("Plan limiet bereikt. Upgrade je plan om meer activiteiten toe te voegen.");
+                    } else {
+                        toast.error(`Fout: ${err.message}`);
+                    }
                 },
             }
         );

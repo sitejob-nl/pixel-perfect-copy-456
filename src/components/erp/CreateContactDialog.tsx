@@ -74,7 +74,11 @@ export default function CreateContactDialog({ open, onOpenChange }: Props) {
           resetForm();
         },
         onError: (err) => {
-          toast.error(`Fout: ${err.message}`);
+          if (err.message?.toLowerCase().includes("limit reached")) {
+            toast.error("Plan limiet bereikt. Upgrade je plan om meer contacten toe te voegen.");
+          } else {
+            toast.error(`Fout: ${err.message}`);
+          }
         },
       }
     );

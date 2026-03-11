@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 import type { Database } from "@/integrations/supabase/types";
 
 type DataSourceRow = Database["public"]["Tables"]["data_sources"]["Row"];
@@ -8,8 +9,12 @@ type ScoringRuleRow = Database["public"]["Tables"]["scoring_rules"]["Row"];
 type OutreachSequenceRow = Database["public"]["Tables"]["outreach_sequences"]["Row"];
 
 export function useDataSources() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["data-sources"],
+    queryKey: ["data-sources", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("data_sources")
@@ -26,8 +31,12 @@ export interface ScrapeRunWithSource extends ScrapeRunRow {
 }
 
 export function useScrapeRuns() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["scrape-runs"],
+    queryKey: ["scrape-runs", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scrape_runs")
@@ -41,8 +50,12 @@ export function useScrapeRuns() {
 }
 
 export function useScoringRules() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["scoring-rules"],
+    queryKey: ["scoring-rules", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scoring_rules")
@@ -55,8 +68,12 @@ export function useScoringRules() {
 }
 
 export function useOutreachSequences() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
   return useQuery({
-    queryKey: ["outreach-sequences"],
+    queryKey: ["outreach-sequences", orgId],
+    enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("outreach_sequences")
