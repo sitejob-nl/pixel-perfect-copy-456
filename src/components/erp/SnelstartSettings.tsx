@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ErpButton } from "@/components/erp/ErpPrimitives";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,30 @@ export default function SnelstartSettings() {
     const saveConfig = useSaveSnelstartConfig();
     const sync = useSnelstartSync();
     const { data: syncLog = [] } = useSnelstartSyncLog();
+
+    // Handle Snelstart callback: capture koppelSleutel from URL
+    const callbackHandled = useRef(false);
+    useEffect(() => {
+        if (callbackHandled.current) return;
+        const params = new URLSearchParams(window.location.search);
+        const koppelSleutel = params.get("koppelSleutel");
+        if (koppelSleutel) {
+            callbackHandled.current = true;
+            saveConfig.mutateAsync({
+                koppel_sleutel: koppelSleutel,
+                is_active: true,
+            }).then(() => {
+                toast.success("Snelstart koppeling geactiveerd!");
+            }).catch((e: any) => {
+                toast.error("Fout bij activeren koppeling: " + e.message);
+            });
+            // Clean URL
+            params.delete("koppelSleutel");
+            const clean = params.toString();
+            const newUrl = window.location.pathname + (clean ? "?" + clean : "");
+            window.history.replaceState({}, "", newUrl);
+        }
+    }, []);
 
     const [subscriptionKey, setSubscriptionKey] = useState("");
     const [appShortName, setAppShortName] = useState("");
