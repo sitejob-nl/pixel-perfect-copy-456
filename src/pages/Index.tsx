@@ -31,6 +31,7 @@ const pages: Record<string, React.ReactNode> = {
   contracts: <PlaceholderPage title="Contracten" icon="Pen" />,
   demos: <PlaceholderPage title="Demo Generatie" icon="Globe" />,
   whatsapp: <PlaceholderPage title="WhatsApp" icon="Msg" />,
+  webhooks: <WebhooksPage />,
   settings: <SettingsPage />,
 };
 

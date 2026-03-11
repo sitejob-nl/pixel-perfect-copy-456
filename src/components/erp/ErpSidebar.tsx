@@ -66,6 +66,7 @@ const moduleMap: Record<string, string> = {
   dataintel: "mod_data_sources",
   aiagent: "mod_ai_agent",
   demos: "mod_demos",
+  webhooks: "mod_webhooks",
 };
 
 export default function ErpSidebar({ activePage, onNavigate }: { activePage: string; onNavigate: (page: string) => void }) {
