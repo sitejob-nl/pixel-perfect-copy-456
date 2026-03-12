@@ -124,7 +124,7 @@ function GenerateTab() {
   const orgId = (orgData?.organizations as any)?.id;
   const { data: contacts } = useContacts();
   const generateDemo = useGenerateDemo();
-
+  const analyzeWebsite = useAnalyzeWebsite();
   // Dynamic model list from ai_models table
   const { data: aiModels } = useQuery({
     queryKey: ["ai-models"],
