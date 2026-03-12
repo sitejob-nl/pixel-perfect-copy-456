@@ -161,7 +161,8 @@ export default function OrgSettings() {
 
   const handleSave = async () => {
     try {
-      await updateOrg.mutateAsync(form);
+      const payload = { ...form, bg_color: form.bg_color || null };
+      await updateOrg.mutateAsync(payload);
       toast.success("Organisatie bijgewerkt");
     } catch (e: any) {
       toast.error(e.message || "Kon niet opslaan");
