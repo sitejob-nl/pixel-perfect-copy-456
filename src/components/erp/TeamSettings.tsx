@@ -148,7 +148,16 @@ export default function TeamSettings() {
       {/* Invite section */}
       {isAdmin && (
         <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
-          <h3 className="text-[15px] font-semibold text-erp-text0 mb-4">Teamlid uitnodigen</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-[15px] font-semibold text-erp-text0">Teamlid uitnodigen</h3>
+            <button
+              onClick={() => setShowEmailPreview(true)}
+              className="flex items-center gap-1.5 text-[12px] text-erp-text3 hover:text-erp-blue transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              Mail preview
+            </button>
+          </div>
           <div className="flex gap-3">
             <input
               type="email"
