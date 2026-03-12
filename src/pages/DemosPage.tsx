@@ -140,6 +140,7 @@ function GenerateTab() {
   });
 
   const [step, setStep] = useState(1);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [contactId, setContactId] = useState("");
@@ -155,36 +156,53 @@ function GenerateTab() {
   ];
 
   const handleGenerate = async () => {
-    setStep(2);
-    try {
-      let scrapeId: string | undefined;
-      // If website URL is provided, first analyze to get a scrape_id
-      if (websiteUrl) {
+    let scrapeId: string | undefined;
+    
+    // If website URL is provided, first analyze to get a scrape_id
+    if (websiteUrl) {
+      setIsAnalyzing(true);
+      try {
         const analyzeResult = await analyzeWebsite.mutateAsync({
           url: websiteUrl,
           organization_id: orgId,
         });
         scrapeId = analyzeResult?.scrape_id || analyzeResult?.id;
+      } catch {
+        setIsAnalyzing(false);
+        return;
       }
-      generateDemo.mutate(
-        {
-          company_name: companyName,
-          website_url: websiteUrl || undefined,
-          demo_type: demoType,
-          contact_id: contactId || undefined,
-          model,
-          organization_id: orgId,
-          scrape_id: scrapeId,
-        },
-        {
-          onSuccess: (data) => { setResult(data); setStep(3); },
-          onError: () => setStep(1),
-        }
-      );
-    } catch {
-      setStep(1);
+      setIsAnalyzing(false);
     }
+    
+    // Now generate the demo
+    setStep(2);
+    generateDemo.mutate(
+      {
+        company_name: companyName,
+        website_url: websiteUrl || undefined,
+        demo_type: demoType,
+        contact_id: contactId || undefined,
+        model,
+        organization_id: orgId,
+        scrape_id: scrapeId,
+      },
+      {
+        onSuccess: (data) => { setResult(data); setStep(3); },
+        onError: () => setStep(1),
+      }
+    );
   };
+
+  // Show website analysis loading screen
+  if (isAnalyzing) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Website wordt geanalyseerd...</p>
+        <p className="text-xs text-muted-foreground">We verzamelen informatie over kleuren, branding en content</p>
+      </div>
+    );
+  }
 
   if (step === 2) {
     return (
