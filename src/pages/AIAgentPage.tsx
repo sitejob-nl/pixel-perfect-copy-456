@@ -33,7 +33,10 @@ export default function AIAgentPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [lastUsage, setLastUsage] = useState<{ input_tokens: number; output_tokens: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: org } = useOrganization();
