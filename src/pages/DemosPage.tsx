@@ -140,6 +140,7 @@ function GenerateTab() {
   });
 
   const [step, setStep] = useState(1);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [contactId, setContactId] = useState("");
