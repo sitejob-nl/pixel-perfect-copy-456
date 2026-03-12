@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { PageHeader, ErpButton, ErpTabs, ErpCard, TH, TD, TR, Badge } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
