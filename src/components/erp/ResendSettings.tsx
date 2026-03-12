@@ -8,10 +8,14 @@ import {
   useResendTemplateMutation,
   useResendBroadcasts,
   useResendBroadcastMutation,
+  useResendContacts,
+  useResendContactMutation,
+  useResendDomains,
+  useResendDomainMutation,
 } from "@/hooks/useResend";
-import { Loader2, Plus, Trash2, Send, Copy, Globe, FileText, Radio, ExternalLink } from "lucide-react";
+import { Loader2, Plus, Trash2, Send, Copy, Globe, FileText, Radio, ExternalLink, Users, ShieldCheck, CheckCircle } from "lucide-react";
 
-type SubTab = "webhooks" | "templates" | "broadcasts";
+type SubTab = "webhooks" | "templates" | "broadcasts" | "contacts" | "domains";
 
 const WEBHOOK_EVENTS = [
   "email.sent",
@@ -43,6 +47,8 @@ export default function ResendSettings() {
     { key: "webhooks", label: "Webhooks", icon: <Globe className="w-4 h-4" /> },
     { key: "templates", label: "Templates", icon: <FileText className="w-4 h-4" /> },
     { key: "broadcasts", label: "Broadcasts", icon: <Radio className="w-4 h-4" /> },
+    { key: "contacts", label: "Contacts", icon: <Users className="w-4 h-4" /> },
+    { key: "domains", label: "Domains", icon: <ShieldCheck className="w-4 h-4" /> },
   ];
 
   return (
@@ -68,6 +74,8 @@ export default function ResendSettings() {
       {subTab === "webhooks" && <WebhooksPanel />}
       {subTab === "templates" && <TemplatesPanel />}
       {subTab === "broadcasts" && <BroadcastsPanel />}
+      {subTab === "contacts" && <ContactsPanel />}
+      {subTab === "domains" && <DomainsPanel />}
     </div>
   );
 }
@@ -376,6 +384,205 @@ function BroadcastsPanel() {
                 </button>
                 <button
                   onClick={() => mutation.mutate({ action: "delete", payload: { id: b.id } })}
+                  className="p-1.5 text-erp-text3 hover:text-red-400 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════ CONTACTS ═══════════════════════════════
+function ContactsPanel() {
+  const { data, isLoading } = useResendContacts();
+  const mutation = useResendContactMutation();
+  const [showCreate, setShowCreate] = useState(false);
+  const [form, setForm] = useState({ email: "", firstName: "", lastName: "", unsubscribed: false });
+
+  const contacts = data?.data || [];
+
+  const handleCreate = () => {
+    if (!form.email) return;
+    mutation.mutate(
+      { action: "create", payload: { ...form } },
+      { onSuccess: () => { setShowCreate(false); setForm({ email: "", firstName: "", lastName: "", unsubscribed: false }); } }
+    );
+  };
+
+  return (
+    <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[15px] font-semibold text-erp-text0">Resend Contacts</h3>
+        <button
+          onClick={() => setShowCreate(!showCreate)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-erp-blue text-white rounded-lg text-[12px] font-medium hover:bg-erp-blue/90 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Nieuw
+        </button>
+      </div>
+
+      {showCreate && (
+        <div className="mb-4 p-4 bg-erp-bg2 rounded-lg border border-erp-border0 space-y-3">
+          <div>
+            <label className="block text-[12px] font-medium text-erp-text2 mb-1">E-mail</label>
+            <input
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              placeholder="naam@voorbeeld.nl"
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[12px] font-medium text-erp-text2 mb-1">Voornaam</label>
+              <input
+                value={form.firstName}
+                onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
+              />
+            </div>
+            <div>
+              <label className="block text-[12px] font-medium text-erp-text2 mb-1">Achternaam</label>
+              <input
+                value={form.lastName}
+                onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-[12px] text-erp-text1">
+            <input
+              type="checkbox"
+              checked={form.unsubscribed}
+              onChange={(e) => setForm({ ...form, unsubscribed: e.target.checked })}
+              className="rounded border-erp-border0"
+            />
+            Uitgeschreven (unsubscribed)
+          </label>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-[12px] text-erp-text3 hover:text-erp-text1">Annuleren</button>
+            <button onClick={handleCreate} disabled={mutation.isPending} className="px-3 py-1.5 bg-erp-blue text-white rounded-lg text-[12px] font-medium hover:bg-erp-blue/90 disabled:opacity-50">
+              {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Aanmaken"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-erp-text3" /></div>
+      ) : contacts.length === 0 ? (
+        <p className="text-[13px] text-erp-text3 text-center py-6">Geen contacts gevonden</p>
+      ) : (
+        <div className="space-y-2">
+          {contacts.map((c: any) => (
+            <div key={c.id} className="flex items-center justify-between p-3 bg-erp-bg2 rounded-lg border border-erp-border0">
+              <div>
+                <div className="text-[13px] font-medium text-erp-text0">{c.email}</div>
+                <div className="text-[11px] text-erp-text3 mt-0.5">
+                  {[c.first_name, c.last_name].filter(Boolean).join(" ") || "—"}
+                  {c.unsubscribed && <span className="ml-2 text-red-400">uitgeschreven</span>}
+                </div>
+              </div>
+              <button
+                onClick={() => mutation.mutate({ action: "delete", payload: { id: c.id } })}
+                className="p-1.5 text-erp-text3 hover:text-red-400 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════ DOMAINS ═══════════════════════════════
+function DomainsPanel() {
+  const { data, isLoading } = useResendDomains();
+  const mutation = useResendDomainMutation();
+  const [showCreate, setShowCreate] = useState(false);
+  const [domainName, setDomainName] = useState("");
+
+  const domains = data?.data || [];
+
+  const handleCreate = () => {
+    if (!domainName) return;
+    mutation.mutate(
+      { action: "create", payload: { name: domainName } },
+      { onSuccess: () => { setShowCreate(false); setDomainName(""); } }
+    );
+  };
+
+  return (
+    <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[15px] font-semibold text-erp-text0">Domeinen</h3>
+        <button
+          onClick={() => setShowCreate(!showCreate)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-erp-blue text-white rounded-lg text-[12px] font-medium hover:bg-erp-blue/90 transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" /> Nieuw
+        </button>
+      </div>
+
+      {showCreate && (
+        <div className="mb-4 p-4 bg-erp-bg2 rounded-lg border border-erp-border0 space-y-3">
+          <div>
+            <label className="block text-[12px] font-medium text-erp-text2 mb-1">Domeinnaam</label>
+            <input
+              value={domainName}
+              onChange={(e) => setDomainName(e.target.value)}
+              placeholder="voorbeeld.nl"
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setShowCreate(false)} className="px-3 py-1.5 text-[12px] text-erp-text3 hover:text-erp-text1">Annuleren</button>
+            <button onClick={handleCreate} disabled={mutation.isPending} className="px-3 py-1.5 bg-erp-blue text-white rounded-lg text-[12px] font-medium hover:bg-erp-blue/90 disabled:opacity-50">
+              {mutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Toevoegen"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-erp-text3" /></div>
+      ) : domains.length === 0 ? (
+        <p className="text-[13px] text-erp-text3 text-center py-6">Geen domeinen gevonden</p>
+      ) : (
+        <div className="space-y-2">
+          {domains.map((d: any) => (
+            <div key={d.id} className="flex items-center justify-between p-3 bg-erp-bg2 rounded-lg border border-erp-border0">
+              <div>
+                <div className="text-[13px] font-medium text-erp-text0">{d.name}</div>
+                <div className="text-[11px] text-erp-text3 mt-0.5 flex items-center gap-2">
+                  <span className={cn(
+                    "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                    d.status === "verified" ? "bg-green-500/10 text-green-400" : "bg-yellow-500/10 text-yellow-400"
+                  )}>
+                    {d.status === "verified" && <CheckCircle className="w-3 h-3" />}
+                    {d.status || "pending"}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                {d.status !== "verified" && (
+                  <button
+                    onClick={() => mutation.mutate({ action: "verify", payload: { id: d.id } })}
+                    title="DNS verificatie starten"
+                    className="p-1.5 text-erp-text3 hover:text-erp-blue transition-colors"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => mutation.mutate({ action: "delete", payload: { id: d.id } })}
                   className="p-1.5 text-erp-text3 hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
