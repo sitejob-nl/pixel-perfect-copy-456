@@ -136,7 +136,8 @@ async function embedSignaturesInPdf(
   pdfBytes: Uint8Array,
   sessions: any[],
   signatureFields: any[] | null,
-  contract_id: string
+  contract_id: string,
+  contract: any
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -417,7 +418,8 @@ Deno.serve(async (req) => {
       new Uint8Array(basePdfBytes),
       signedSessions,
       signatureFields,
-      contract_id
+      contract_id,
+      contract
     );
 
     // Step 3: Generate document hash
