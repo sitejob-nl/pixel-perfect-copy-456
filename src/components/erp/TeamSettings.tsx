@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   useOrgMembers,
-  useOrgInvites,
   useMemberModuleOverrides,
   useInviteMember,
   useUpdateMemberRole,
@@ -28,12 +27,16 @@ const ROLE_LABELS: Record<string, string> = {
   owner: "Eigenaar",
   admin: "Admin",
   member: "Lid",
+  viewer: "Viewer",
+  intern: "Stagiair",
 };
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "bg-erp-orange/15 text-erp-orange",
   admin: "bg-erp-blue/15 text-erp-blue",
   member: "bg-erp-bg4 text-erp-text2",
+  viewer: "bg-erp-bg4 text-erp-text3",
+  intern: "bg-erp-bg4 text-erp-text3",
 };
 
 const MODULE_LABELS: Record<string, string> = {
@@ -154,8 +157,9 @@ function MemberContracts({ memberName, memberUserId }: { memberName: string; mem
 export default function TeamSettings() {
   const { user } = useAuth();
   const { data: org } = useOrganization();
-  const { data: members, isLoading: membersLoading } = useOrgMembers();
-  const { data: invites } = useOrgInvites();
+  const { data: membersData, isLoading: membersLoading } = useOrgMembers();
+  const members = membersData?.members;
+  const invites = membersData?.pending_invites;
   const { data: modules } = useOrgModules();
   const { data: orgDetails } = useOrgDetails();
   const { data: overrides } = useMemberModuleOverrides();
@@ -276,6 +280,8 @@ export default function TeamSettings() {
               className="bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
             >
               <option value="member">Lid</option>
+              <option value="viewer">Viewer</option>
+              <option value="intern">Stagiair</option>
               <option value="admin">Admin</option>
               {currentUserRole === "owner" && <option value="owner">Eigenaar</option>}
             </select>
@@ -393,6 +399,8 @@ export default function TeamSettings() {
                           className="bg-erp-bg2 border border-erp-border0 rounded-lg px-2 py-1 text-[12px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
                         >
                           <option value="member">Lid</option>
+                          <option value="viewer">Viewer</option>
+                          <option value="intern">Stagiair</option>
                           <option value="admin">Admin</option>
                           {currentUserRole === "owner" && <option value="owner">Eigenaar</option>}
                         </select>

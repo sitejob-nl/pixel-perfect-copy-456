@@ -3,6 +3,7 @@ import { PageHeader, ErpButton, ErpCard, StatCard, ErpTabs, Dot, Badge, Chip, TH
 import { Icons } from "@/components/erp/ErpIcons";
 import { tierColors } from "@/data/mockData";
 import { useScrapeRuns, useScoringRules, useOutreachSequences, useDeleteScoringRule } from "@/hooks/useDataIntel";
+import { useLeadPipeline, useEnrichmentStatus, useProcessLeads } from "@/hooks/useLeadEnrichment";
 import { useOrganization } from "@/hooks/useOrganization";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -11,13 +12,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import RunScraperDialog from "@/components/erp/RunScraperDialog";
 
 export default function DataIntelPage() {
-  const [tab, setTab] = useState("runs");
+  const [tab, setTab] = useState("pipeline");
   const [showRunDialog, setShowRunDialog] = useState(false);
 
   const { data: org } = useOrganization();
   const { data: scrapeRuns = [] } = useScrapeRuns();
   const { data: scoringRules = [] } = useScoringRules();
   const { data: sequences = [] } = useOutreachSequences();
+  const { data: leads = [] } = useLeadPipeline();
+  const { data: enrichmentStatus } = useEnrichmentStatus();
+  const processLeads = useProcessLeads();
   const deleteScoringRule = useDeleteScoringRule();
   const queryClient = useQueryClient();
 
@@ -38,6 +42,13 @@ export default function DataIntelPage() {
   const totalCost = scrapeRuns.reduce((a, r) => a + Number(r.cost_euros ?? 0), 0);
   const importRatio = totalLeads > 0 ? Math.round((totalImported / totalLeads) * 100) : 0;
 
+  // Pipeline stats
+  const rawLeadStats = enrichmentStatus?.raw_leads || {};
+  const pipelineNew = rawLeadStats.new ?? 0;
+  const pipelineEnriched = rawLeadStats.enriched ?? 0;
+  const pipelineImported = rawLeadStats.imported ?? 0;
+  const pipelineDuplicate = rawLeadStats.duplicate ?? 0;
+
   const runStatusColor = (status: string) => {
     switch (status) {
       case "completed": return "hsl(160,67%,52%)";
@@ -52,12 +63,45 @@ export default function DataIntelPage() {
     try { return formatDistanceToNow(new Date(date), { addSuffix: true, locale: nl }); } catch { return "—"; }
   };
 
+  const handleProcessAll = async () => {
+    try {
+      const result = await processLeads.mutateAsync({});
+      const p = result.pipeline;
+      toast.success(`Pipeline klaar: ${p.enriched ?? 0} verrijkt, ${p.imported ?? 0} geïmporteerd, ${p.duplicates_skipped ?? 0} duplicaten overgeslagen`);
+    } catch (e: any) {
+      toast.error(e.message || "Verwerking mislukt");
+    }
+  };
+
+  const scoreTierBadge = (tier: string | null) => {
+    const colors: Record<string, string> = {
+      hot: "bg-erp-red/15 text-erp-red",
+      warm: "bg-erp-orange/15 text-erp-orange",
+      cold: "bg-erp-blue/15 text-erp-blue",
+    };
+    return colors[tier || ""] || "bg-erp-bg4 text-erp-text3";
+  };
+
   return (
     <div className="animate-fade-up max-w-[1200px]">
-      <PageHeader title="Data Intelligence" desc="Scraping, scoring & outreach pipeline">
-        <ErpButton primary onClick={() => setShowRunDialog(true)}>
-          <Icons.Zap className="w-4 h-4" /> Nieuwe run
-        </ErpButton>
+      <PageHeader title="Data Intelligence" desc="Scraping, enrichment & outreach pipeline">
+        <div className="flex gap-2">
+          <ErpButton onClick={handleProcessAll} disabled={processLeads.isPending}>
+            {processLeads.isPending ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                Verwerken...
+              </>
+            ) : (
+              <>
+                <Icons.Zap className="w-4 h-4" /> Verwerk leads
+              </>
+            )}
+          </ErpButton>
+          <ErpButton primary onClick={() => setShowRunDialog(true)}>
+            <Icons.Zap className="w-4 h-4" /> Nieuwe run
+          </ErpButton>
+        </div>
       </PageHeader>
 
       {org?.organization_id && (
@@ -69,13 +113,83 @@ export default function DataIntelPage() {
       )}
 
       <div className="grid grid-cols-4 gap-[14px] mb-6">
-        <StatCard label="Leads gevonden" value={String(totalLeads)} change={`${scrapeRuns.length} runs`} up />
+        <StatCard label="Nieuw (raw)" value={String(pipelineNew)} change="wachten op verwerking" up={pipelineNew > 0} />
+        <StatCard label="Verrijkt" value={String(pipelineEnriched)} change={`${enrichmentStatus?.lead_enrichments ?? 0} enrichments`} up />
+        <StatCard label="Geïmporteerd" value={String(pipelineImported)} change={`${pipelineDuplicate} duplicaten`} up />
         <StatCard label="Hot leads" value={String(totalHot)} change="hoge score" up />
-        <StatCard label="Import ratio" value={`${importRatio}%`} change={`${totalImported} geïmporteerd`} up />
-        <StatCard label="Kosten" value={totalCost.toFixed(2)} prefix="€" change={totalLeads > 0 ? `€${(totalCost / totalLeads).toFixed(3)} per lead` : "—"} up />
       </div>
 
-      <ErpTabs items={[["runs", "Scrape Runs"], ["scoring", "Scoring Rules"], ["outreach", "Outreach"]]} active={tab} onChange={setTab} />
+      {/* Pipeline status bar */}
+      {(pipelineNew + pipelineEnriched + pipelineImported + pipelineDuplicate) > 0 && (
+        <div className="mb-6">
+          <div className="flex gap-1 h-3 rounded-full overflow-hidden bg-erp-bg4">
+            {pipelineNew > 0 && (
+              <div className="bg-erp-text3 transition-all" style={{ flex: pipelineNew }} title={`${pipelineNew} nieuw`} />
+            )}
+            {pipelineEnriched > 0 && (
+              <div className="bg-erp-blue transition-all" style={{ flex: pipelineEnriched }} title={`${pipelineEnriched} verrijkt`} />
+            )}
+            {pipelineImported > 0 && (
+              <div className="bg-erp-green transition-all" style={{ flex: pipelineImported }} title={`${pipelineImported} geïmporteerd`} />
+            )}
+            {pipelineDuplicate > 0 && (
+              <div className="bg-erp-orange transition-all" style={{ flex: pipelineDuplicate }} title={`${pipelineDuplicate} duplicaat`} />
+            )}
+          </div>
+          <div className="flex gap-4 mt-2 text-[10px] text-erp-text3">
+            <span className="flex items-center gap-1"><Dot color="#6b7280" size={6} /> Nieuw</span>
+            <span className="flex items-center gap-1"><Dot color="hsl(225,93%,64%)" size={6} /> Verrijkt</span>
+            <span className="flex items-center gap-1"><Dot color="hsl(160,67%,52%)" size={6} /> Geïmporteerd</span>
+            <span className="flex items-center gap-1"><Dot color="hsl(30,93%,64%)" size={6} /> Duplicaat</span>
+          </div>
+        </div>
+      )}
+
+      <ErpTabs items={[["pipeline", "Lead Pipeline"], ["runs", "Scrape Runs"], ["scoring", "Scoring Rules"], ["outreach", "Outreach"]]} active={tab} onChange={setTab} />
+
+      {tab === "pipeline" && (
+        <ErpCard className="overflow-hidden">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr>
+                <TH>Naam</TH>
+                <TH>Bedrijf</TH>
+                <TH>Score</TH>
+                <TH>Tier</TH>
+                <TH>E-mail</TH>
+                <TH>Bron</TH>
+                <TH>AI Samenvatting</TH>
+              </tr>
+            </thead>
+            <tbody>
+              {leads.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-8 border-b border-erp-border0 text-center text-erp-text3 text-sm">
+                  Nog geen leads in de pipeline. Start een scrape run en klik "Verwerk leads".
+                </td></tr>
+              )}
+              {leads.map((lead: any) => (
+                <TR key={lead.id}>
+                  <TD className="font-medium">{lead.first_name} {lead.last_name || ""}</TD>
+                  <TD className="text-erp-text2">{lead.company_name || "—"}</TD>
+                  <TD>
+                    <span className="font-bold text-erp-text0">{lead.lead_score ?? 0}</span>
+                  </TD>
+                  <TD>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${scoreTierBadge(lead.score_tier)}`}>
+                      {lead.score_tier || "—"}
+                    </span>
+                  </TD>
+                  <TD className="text-erp-text2 text-[12px]">{lead.email || "—"}</TD>
+                  <TD><Chip>{lead.source || "—"}</Chip></TD>
+                  <TD className="text-erp-text3 text-[11px] max-w-[200px] truncate">
+                    {lead.ai_summary || "—"}
+                  </TD>
+                </TR>
+              ))}
+            </tbody>
+          </table>
+        </ErpCard>
+      )}
 
       {tab === "runs" && (
         <div className="flex flex-col gap-[6px]">

@@ -17,7 +17,7 @@ export interface OrgInvite {
   id: string;
   email: string;
   role: string;
-  token: string;
+  token?: string;
   created_at: string;
   expires_at: string;
   accepted_at: string | null;
@@ -31,46 +31,31 @@ export interface ModuleOverride {
   is_enabled: boolean;
 }
 
+/** Fetches members + pending invites via manage-members edge function */
 export function useOrgMembers() {
-  const { data: org } = useOrganization();
-  const orgId = org?.organization_id;
-
   return useQuery({
-    queryKey: ["org-members", orgId],
-    enabled: !!orgId,
+    queryKey: ["org-members"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("organization_members")
-        .select("id, user_id, role, is_active, joined_at, invited_at, profiles(full_name, avatar_url, email, phone)")
-        .eq("organization_id", orgId!)
-        .order("joined_at", { ascending: true });
+      const { data, error } = await supabase.functions.invoke("manage-members", {
+        body: { action: "list" },
+      });
       if (error) throw error;
-
-      // Fetch emails from auth via a simple approach: get user emails from profiles or use member info
-      // We'll enhance with email lookup
-      return data as OrgMember[];
+      if (data?.error) throw new Error(data.error);
+      return {
+        members: (data?.members || []) as OrgMember[],
+        pending_invites: (data?.pending_invites || []) as OrgInvite[],
+      };
     },
   });
 }
 
+/** @deprecated Use useOrgMembers().data.pending_invites instead */
 export function useOrgInvites() {
-  const { data: org } = useOrganization();
-  const orgId = org?.organization_id;
-
-  return useQuery({
-    queryKey: ["org-invites", orgId],
-    enabled: !!orgId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("organization_invites")
-        .select("*")
-        .eq("organization_id", orgId!)
-        .is("accepted_at", null)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data as OrgInvite[];
-    },
-  });
+  const { data } = useOrgMembers();
+  return {
+    data: data?.pending_invites || [],
+    isLoading: false,
+  };
 }
 
 export function useMemberModuleOverrides() {
@@ -109,7 +94,6 @@ export function useInviteMember() {
       return data;
     },
     onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["org-invites"] });
       qc.invalidateQueries({ queryKey: ["org-members"] });
       if (data?.email_sent) {
         toast.success("Uitnodiging verstuurd!");
@@ -125,11 +109,11 @@ export function useUpdateMemberRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ memberId, role }: { memberId: string; role: string }) => {
-      const { error } = await supabase
-        .from("organization_members")
-        .update({ role })
-        .eq("id", memberId);
+      const { data, error } = await supabase.functions.invoke("manage-members", {
+        body: { action: "update-role", member_id: memberId, role },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["org-members"] });
@@ -141,11 +125,11 @@ export function useRemoveMember() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (memberId: string) => {
-      const { error } = await supabase
-        .from("organization_members")
-        .update({ is_active: false })
-        .eq("id", memberId);
+      const { data, error } = await supabase.functions.invoke("manage-members", {
+        body: { action: "remove-member", member_id: memberId },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["org-members"] });
@@ -157,14 +141,14 @@ export function useDeleteInvite() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (inviteId: string) => {
-      const { error } = await supabase
-        .from("organization_invites")
-        .delete()
-        .eq("id", inviteId);
+      const { data, error } = await supabase.functions.invoke("manage-members", {
+        body: { action: "revoke-invite", invite_id: inviteId },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["org-invites"] });
+      qc.invalidateQueries({ queryKey: ["org-members"] });
     },
   });
 }
@@ -181,13 +165,12 @@ export function useSetModuleOverride() {
     }: {
       userId: string;
       moduleKey: string;
-      isEnabled: boolean | null; // null = remove override (inherit)
+      isEnabled: boolean | null;
     }) => {
       const orgId = org?.organization_id;
       if (!orgId) throw new Error("Geen organisatie");
 
       if (isEnabled === null) {
-        // Remove override
         const { error } = await (supabase as any)
           .from("member_module_overrides")
           .delete()
