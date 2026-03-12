@@ -1,58 +1,68 @@
 
 
-## Plan: Leeg contract met content-editor + PDF upload met veldpositionering
+# Fix Build Errors: Snelstart Type Mismatches
 
-### Wat wordt er gebouwd
+## Wat er nu is opgezet voor Snelstart
 
-Twee verbeteringen aan de contract-aanmaak flow:
+**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
 
-1. **Leeg contract → content invoeren**: Als je "Leeg contract" selecteert, verschijnt er in stap 2 een HTML-textarea waar je de contractinhoud kunt schrijven (in plaats van alleen variabelen koppelen).
+**Frontend:**
+- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
+- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
+- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
 
-2. **PDF uploaden**: Een derde optie naast "Leeg contract" en templates — "PDF uploaden". Je upload een PDF, die wordt omgezet naar pagina-afbeeldingen, en in stap 3 kun je met de bestaande PDFFieldEditor handtekeningvelden op de juiste plek slepen.
+**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
 
-### Technische aanpak
+## Root Cause van de Build Errors
 
-#### 1. ContractsPage.tsx — Step1Templates uitbreiden
+De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
 
-Drie opties in het template-selectiescherm:
-- **Leeg contract** (bestaand, `templateId = null`)
-- **PDF uploaden** (nieuw, `contractMode = "pdf"`)
-- **Templates** (bestaand)
+## Fix (2 bestanden)
 
-Nieuwe state: `contractMode: "template" | "empty" | "pdf"`, `uploadedPdfUrl`, `pdfPageImages: string[]`.
+### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
 
-#### 2. ContractsPage.tsx — Step2 aanpassen
+Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
 
-- **Als mode = "empty"**: toon een `<textarea>` voor vrije HTML-invoer (de content die als `rendered_html` wordt opgeslagen)
-- **Als mode = "pdf"**: toon een bestandsuploader. De PDF wordt geüpload naar de `org-assets` bucket. Vervolgens worden de pagina's gerenderd als afbeeldingen via een canvas (met `pdfjs-dist` library) zodat ze in de PDFFieldEditor getoond kunnen worden.
-- **Als mode = "template"**: bestaande variabelen-flow blijft ongewijzigd.
+Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
+```
+// FOUT: profiles heeft geen organization_id
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("organization_id")
+  .eq("id", user.id)
+  .single();
 
-#### 3. PDFFieldEditor.tsx — PDF-pagina's als afbeeldingen ondersteunen
+// FIX: gebruik organization_members
+const { data: membership } = await supabase
+  .from("organization_members")
+  .select("organization_id")
+  .eq("user_id", user.id)
+  .eq("is_active", true)
+  .limit(1)
+  .single();
+```
 
-Momenteel rendert de component HTML via `dangerouslySetInnerHTML`. Uitbreiden zodat als een pagina begint met `data:image` of een URL is, het als `<img>` wordt gerenderd in plaats van HTML. Dit maakt hergebruik mogelijk voor zowel HTML-contracten als geüploade PDF's.
+Voor de tabellen die niet in types staan, cast naar `any`:
+```
+const { data, error } = await (supabase as any)
+  .from("snelstart_config")
+  ...
+```
 
-#### 4. PDF naar afbeeldingen (client-side)
+### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
 
-Gebruik `pdfjs-dist` (nieuwe dependency) om PDF-pagina's client-side naar canvas te renderen en als base64 images om te zetten. Geen server-side verwerking nodig.
+Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
+```
+const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
+const actorId = providerConfig?.actorId || "";
+```
 
-#### 5. Contract opslaan
+### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
 
-Bij mode "pdf":
-- `pdf_url` → URL van de geüploade PDF in `org-assets`
-- `signature_fields` → de gepositioneerde velden
-- `content` / `rendered_html` → leeg (niet relevant voor PDF-contracten)
+De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
 
-Bij mode "empty":
-- `content` en `rendered_html` → de ingevoerde HTML-tekst
-- Geen `pdf_url`
+## Bestanden
 
-### Samenvatting wijzigingen
-
-| Bestand | Wijziging |
-|---|---|
-| `package.json` | `pdfjs-dist` toevoegen |
-| `src/pages/ContractsPage.tsx` | Contract-modes, PDF upload, textarea voor leeg contract, aangepaste step-flow |
-| `src/components/contracts/PDFFieldEditor.tsx` | Ondersteuning voor image-based pagina's naast HTML |
-
-Geen database-migraties nodig — `pdf_url`, `signature_fields`, `content`, `rendered_html` bestaan al.
+- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
+- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
 

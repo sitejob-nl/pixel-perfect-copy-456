@@ -173,11 +173,21 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
 
         {/* Document with overlay fields */}
         <div className="relative border border-erp-border0 rounded-xl bg-white overflow-hidden flex-1" ref={containerRef}>
-          <div
-            className="p-8 text-sm text-gray-900 leading-relaxed min-h-[500px] select-none"
-            dangerouslySetInnerHTML={{ __html: pages[activePage] || "<p>Geen content</p>" }}
-            onClick={() => setSelectedField(null)}
-          />
+          {pages[activePage]?.startsWith("data:image") || pages[activePage]?.startsWith("blob:") ? (
+            <img
+              src={pages[activePage]}
+              alt={`Pagina ${activePage + 1}`}
+              className="w-full select-none"
+              draggable={false}
+              onClick={() => setSelectedField(null)}
+            />
+          ) : (
+            <div
+              className="p-8 text-sm text-gray-900 leading-relaxed min-h-[500px] select-none"
+              dangerouslySetInnerHTML={{ __html: pages[activePage] || "<p>Geen content</p>" }}
+              onClick={() => setSelectedField(null)}
+            />
+          )}
 
           {/* Draggable fields overlay */}
           {pageFields.map((field) => {

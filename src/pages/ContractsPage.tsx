@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { PageHeader, ErpButton, ErpTabs, ErpCard, TH, TD, TR, Badge } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
@@ -162,10 +162,16 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   open: boolean; onClose: () => void; onCreated: (id: string) => void;
 }) {
   const [step, setStep] = useState(1);
+  const [contractMode, setContractMode] = useState<"template" | "empty" | "pdf">("template");
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [linkedRecords, setLinkedRecords] = useState<Record<string, string>>({});
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  const [emptyContent, setEmptyContent] = useState("");
+  const [uploadedPdfUrl, setUploadedPdfUrl] = useState<string | null>(null);
+  const [pdfPageImages, setPdfPageImages] = useState<string[]>([]);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [signatureFields, setSignatureFields] = useState<SignatureField[]>([]);
   const [signers, setSigners] = useState<Array<{ name: string; email: string; phone: string; role: string }>>([
     { name: "", email: "", phone: "", role: "Klant" },
   ]);
@@ -235,6 +241,8 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   }, [linkedRecords.contact_id, contacts]);
 
   const renderHtml = useMemo(() => {
+    if (contractMode === "empty") return emptyContent;
+    if (contractMode === "pdf") return "";
     if (!selectedTemplate?.content_html) return "";
     let html = selectedTemplate.content_html;
     for (const varName of templateVars) {
@@ -242,21 +250,58 @@ function CreateContractDialog({ open, onClose, onCreated }: {
       html = html.replaceAll(`{{${varName}}}`, val);
     }
     return html;
-  }, [selectedTemplate, templateVars, variableValues]);
+  }, [contractMode, selectedTemplate, templateVars, variableValues, emptyContent]);
+
+  // PDF upload handler
+  const handlePdfUpload = async (file: File) => {
+    setPdfUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "pdf";
+      const path = `contracts/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("org-assets").upload(path, file, { contentType: file.type });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("org-assets").getPublicUrl(path);
+      setUploadedPdfUrl(urlData.publicUrl);
+
+      // Render PDF pages to images using pdfjs-dist
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const images: string[] = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        images.push(canvas.toDataURL("image/png"));
+      }
+      setPdfPageImages(images);
+      toast.success(`PDF geladen — ${images.length} pagina('s)`);
+    } catch (e: any) {
+      toast.error(e.message || "PDF upload mislukt");
+    }
+    setPdfUploading(false);
+  };
 
   const handleCreate = async () => {
     try {
       const contract = await createContract.mutateAsync({
         title: title || selectedTemplate?.name || "Contract",
-        template_id: templateId,
+        template_id: contractMode === "template" ? templateId : null,
         contact_id: linkedRecords.contact_id || null,
         company_id: linkedRecords.company_id || null,
         deal_id: linkedRecords.deal_id || null,
         project_id: linkedRecords.project_id || null,
         quote_id: linkedRecords.quote_id || null,
         variable_values: variableValues,
-        rendered_html: renderHtml,
-        content: renderHtml,
+        rendered_html: contractMode !== "pdf" ? renderHtml : null,
+        content: contractMode !== "pdf" ? renderHtml : null,
+        pdf_url: contractMode === "pdf" ? uploadedPdfUrl : null,
+        signature_fields: signatureFields.length > 0 ? signatureFields : null,
         status: "draft",
       });
 
@@ -283,6 +328,16 @@ function CreateContractDialog({ open, onClose, onCreated }: {
     }
   };
 
+  // Determine step labels based on mode
+  const stepLabels = contractMode === "pdf"
+    ? ["Bron kiezen", "PDF uploaden", "Velden & Ondertekenaars"]
+    : contractMode === "empty"
+    ? ["Bron kiezen", "Content schrijven", "Preview & Ondertekenaars"]
+    : ["Template", "Variabelen", "Preview & Ondertekenaars"];
+
+  const canProceedStep1 = !!title;
+  const canProceedStep2 = contractMode !== "pdf" || pdfPageImages.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-erp-bg2 border-erp-border0">
@@ -294,7 +349,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
 
         {/* Step indicators */}
         <div className="flex gap-2 mb-4">
-          {["Template", "Variabelen", "Preview & Ondertekenaars"].map((label, i) => (
+          {stepLabels.map((label, i) => (
             <div
               key={i}
               className={cn(
@@ -309,17 +364,37 @@ function CreateContractDialog({ open, onClose, onCreated }: {
           <Step1Templates
             templates={templates || []}
             selected={templateId}
+            contractMode={contractMode}
             onSelect={(id) => {
               setTemplateId(id);
-              const tmpl = templates?.find((t: any) => t.id === id);
-              if (tmpl) setTitle(tmpl.name);
+              if (id) {
+                setContractMode("template");
+                const tmpl = templates?.find((t: any) => t.id === id);
+                if (tmpl) setTitle(tmpl.name);
+              }
+            }}
+            onModeChange={(mode) => {
+              setContractMode(mode);
+              setTemplateId(null);
             }}
             title={title}
             onTitleChange={setTitle}
           />
         )}
 
-        {step === 2 && (
+        {step === 2 && contractMode === "empty" && (
+          <Step2Empty content={emptyContent} onContentChange={setEmptyContent} />
+        )}
+
+        {step === 2 && contractMode === "pdf" && (
+          <Step2PdfUpload
+            pdfPageImages={pdfPageImages}
+            uploading={pdfUploading}
+            onUpload={handlePdfUpload}
+          />
+        )}
+
+        {step === 2 && contractMode === "template" && (
           <Step2Variables
             contacts={contacts || []}
             companies={companies || []}
@@ -341,6 +416,10 @@ function CreateContractDialog({ open, onClose, onCreated }: {
             signers={signers}
             onSignersChange={setSigners}
             members={members || []}
+            contractMode={contractMode}
+            pdfPageImages={pdfPageImages}
+            signatureFields={signatureFields}
+            onSignatureFieldsChange={setSignatureFields}
           />
         )}
 
@@ -349,7 +428,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
             {step === 1 ? "Annuleren" : "Vorige"}
           </ErpButton>
           {step < 3 ? (
-            <ErpButton primary onClick={() => setStep(step + 1)} disabled={step === 1 && !title}>
+            <ErpButton primary onClick={() => setStep(step + 1)} disabled={step === 1 ? !canProceedStep1 : !canProceedStep2}>
               Volgende
             </ErpButton>
           ) : (
@@ -363,8 +442,9 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   );
 }
 
-function Step1Templates({ templates, selected, onSelect, title, onTitleChange }: {
-  templates: any[]; selected: string | null; onSelect: (id: string | null) => void;
+function Step1Templates({ templates, selected, contractMode, onSelect, onModeChange, title, onTitleChange }: {
+  templates: any[]; selected: string | null; contractMode: "template" | "empty" | "pdf";
+  onSelect: (id: string | null) => void; onModeChange: (mode: "template" | "empty" | "pdf") => void;
   title: string; onTitleChange: (v: string) => void;
 }) {
   return (
@@ -380,44 +460,156 @@ function Step1Templates({ templates, selected, onSelect, title, onTitleChange }:
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-erp-text2 mb-2">Selecteer een template</label>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Empty option */}
+        <label className="block text-xs font-medium text-erp-text2 mb-2">Hoe wil je het contract aanmaken?</label>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {/* Empty contract */}
           <div
-            onClick={() => onSelect(null)}
+            onClick={() => onModeChange("empty")}
             className={cn(
               "p-4 rounded-xl border-2 cursor-pointer transition-all",
-              !selected
+              contractMode === "empty"
                 ? "border-erp-blue bg-erp-blue/5"
                 : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
             )}
           >
+            <Icons.Pen className="w-5 h-5 text-erp-text2 mb-2" />
             <div className="text-sm font-medium text-erp-text0">Leeg contract</div>
-            <div className="text-xs text-erp-text3 mt-1">Begin zonder template</div>
+            <div className="text-xs text-erp-text3 mt-1">Schrijf zelf de inhoud</div>
           </div>
 
-          {templates.map((t: any) => (
-            <div
-              key={t.id}
-              onClick={() => onSelect(t.id)}
-              className={cn(
-                "p-4 rounded-xl border-2 cursor-pointer transition-all",
-                selected === t.id
-                  ? "border-erp-blue bg-erp-blue/5"
-                  : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
-              )}
-            >
-              <div className="text-sm font-medium text-erp-text0">{t.name}</div>
-              <div className="text-xs text-erp-text3 mt-1">{t.description || t.category || "Template"}</div>
-              {t.variables?.length > 0 && (
-                <div className="text-[10px] text-erp-text3 mt-2">
-                  {t.variables.length} variabelen
-                </div>
-              )}
-            </div>
-          ))}
+          {/* PDF upload */}
+          <div
+            onClick={() => onModeChange("pdf")}
+            className={cn(
+              "p-4 rounded-xl border-2 cursor-pointer transition-all",
+              contractMode === "pdf"
+                ? "border-erp-blue bg-erp-blue/5"
+                : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
+            )}
+          >
+            <Icons.File className="w-5 h-5 text-erp-text2 mb-2" />
+            <div className="text-sm font-medium text-erp-text0">PDF uploaden</div>
+            <div className="text-xs text-erp-text3 mt-1">Upload een bestaand PDF-bestand</div>
+          </div>
+
+          {/* Template */}
+          <div
+            onClick={() => onModeChange("template")}
+            className={cn(
+              "p-4 rounded-xl border-2 cursor-pointer transition-all",
+              contractMode === "template"
+                ? "border-erp-blue bg-erp-blue/5"
+                : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
+            )}
+          >
+            <Icons.Portal className="w-5 h-5 text-erp-text2 mb-2" />
+            <div className="text-sm font-medium text-erp-text0">Template</div>
+            <div className="text-xs text-erp-text3 mt-1">Gebruik een bestaande template</div>
+          </div>
         </div>
+
+        {/* Template list (only when template mode) */}
+        {contractMode === "template" && templates.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            {templates.map((t: any) => (
+              <div
+                key={t.id}
+                onClick={() => onSelect(t.id)}
+                className={cn(
+                  "p-4 rounded-xl border-2 cursor-pointer transition-all",
+                  selected === t.id
+                    ? "border-erp-blue bg-erp-blue/5"
+                    : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
+                )}
+              >
+                <div className="text-sm font-medium text-erp-text0">{t.name}</div>
+                <div className="text-xs text-erp-text3 mt-1">{t.description || t.category || "Template"}</div>
+                {t.variables?.length > 0 && (
+                  <div className="text-[10px] text-erp-text3 mt-2">
+                    {t.variables.length} variabelen
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function Step2Empty({ content, onContentChange }: {
+  content: string; onContentChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold text-erp-text0">Contractinhoud schrijven</h4>
+      <p className="text-xs text-erp-text3">Schrijf de contracttekst hieronder. Je kunt HTML gebruiken voor opmaak.</p>
+      <textarea
+        value={content}
+        onChange={(e) => onContentChange(e.target.value)}
+        placeholder="Typ hier de contractinhoud..."
+        rows={16}
+        className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue font-mono resize-y"
+      />
+    </div>
+  );
+}
+
+function Step2PdfUpload({ pdfPageImages, uploading, onUpload }: {
+  pdfPageImages: string[]; uploading: boolean; onUpload: (file: File) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-4">
+      <h4 className="text-sm font-semibold text-erp-text0">PDF uploaden</h4>
+      <p className="text-xs text-erp-text3">Upload een PDF-bestand. In de volgende stap kun je handtekeningvelden op de juiste plek slepen.</p>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); }}
+      />
+
+      {pdfPageImages.length === 0 ? (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="w-full border-2 border-dashed border-erp-border1 rounded-xl py-12 flex flex-col items-center gap-2 text-erp-text2 hover:bg-erp-bg3 transition-colors disabled:opacity-50"
+        >
+          {uploading ? (
+            <span className="text-sm">PDF wordt verwerkt...</span>
+          ) : (
+            <>
+              <Icons.File className="w-8 h-8 text-erp-text3" />
+              <span className="text-sm font-medium">Klik om een PDF te uploaden</span>
+              <span className="text-xs text-erp-text3">of sleep het bestand hierheen</span>
+            </>
+          )}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-erp-text2 font-medium">{pdfPageImages.length} pagina('s) geladen</span>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="text-xs text-erp-blue hover:underline font-medium"
+            >
+              Ander bestand kiezen
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2 max-h-[350px] overflow-y-auto">
+            {pdfPageImages.map((img, i) => (
+              <div key={i} className="border border-erp-border0 rounded-lg overflow-hidden">
+                <img src={img} alt={`Pagina ${i + 1}`} className="w-full" />
+                <div className="text-[10px] text-erp-text3 text-center py-1">p{i + 1}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -523,11 +715,15 @@ function Step2Variables({ contacts, companies, deals, projects, quotes, linkedRe
   );
 }
 
-function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
+function Step3Preview({ renderHtml, signers, onSignersChange, members, contractMode, pdfPageImages, signatureFields, onSignatureFieldsChange }: {
   renderHtml: string;
   signers: Array<{ name: string; email: string; phone: string; role: string }>;
   onSignersChange: (s: Array<{ name: string; email: string; phone: string; role: string }>) => void;
   members: import("@/hooks/useTeam").OrgMember[];
+  contractMode: "template" | "empty" | "pdf";
+  pdfPageImages: string[];
+  signatureFields: SignatureField[];
+  onSignatureFieldsChange: (fields: SignatureField[]) => void;
 }) {
   const updateSigner = (i: number, field: string, value: string) => {
     const next = [...signers];
@@ -551,21 +747,40 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
 
   const activeMembers = members.filter((m) => m.is_active);
 
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {/* Left: Preview */}
-      <div>
-        <h4 className="text-sm font-semibold text-erp-text0 mb-2">Preview</h4>
-        <div
-          className="bg-white text-gray-900 rounded-lg p-6 max-h-[400px] overflow-y-auto text-sm shadow-inner border border-erp-border0"
-          dangerouslySetInnerHTML={{ __html: renderHtml || "<p>Geen content</p>" }}
-        />
-      </div>
+  const showFieldEditor = contractMode === "pdf" && pdfPageImages.length > 0;
 
-      {/* Right: Signers */}
+  return (
+    <div className="space-y-4">
+      {/* PDF field editor */}
+      {showFieldEditor && (
+        <div>
+          <h4 className="text-sm font-semibold text-erp-text0 mb-2">Velden positioneren op de PDF</h4>
+          <div className="h-[400px]">
+            <PDFFieldEditor
+              pages={pdfPageImages}
+              fields={signatureFields}
+              onChange={onSignatureFieldsChange}
+              signerCount={signers.length}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* HTML preview for non-PDF modes */}
+      {!showFieldEditor && (
+        <div>
+          <h4 className="text-sm font-semibold text-erp-text0 mb-2">Preview</h4>
+          <div
+            className="bg-white text-gray-900 rounded-lg p-6 max-h-[300px] overflow-y-auto text-sm shadow-inner border border-erp-border0"
+            dangerouslySetInnerHTML={{ __html: renderHtml || "<p>Geen content</p>" }}
+          />
+        </div>
+      )}
+
+      {/* Signers */}
       <div>
         <h4 className="text-sm font-semibold text-erp-text0 mb-2">Ondertekenaars</h4>
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {signers.map((s, i) => (
             <div key={i} className="bg-erp-bg3 rounded-xl p-3 border border-erp-border0 space-y-2">
               <div className="flex items-center justify-between">
@@ -579,13 +794,10 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
                   </button>
                 )}
               </div>
-              {/* Team member picker */}
               {activeMembers.length > 0 && (
                 <select
                   defaultValue=""
-                  onChange={(e) => {
-                    if (e.target.value) fillFromMember(i, e.target.value);
-                  }}
+                  onChange={(e) => { if (e.target.value) fillFromMember(i, e.target.value); }}
                   className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
                 >
                   <option value="">— Selecteer teamlid —</option>
@@ -596,45 +808,23 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
                   ))}
                 </select>
               )}
-              <input
-                value={s.role}
-                onChange={(e) => updateSigner(i, "role", e.target.value)}
-                placeholder="Rol (bijv. Klant)"
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
-              <input
-                value={s.name}
-                onChange={(e) => updateSigner(i, "name", e.target.value)}
-                placeholder="Naam"
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
-              <input
-                value={s.email}
-                onChange={(e) => updateSigner(i, "email", e.target.value)}
-                placeholder="E-mail"
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
-              <input
-                value={s.phone}
-                onChange={(e) => updateSigner(i, "phone", e.target.value)}
-                placeholder="Telefoon (voor SMS)"
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
+              <input value={s.role} onChange={(e) => updateSigner(i, "role", e.target.value)} placeholder="Rol (bijv. Klant)" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+              <input value={s.name} onChange={(e) => updateSigner(i, "name", e.target.value)} placeholder="Naam" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+              <input value={s.email} onChange={(e) => updateSigner(i, "email", e.target.value)} placeholder="E-mail" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+              <input value={s.phone} onChange={(e) => updateSigner(i, "phone", e.target.value)} placeholder="Telefoon (voor SMS)" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
             </div>
           ))}
-          <button
-            onClick={() => onSignersChange([...signers, { name: "", email: "", phone: "", role: "Ondertekenaar" }])}
-            className="text-xs text-erp-blue hover:underline font-medium"
-          >
-            + Ondertekenaar toevoegen
-          </button>
         </div>
+        <button
+          onClick={() => onSignersChange([...signers, { name: "", email: "", phone: "", role: "Ondertekenaar" }])}
+          className="text-xs text-erp-blue hover:underline font-medium mt-2"
+        >
+          + Ondertekenaar toevoegen
+        </button>
       </div>
     </div>
   );
 }
-
-// ─── Contract Detail Panel ─────────────────────────────────────
 
 function SendContractEmailDialog({ open, onClose, contract }: { open: boolean; onClose: () => void; contract: any }) {
   const sessions = contract.contract_signing_sessions || [];
