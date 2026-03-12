@@ -13,6 +13,7 @@ import { useCompanies } from "@/hooks/useCompanies";
 import { useDeals } from "@/hooks/useDeals";
 import { useProjects } from "@/hooks/useProjects";
 import { useQuotes } from "@/hooks/useQuotes";
+import { useOrgMembers } from "@/hooks/useTeam";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -172,6 +173,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   const { data: templates } = useContractTemplates();
   const { data: contacts } = useContacts();
   const { data: companies } = useCompanies();
+  const { data: members } = useOrgMembers();
   const { data: deals } = useDeals();
   const { data: projects } = useProjects();
   const { data: quotes } = useQuotes();
@@ -338,6 +340,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
             renderHtml={renderHtml}
             signers={signers}
             onSignersChange={setSigners}
+            members={members || []}
           />
         )}
 
@@ -520,16 +523,33 @@ function Step2Variables({ contacts, companies, deals, projects, quotes, linkedRe
   );
 }
 
-function Step3Preview({ renderHtml, signers, onSignersChange }: {
+function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
   renderHtml: string;
   signers: Array<{ name: string; email: string; phone: string; role: string }>;
   onSignersChange: (s: Array<{ name: string; email: string; phone: string; role: string }>) => void;
+  members: import("@/hooks/useTeam").OrgMember[];
 }) {
   const updateSigner = (i: number, field: string, value: string) => {
     const next = [...signers];
     next[i] = { ...next[i], [field]: value };
     onSignersChange(next);
   };
+
+  const fillFromMember = (i: number, userId: string) => {
+    const member = members.find((m) => m.user_id === userId);
+    if (!member) return;
+    const next = [...signers];
+    next[i] = {
+      ...next[i],
+      name: member.profiles?.full_name || "",
+      email: member.profiles?.email || "",
+      phone: member.profiles?.phone || "",
+      role: "Medewerker",
+    };
+    onSignersChange(next);
+  };
+
+  const activeMembers = members.filter((m) => m.is_active);
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -559,6 +579,23 @@ function Step3Preview({ renderHtml, signers, onSignersChange }: {
                   </button>
                 )}
               </div>
+              {/* Team member picker */}
+              {activeMembers.length > 0 && (
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) fillFromMember(i, e.target.value);
+                  }}
+                  className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
+                >
+                  <option value="">— Selecteer teamlid —</option>
+                  {activeMembers.map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.profiles?.full_name || "Onbekend"} ({m.role})
+                    </option>
+                  ))}
+                </select>
+              )}
               <input
                 value={s.role}
                 onChange={(e) => updateSigner(i, "role", e.target.value)}

@@ -10,7 +10,7 @@ export interface OrgMember {
   is_active: boolean;
   joined_at: string | null;
   invited_at: string | null;
-  profiles: { full_name: string | null; avatar_url: string | null } | null;
+  profiles: { full_name: string | null; avatar_url: string | null; email: string | null; phone: string | null } | null;
 }
 
 export interface OrgInvite {
@@ -41,7 +41,7 @@ export function useOrgMembers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organization_members")
-        .select("id, user_id, role, is_active, joined_at, invited_at, profiles(full_name, avatar_url)")
+        .select("id, user_id, role, is_active, joined_at, invited_at, profiles(full_name, avatar_url, email, phone)")
         .eq("organization_id", orgId!)
         .order("joined_at", { ascending: true });
       if (error) throw error;
