@@ -1,56 +1,68 @@
 
 
-## Plan: Contracten versturen via e-mail en toevoegen aan klantportaal
+# Fix Build Errors: Snelstart Type Mismatches
 
-### Wat wordt er gebouwd
+## Wat er nu is opgezet voor Snelstart
 
-Twee manieren om een contract bij de klant te krijgen:
+**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
 
-1. **Via e-mail versturen** — Een knop "Verstuur via e-mail" op het contract-detailscherm die:
-   - Een e-mail stuurt naar het gekoppelde contact (of handmatig ingevoerd adres) met een ondertekeningslink
-   - De Resend-integratie gebruikt (bestaande `send-email` flow) 
-   - De contractstatus op "sent" zet
+**Frontend:**
+- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
+- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
+- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
 
-2. **Zichtbaar in klantportaal** — Een toggle "Toon in portaal" op het contract-detailscherm die:
-   - Het `visible_in_portal` veld op `true` zet (kolom bestaat al op de contracts tabel)
-   - Het contract direct zichtbaar maakt in het bestaande portaal (de `get_contracts` actie in de client-portal function filtert al op `visible_in_portal = true`)
+**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
 
-### Technische aanpak
+## Root Cause van de Build Errors
 
-#### 1. ContractsPage.tsx — UI uitbreiden
+De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
 
-Op het contract-detailscherm (`ContractDetail` component, regel ~600):
+## Fix (2 bestanden)
 
-- **"Verstuur via e-mail" knop** naast de bestaande "Verzenden" knop — opent een kleine dialog met:
-  - Vooringevuld e-mailadres (van gekoppeld contact)
-  - Optioneel aangepast onderwerp en bericht
-  - Verzendt via de `send-email` edge function met een HTML-mail die de ondertekeningslink(en) bevat
-  - Zet status op "sent"
+### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
 
-- **"Toon in portaal" toggle/switch** in de header of als aparte actie:
-  - Gebruikt `useUpdateContract` om `visible_in_portal: true/false` te toggglen
-  - Visuele indicator (badge) als het contract in het portaal staat
+Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
 
-#### 2. send-email Edge Function — Contract-verzendmail
+Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
+```
+// FOUT: profiles heeft geen organization_id
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("organization_id")
+  .eq("id", user.id)
+  .single();
 
-Gebruik de bestaande `send-email` function met `action: "send"`. De frontend genereert de HTML met:
-- Contracttitel en -nummer
-- Ondertekeningslinks per ondertekenaar (uit `contract_signing_sessions`)
-- Organisatie-branding
+// FIX: gebruik organization_members
+const { data: membership } = await supabase
+  .from("organization_members")
+  .select("organization_id")
+  .eq("user_id", user.id)
+  .eq("is_active", true)
+  .limit(1)
+  .single();
+```
 
-Geen aanpassing aan de edge function nodig — de bestaande `send` actie accepteert al `to`, `subject`, `html_content`.
+Voor de tabellen die niet in types staan, cast naar `any`:
+```
+const { data, error } = await (supabase as any)
+  .from("snelstart_config")
+  ...
+```
 
-#### 3. Geen database-migratie nodig
+### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
 
-- `visible_in_portal` bestaat al op de `contracts` tabel
-- De `client-portal` edge function filtert hier al op
-- De `contract_signing_sessions` hebben al `session_token` voor links
+Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
+```
+const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
+const actorId = providerConfig?.actorId || "";
+```
 
-### Samenvatting wijzigingen
+### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
 
-| Bestand | Wijziging |
-|---|---|
-| `src/pages/ContractsPage.tsx` | E-mail-verzenddialog + portaal-toggle toevoegen aan ContractDetail |
+De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
 
-Eén bestand, geen migraties, geen nieuwe edge functions.
+## Bestanden
+
+- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
+- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
 

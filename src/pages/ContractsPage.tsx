@@ -19,6 +19,8 @@ import { nl } from "date-fns/locale";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "hsl(var(--erp-text-2))",
@@ -597,11 +599,109 @@ function Step3Preview({ renderHtml, signers, onSignersChange }: {
 
 // ─── Contract Detail Panel ─────────────────────────────────────
 
+function SendContractEmailDialog({ open, onClose, contract }: { open: boolean; onClose: () => void; contract: any }) {
+  const sessions = contract.contract_signing_sessions || [];
+  const contactEmail = contract.contacts?.email || "";
+  const [to, setTo] = useState(contactEmail);
+  const [subject, setSubject] = useState(`Contract ter ondertekening: ${contract.title}`);
+  const [message, setMessage] = useState("Hierbij ontvangt u een contract ter ondertekening. Klik op de link hieronder om het contract te bekijken en te ondertekenen.");
+  const [sending, setSending] = useState(false);
+  const updateContract = useUpdateContract();
+
+  const handleSend = async () => {
+    if (!to) { toast.error("Vul een e-mailadres in"); return; }
+    setSending(true);
+    try {
+      const origin = window.location.origin;
+      const signerLinksHtml = sessions
+        .filter((s: any) => s.status !== "signed")
+        .map((s: any) => `<p style="margin:8px 0"><a href="${origin}/sign?token=${s.session_token}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">${s.signer_name} — Onderteken nu</a></p>`)
+        .join("");
+
+      const htmlContent = `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+          <h2 style="color:#1a1a2e;margin-bottom:8px">${contract.title}</h2>
+          ${contract.contract_number ? `<p style="color:#666;font-size:13px;margin-top:0">Nummer: ${contract.contract_number}</p>` : ""}
+          <p style="color:#333;font-size:14px;line-height:1.6">${message}</p>
+          <div style="margin:24px 0">${signerLinksHtml}</div>
+          <p style="color:#999;font-size:12px;margin-top:32px">Dit is een automatisch gegenereerd bericht.</p>
+        </div>`;
+
+      const { data, error } = await supabase.functions.invoke("send-email", {
+        body: {
+          action: "send",
+          to,
+          subject,
+          html_content: htmlContent,
+          contact_id: contract.contact_id || null,
+          send_type: "contract",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      await updateContract.mutateAsync({
+        id: contract.id,
+        status: "sent",
+        sent_at: new Date().toISOString(),
+      });
+
+      toast.success("Contract per e-mail verzonden");
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Verzenden mislukt");
+    }
+    setSending(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md bg-erp-bg2 border-erp-border0">
+        <DialogHeader>
+          <DialogTitle className="text-erp-text0">Contract versturen via e-mail</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Aan</label>
+            <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="email@voorbeeld.nl"
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Onderwerp</label>
+            <input value={subject} onChange={(e) => setSubject(e.target.value)}
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Bericht</label>
+            <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3}
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue resize-none" />
+          </div>
+          {sessions.filter((s: any) => s.status !== "signed").length > 0 && (
+            <div className="bg-erp-bg3 rounded-lg p-3">
+              <div className="text-xs font-medium text-erp-text2 mb-1.5">Ondertekeningslinks in e-mail:</div>
+              {sessions.filter((s: any) => s.status !== "signed").map((s: any) => (
+                <div key={s.id} className="text-xs text-erp-text1">• {s.signer_name} ({s.signer_role})</div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-erp-border0">
+          <ErpButton onClick={onClose}>Annuleren</ErpButton>
+          <ErpButton primary onClick={handleSend} disabled={sending || !to}>
+            {sending ? "Verzenden..." : "Verstuur e-mail"}
+          </ErpButton>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ContractDetail({ contractId, onBack }: { contractId: string; onBack: () => void }) {
   const { data: contract, isLoading } = useContract(contractId);
   const [tab, setTab] = useState("content");
   const [sigFields, setSigFields] = useState<SignatureField[]>([]);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const updateContract = useUpdateContract();
 
   // Load existing signature fields from contract
@@ -657,6 +757,18 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
     }
   };
 
+  const togglePortal = async () => {
+    try {
+      await updateContract.mutateAsync({
+        id: contract.id,
+        visible_in_portal: !contract.visible_in_portal,
+      });
+      toast.success(contract.visible_in_portal ? "Verwijderd uit portaal" : "Zichtbaar in portaal");
+    } catch (e: any) {
+      toast.error(e.message || "Fout bij wijzigen");
+    }
+  };
+
   const copyLink = (token: string) => {
     const origin = window.location.origin;
     navigator.clipboard.writeText(`${origin}/sign?token=${token}`);
@@ -676,12 +788,32 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-erp-text0">{contract.title}</h1>
             <Badge color={STATUS_COLORS[contract.status]}>{STATUS_LABELS[contract.status] || contract.status}</Badge>
+            {contract.visible_in_portal && (
+              <Badge color="hsl(var(--erp-blue))">Portaal</Badge>
+            )}
           </div>
           <div className="text-xs text-erp-text3 mt-0.5 font-mono">{contract.contract_number}</div>
         </div>
-         {contract.status === "draft" && (
-          <ErpButton primary onClick={handleSend}>
-            <Icons.Send className="w-4 h-4" /> Verzenden
+
+        {/* Portal toggle */}
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-erp-text2">Portaal</label>
+          <Switch checked={!!contract.visible_in_portal} onCheckedChange={togglePortal} />
+        </div>
+
+        {contract.status === "draft" && (
+          <>
+            <ErpButton onClick={() => setShowEmailDialog(true)}>
+              <Icons.Mail className="w-4 h-4" /> Via e-mail
+            </ErpButton>
+            <ErpButton primary onClick={handleSend}>
+              <Icons.Send className="w-4 h-4" /> Verzenden
+            </ErpButton>
+          </>
+        )}
+        {contract.status === "sent" && (
+          <ErpButton onClick={() => setShowEmailDialog(true)}>
+            <Icons.Mail className="w-4 h-4" /> Opnieuw mailen
           </ErpButton>
         )}
         {hasSigned && (
@@ -696,6 +828,10 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
           </a>
         )}
       </div>
+
+      {showEmailDialog && (
+        <SendContractEmailDialog open={showEmailDialog} onClose={() => setShowEmailDialog(false)} contract={contract} />
+      )}
 
       <ErpTabs
         items={[["content", "Contract"], ["fields", "Velden"], ["signers", "Ondertekenaars"], ["audit", "Audit Trail"]]}
