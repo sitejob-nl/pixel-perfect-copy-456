@@ -66,6 +66,7 @@ export default function TeamSettings() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [expandedMember, setExpandedMember] = useState<string | null>(null);
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
 
   const currentUserRole = org?.role;
   const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
