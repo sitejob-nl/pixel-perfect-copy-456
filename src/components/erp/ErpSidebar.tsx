@@ -40,6 +40,7 @@ const nav: NavSection[] = [
   {
     l: "Intelligence", items: [
       { k: "dataintel", l: "Data Intelligence", i: "Zap", dot: true },
+      { k: "scrapers", l: "Scrapers", i: "Search" },
       { k: "aiagent", l: "AI Agent", i: "Bot", dot: true },
       { k: "demos", l: "Demo's", i: "Globe" },
       { k: "content", l: "Content", i: "Calendar" },
