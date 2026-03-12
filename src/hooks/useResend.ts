@@ -88,3 +88,51 @@ export function useResendBroadcastMutation() {
     onError: (e: Error) => toast.error(e.message),
   });
 }
+
+// ─── Contacts ───
+export function useResendContacts() {
+  const orgId = useOrgId();
+  return useQuery({
+    queryKey: ["resend-contacts", orgId],
+    enabled: !!orgId,
+    queryFn: () => invokeResend("contacts.list", orgId!),
+  });
+}
+
+export function useResendContactMutation() {
+  const orgId = useOrgId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ action, payload }: { action: string; payload?: Record<string, unknown> }) =>
+      invokeResend(`contacts.${action}`, orgId!, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["resend-contacts"] });
+      toast.success("Contact bijgewerkt");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// ─── Domains ───
+export function useResendDomains() {
+  const orgId = useOrgId();
+  return useQuery({
+    queryKey: ["resend-domains", orgId],
+    enabled: !!orgId,
+    queryFn: () => invokeResend("domains.list", orgId!),
+  });
+}
+
+export function useResendDomainMutation() {
+  const orgId = useOrgId();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ action, payload }: { action: string; payload?: Record<string, unknown> }) =>
+      invokeResend(`domains.${action}`, orgId!, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["resend-domains"] });
+      toast.success("Domein bijgewerkt");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}

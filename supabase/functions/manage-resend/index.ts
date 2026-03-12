@@ -161,6 +161,49 @@ Deno.serve(async (req) => {
         default:
           throw new Error(`Unknown broadcasts method: ${method}`);
       }
+    } else if (resource === "contacts") {
+      switch (method) {
+        case "list":
+          result = await resendFetch(apiKey, "/contacts", "GET");
+          break;
+        case "create":
+          result = await resendFetch(apiKey, "/contacts", "POST", payload);
+          break;
+        case "get":
+          result = await resendFetch(apiKey, `/contacts/${payload.id}`, "GET");
+          break;
+        case "update":
+          result = await resendFetch(apiKey, `/contacts/${payload.id}`, "PATCH", payload);
+          break;
+        case "delete":
+          result = await resendFetch(apiKey, `/contacts/${payload.id}`, "DELETE");
+          break;
+        default:
+          throw new Error(`Unknown contacts method: ${method}`);
+      }
+    } else if (resource === "domains") {
+      switch (method) {
+        case "list":
+          result = await resendFetch(apiKey, "/domains", "GET");
+          break;
+        case "create":
+          result = await resendFetch(apiKey, "/domains", "POST", payload);
+          break;
+        case "get":
+          result = await resendFetch(apiKey, `/domains/${payload.id}`, "GET");
+          break;
+        case "verify":
+          result = await resendFetch(apiKey, `/domains/${payload.id}/verify`, "POST");
+          break;
+        case "update":
+          result = await resendFetch(apiKey, `/domains/${payload.id}`, "PATCH", payload);
+          break;
+        case "delete":
+          result = await resendFetch(apiKey, `/domains/${payload.id}`, "DELETE");
+          break;
+        default:
+          throw new Error(`Unknown domains method: ${method}`);
+      }
     } else {
       throw new Error(`Unknown resource: ${resource}`);
     }
