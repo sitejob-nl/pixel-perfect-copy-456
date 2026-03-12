@@ -45,6 +45,8 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab Content */}
+      {activeTab === "team" && <TeamSettings />}
+
       {activeTab === "api-keys" && <ApiKeysSettings />}
 
       {activeTab === "snelstart" && <SnelstartSettings />}
