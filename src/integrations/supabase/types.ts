@@ -2175,12 +2175,16 @@ export type Database = {
           invoice_number: string
           notes: string | null
           organization_id: string
+          paid_amount: number | null
           paid_at: string | null
           payment_method: string | null
           payment_reference: string | null
+          payment_status: string | null
           payment_type: string | null
+          payment_url: string | null
           project_id: string | null
           quote_id: string | null
+          reminder_sent_at: string | null
           snelstart_id: string | null
           status: string
           subtotal: number | null
@@ -2205,12 +2209,16 @@ export type Database = {
           invoice_number: string
           notes?: string | null
           organization_id: string
+          paid_amount?: number | null
           paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          payment_status?: string | null
           payment_type?: string | null
+          payment_url?: string | null
           project_id?: string | null
           quote_id?: string | null
+          reminder_sent_at?: string | null
           snelstart_id?: string | null
           status?: string
           subtotal?: number | null
@@ -2235,12 +2243,16 @@ export type Database = {
           invoice_number?: string
           notes?: string | null
           organization_id?: string
+          paid_amount?: number | null
           paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          payment_status?: string | null
           payment_type?: string | null
+          payment_url?: string | null
           project_id?: string | null
           quote_id?: string | null
+          reminder_sent_at?: string | null
           snelstart_id?: string | null
           status?: string
           subtotal?: number | null
@@ -2656,39 +2668,54 @@ export type Database = {
       onboarding_questions: {
         Row: {
           created_at: string
+          description: string | null
           id: string
           is_required: boolean | null
           is_template: boolean | null
           options: Json | null
           organization_id: string
+          placeholder: string | null
+          portal_session_id: string | null
           project_id: string | null
           question: string
           question_type: string | null
+          section_title: string | null
           sort_order: number | null
+          validation_rules: Json | null
         }
         Insert: {
           created_at?: string
+          description?: string | null
           id?: string
           is_required?: boolean | null
           is_template?: boolean | null
           options?: Json | null
           organization_id: string
+          placeholder?: string | null
+          portal_session_id?: string | null
           project_id?: string | null
           question: string
           question_type?: string | null
+          section_title?: string | null
           sort_order?: number | null
+          validation_rules?: Json | null
         }
         Update: {
           created_at?: string
+          description?: string | null
           id?: string
           is_required?: boolean | null
           is_template?: boolean | null
           options?: Json | null
           organization_id?: string
+          placeholder?: string | null
+          portal_session_id?: string | null
           project_id?: string | null
           question?: string
           question_type?: string | null
+          section_title?: string | null
           sort_order?: number | null
+          validation_rules?: Json | null
         }
         Relationships: [
           {
@@ -2703,6 +2730,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_questions_portal_session_id_fkey"
+            columns: ["portal_session_id"]
+            isOneToOne: false
+            referencedRelation: "portal_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -2793,6 +2827,57 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "portal_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          questions: Json
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          questions?: Json
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          questions?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -3418,12 +3503,227 @@ export type Database = {
           },
         ]
       }
+      portal_activity_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          organization_id: string
+          portal_session_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          organization_id: string
+          portal_session_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          organization_id?: string
+          portal_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_activity_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_activity_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_activity_log_portal_session_id_fkey"
+            columns: ["portal_session_id"]
+            isOneToOne: false
+            referencedRelation: "portal_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_file_requests: {
+        Row: {
+          accepted_types: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          max_file_size_mb: number | null
+          organization_id: string
+          portal_session_id: string
+          required: boolean | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          sort_order: number | null
+          status: string | null
+          title: string
+          uploaded_file_id: string | null
+        }
+        Insert: {
+          accepted_types?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          max_file_size_mb?: number | null
+          organization_id: string
+          portal_session_id: string
+          required?: boolean | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sort_order?: number | null
+          status?: string | null
+          title: string
+          uploaded_file_id?: string | null
+        }
+        Update: {
+          accepted_types?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          max_file_size_mb?: number | null
+          organization_id?: string
+          portal_session_id?: string
+          required?: boolean | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          sort_order?: number | null
+          status?: string | null
+          title?: string
+          uploaded_file_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_file_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_file_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_file_requests_portal_session_id_fkey"
+            columns: ["portal_session_id"]
+            isOneToOne: false
+            referencedRelation: "portal_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_file_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_file_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_file_requests_uploaded_file_id_fkey"
+            columns: ["uploaded_file_id"]
+            isOneToOne: false
+            referencedRelation: "project_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_messages: {
+        Row: {
+          attachments: Json | null
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          organization_id: string
+          portal_session_id: string
+          read_at: string | null
+          sender_name: string
+          sender_type: string
+        }
+        Insert: {
+          attachments?: Json | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          organization_id: string
+          portal_session_id: string
+          read_at?: string | null
+          sender_name: string
+          sender_type?: string
+        }
+        Update: {
+          attachments?: Json | null
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          organization_id?: string
+          portal_session_id?: string
+          read_at?: string | null
+          sender_name?: string
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_messages_portal_session_id_fkey"
+            columns: ["portal_session_id"]
+            isOneToOne: false
+            referencedRelation: "portal_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_sessions: {
         Row: {
           access_token: string
+          branding: Json | null
           client_email: string | null
           client_name: string | null
+          company_id: string | null
+          contact_id: string | null
           created_at: string
+          custom_links: Json | null
+          enabled_sections: Json | null
           expires_at: string | null
           id: string
           is_active: boolean | null
@@ -3431,14 +3731,21 @@ export type Database = {
           organization_id: string
           password_hash: string | null
           password_required: boolean | null
-          project_id: string
+          portal_name: string | null
+          project_id: string | null
           session_type: string
+          welcome_message: string | null
         }
         Insert: {
           access_token?: string
+          branding?: Json | null
           client_email?: string | null
           client_name?: string | null
+          company_id?: string | null
+          contact_id?: string | null
           created_at?: string
+          custom_links?: Json | null
+          enabled_sections?: Json | null
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -3446,14 +3753,21 @@ export type Database = {
           organization_id: string
           password_hash?: string | null
           password_required?: boolean | null
-          project_id: string
+          portal_name?: string | null
+          project_id?: string | null
           session_type?: string
+          welcome_message?: string | null
         }
         Update: {
           access_token?: string
+          branding?: Json | null
           client_email?: string | null
           client_name?: string | null
+          company_id?: string | null
+          contact_id?: string | null
           created_at?: string
+          custom_links?: Json | null
+          enabled_sections?: Json | null
           expires_at?: string | null
           id?: string
           is_active?: boolean | null
@@ -3461,10 +3775,40 @@ export type Database = {
           organization_id?: string
           password_hash?: string | null
           password_required?: boolean | null
-          project_id?: string
+          portal_name?: string | null
+          project_id?: string | null
           session_type?: string
+          welcome_message?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "portal_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_sessions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_sessions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_sessions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "portal_sessions_organization_id_fkey"
             columns: ["organization_id"]
@@ -4012,9 +4356,13 @@ export type Database = {
       }
       quotes: {
         Row: {
+          accepted_at: string | null
+          accepted_by: string | null
           contact_id: string | null
           created_at: string
           deal_id: string | null
+          decline_reason: string | null
+          declined_at: string | null
           discount_amount: number | null
           discount_type: string | null
           id: string
@@ -4038,9 +4386,13 @@ export type Database = {
           visible_in_portal: boolean | null
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
           contact_id?: string | null
           created_at?: string
           deal_id?: string | null
+          decline_reason?: string | null
+          declined_at?: string | null
           discount_amount?: number | null
           discount_type?: string | null
           id?: string
@@ -4064,9 +4416,13 @@ export type Database = {
           visible_in_portal?: boolean | null
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
           contact_id?: string | null
           created_at?: string
           deal_id?: string | null
+          decline_reason?: string | null
+          declined_at?: string | null
           discount_amount?: number | null
           discount_type?: string | null
           id?: string
