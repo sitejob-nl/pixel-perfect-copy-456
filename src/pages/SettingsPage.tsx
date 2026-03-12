@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import SnelstartSettings from "@/components/erp/SnelstartSettings";
 import ApiKeysSettings from "@/components/erp/ApiKeysSettings";
@@ -20,6 +21,7 @@ type TabKey = (typeof tabs)[number]["key"];
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("algemeen");
+  const { user } = useAuth();
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -91,7 +93,7 @@ export default function SettingsPage() {
               <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">E-mailadres</label>
               <input
                 type="email"
-                defaultValue="kas@sitejob.nl"
+                defaultValue={user?.email || ""}
                 className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
                 disabled
               />
