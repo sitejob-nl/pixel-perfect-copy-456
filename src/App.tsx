@@ -56,6 +56,22 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/onboarding" replace />;
   }
 
+  if (orgData.deactivated) {
+    return (
+      <div className="min-h-screen bg-erp-bg0 flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto">
+            <span className="text-2xl">⚠</span>
+          </div>
+          <h2 className="text-lg font-semibold text-erp-text0">Account gedeactiveerd</h2>
+          <p className="text-sm text-erp-text3">
+            Je account is gedeactiveerd door een beheerder. Neem contact op met de organisatiebeheerder om weer toegang te krijgen.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
 
