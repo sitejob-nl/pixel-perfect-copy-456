@@ -253,7 +253,7 @@ function GenerateTab() {
         <Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Acme B.V." />
       </div>
       <div className="space-y-2">
-        <Label>Website URL (optioneel)</Label>
+        <Label>Website URL *</Label>
         <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://acme.nl" />
       </div>
       <div className="space-y-2">
