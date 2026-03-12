@@ -629,7 +629,7 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
         <button onClick={onBack} className="text-erp-text2 hover:text-erp-text0">
-          <Icons.ChevronDown className="w-5 h-5 rotate-90" />
+          <Icons.ChevDown className="w-5 h-5 rotate-90" />
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
