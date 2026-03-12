@@ -623,6 +623,7 @@ export type Database = {
           address_line1: string | null
           address_line2: string | null
           annual_revenue: string | null
+          btw_number: string | null
           city: string | null
           company_size: string | null
           country: string | null
@@ -650,6 +651,7 @@ export type Database = {
           address_line1?: string | null
           address_line2?: string | null
           annual_revenue?: string | null
+          btw_number?: string | null
           city?: string | null
           company_size?: string | null
           country?: string | null
@@ -677,6 +679,7 @@ export type Database = {
           address_line1?: string | null
           address_line2?: string | null
           annual_revenue?: string | null
+          btw_number?: string | null
           city?: string | null
           company_size?: string | null
           country?: string | null
@@ -2741,6 +2744,7 @@ export type Database = {
           mobile_friendly: boolean | null
           organization_id: string
           page_load_speed_ms: number | null
+          raw_lead_id: string | null
           score_breakdown: Json | null
           score_tier: string | null
           scored_at: string | null
@@ -2783,6 +2787,7 @@ export type Database = {
           mobile_friendly?: boolean | null
           organization_id: string
           page_load_speed_ms?: number | null
+          raw_lead_id?: string | null
           score_breakdown?: Json | null
           score_tier?: string | null
           scored_at?: string | null
@@ -2825,6 +2830,7 @@ export type Database = {
           mobile_friendly?: boolean | null
           organization_id?: string
           page_load_speed_ms?: number | null
+          raw_lead_id?: string | null
           score_breakdown?: Json | null
           score_tier?: string | null
           scored_at?: string | null
@@ -2868,6 +2874,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_enrichment_raw_lead_id_fkey"
+            columns: ["raw_lead_id"]
+            isOneToOne: false
+            referencedRelation: "raw_leads"
             referencedColumns: ["id"]
           },
         ]
