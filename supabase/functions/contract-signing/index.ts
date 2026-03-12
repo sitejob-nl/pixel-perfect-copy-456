@@ -34,6 +34,49 @@ function generateCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+/** XOR decrypt (same as send-email function) */
+function decrypt(encoded: string, key: string): string {
+  const keyBytes = new TextEncoder().encode(key);
+  const bytes = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
+  const result = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) {
+    result[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+  }
+  return new TextDecoder().decode(result);
+}
+
+/** Get Resend API key for organization */
+async function getResendKey(sb: any, orgId: string): Promise<string> {
+  const encryptionKey = Deno.env.get("ENCRYPTION_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!.slice(0, 32);
+  const { data } = await sb
+    .from("organization_api_keys")
+    .select("resend_api_key_encrypted")
+    .eq("organization_id", orgId)
+    .single();
+  const encrypted = data?.resend_api_key_encrypted;
+  if (!encrypted) throw new Error("Resend API key niet ingesteld. Ga naar Instellingen → API Keys.");
+  return decrypt(encrypted as string, encryptionKey);
+}
+
+/** Get sender address via Resend verified domains */
+async function getSenderAddress(resendKey: string, orgName?: string): Promise<string> {
+  try {
+    const res = await fetch("https://api.resend.com/domains", {
+      headers: { Authorization: `Bearer ${resendKey}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const verified = data?.data?.find((d: any) => d.status === "verified");
+      if (verified) {
+        return `noreply@${verified.name}`;
+      }
+    }
+  } catch {
+    // fallback below
+  }
+  return "onboarding@resend.dev";
+}
+
 // ─── GET action=get ─────────────────────────────────────────────────
 async function handleGet(token: string) {
   const sb = serviceClient();
@@ -83,8 +126,8 @@ async function handleGet(token: string) {
   return json({ contract, session: safeSession });
 }
 
-// ─── GET action=send_sms ────────────────────────────────────────────
-async function handleSendSms(token: string) {
+// ─── GET action=send_sms (now sends email instead) ──────────────────
+async function handleSendVerification(token: string) {
   const sb = serviceClient();
 
   const { data: session, error } = await sb
@@ -96,7 +139,7 @@ async function handleSendSms(token: string) {
   if (error || !session) return json({ error: "Sessie niet gevonden" }, 404);
   if (session.status === "signed") return json({ error: "Contract is al ondertekend" }, 400);
 
-  // Rate limit: max 1 SMS per 60 seconds
+  // Rate limit: max 1 code per 60 seconds
   if (session.sms_sent_at) {
     const diff = Date.now() - new Date(session.sms_sent_at).getTime();
     if (diff < 60000) {
@@ -117,41 +160,67 @@ async function handleSendSms(token: string) {
     })
     .eq("id", session.id);
 
-  // Send SMS via Twilio connector gateway
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
-  const TWILIO_FROM_NUMBER = Deno.env.get("TWILIO_FROM_NUMBER");
-  const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
-
-  if (!LOVABLE_API_KEY) return json({ error: "Server configuratiefout: LOVABLE_API_KEY ontbreekt" }, 500);
-  if (!TWILIO_API_KEY) return json({ error: "Server configuratiefout: TWILIO_API_KEY ontbreekt" }, 500);
-  if (!TWILIO_FROM_NUMBER) return json({ error: "Server configuratiefout: TWILIO_FROM_NUMBER ontbreekt" }, 500);
-
+  // Get Resend API key for org
+  let resendKey: string;
   try {
-    const smsRes = await fetch(`${GATEWAY_URL}/Messages.json`, {
+    resendKey = await getResendKey(sb, session.organization_id);
+  } catch (e: any) {
+    console.error("Failed to get Resend key:", e.message);
+    return json({ error: "E-mail configuratie niet gevonden. Neem contact op met de afzender." }, 500);
+  }
+
+  // Get sender address
+  const senderAddress = await getSenderAddress(resendKey);
+
+  // Send verification email via Resend
+  try {
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px;">
+    <tr><td align="center">
+      <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <tr><td style="padding:32px 40px;text-align:center;">
+          <h1 style="margin:0 0 8px;font-size:20px;color:#18181b;">Verificatiecode</h1>
+          <p style="margin:0 0 24px;font-size:14px;color:#71717a;">Gebruik onderstaande code om uw identiteit te bevestigen voor de contractondertekening.</p>
+          <div style="background:#f4f4f5;border-radius:8px;padding:20px;margin:0 0 24px;">
+            <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#18181b;font-family:monospace;">${code}</span>
+          </div>
+          <p style="margin:0 0 4px;font-size:13px;color:#a1a1aa;">Deze code is 10 minuten geldig.</p>
+          <p style="margin:0;font-size:13px;color:#a1a1aa;">Heeft u deze code niet aangevraagd? U kunt dit bericht negeren.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+    const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "X-Connection-Api-Key": TWILIO_API_KEY,
-        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
       },
-      body: new URLSearchParams({
-        To: session.signer_phone,
-        From: TWILIO_FROM_NUMBER,
-        Body: `Uw verificatiecode voor contractondertekening: ${code}. Geldig voor 10 minuten.`,
+      body: JSON.stringify({
+        from: senderAddress,
+        to: [session.signer_email],
+        subject: "Uw verificatiecode voor contractondertekening",
+        html: emailHtml,
       }),
     });
 
-    if (!smsRes.ok) {
-      const errBody = await smsRes.text();
-      console.error(`Twilio SMS failed [${smsRes.status}]:`, errBody);
-      return json({ error: "SMS kon niet worden verzonden. Probeer het later opnieuw." }, 502);
+    if (!resendRes.ok) {
+      const errBody = await resendRes.text();
+      console.error(`Resend email failed [${resendRes.status}]:`, errBody);
+      return json({ error: "Verificatie-e-mail kon niet worden verzonden. Probeer het later opnieuw." }, 502);
     }
 
-    console.log("SMS sent via Twilio successfully");
+    console.log("Verification email sent via Resend successfully");
   } catch (e) {
-    console.error("Twilio SMS send error:", e);
-    return json({ error: "SMS kon niet worden verzonden door een serverfout." }, 500);
+    console.error("Resend email send error:", e);
+    return json({ error: "Verificatie-e-mail kon niet worden verzonden door een serverfout." }, 500);
   }
 
   // Audit log
@@ -159,13 +228,13 @@ async function handleSendSms(token: string) {
     contract_id: session.contract_id,
     organization_id: session.organization_id,
     session_id: session.id,
-    action: "sms_code_sent",
+    action: "verification_code_sent",
     event_type: "verification",
     signer_name: session.signer_name,
     signer_email: session.signer_email,
   });
 
-  return json({ success: true, message: "Verificatiecode verzonden" });
+  return json({ success: true, message: "Verificatiecode verzonden per e-mail" });
 }
 
 // ─── GET action=verify_sms ──────────────────────────────────────────
@@ -217,7 +286,7 @@ async function handleVerifySms(token: string, code: string) {
     contract_id: session.contract_id,
     organization_id: session.organization_id,
     session_id: session.id,
-    action: "sms_verified",
+    action: "email_verified",
     event_type: "verification",
     signer_name: session.signer_name,
     signer_email: session.signer_email,
@@ -245,7 +314,7 @@ async function handleSign(req: Request) {
 
   if (error || !session) return json({ error: "Sessie niet gevonden" }, 404);
   if (session.status === "signed") return json({ error: "Contract is al ondertekend" }, 400);
-  if (!session.sms_verified_at) return json({ error: "SMS verificatie vereist" }, 403);
+  if (!session.sms_verified_at) return json({ error: "E-mail verificatie vereist" }, 403);
 
   const contract = session.contracts;
   const now = new Date().toISOString();
@@ -366,7 +435,7 @@ Deno.serve(async (req) => {
         case "get":
           return await handleGet(token);
         case "send_sms":
-          return await handleSendSms(token);
+          return await handleSendVerification(token);
         case "verify_sms": {
           const code = url.searchParams.get("code") || "";
           return await handleVerifySms(token, code);

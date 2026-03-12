@@ -106,7 +106,7 @@ export default function SigningVerifyStep({ baseUrl, token, onVerified, onError 
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
       <h2 className="text-lg font-bold text-gray-900 mb-2">Identiteit bevestigen</h2>
       <p className="text-sm text-gray-600 mb-6">
-        We sturen een verificatiecode naar uw e-mailadres om uw identiteit te bevestigen.
+        We sturen een verificatiecode naar <strong>{/* e-mail */}uw e-mailadres</strong> om uw identiteit te bevestigen.
       </p>
 
       {!sent ? (
