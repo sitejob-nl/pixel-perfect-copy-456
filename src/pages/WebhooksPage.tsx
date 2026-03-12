@@ -249,7 +249,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         source_platform: selectedTemplate?.platform_key || "custom",
         target_table: config.target_table,
         field_mappings: mappings.filter((m) => m.source_path && m.target_field),
-        dedup_field: config.dedup_field || null,
+        dedup_field: config.dedup_field === "none" ? null : config.dedup_field || null,
         dedup_action: config.dedup_action,
         default_values: Object.keys(defaultValues).length ? defaultValues : null,
         sample_payload: selectedTemplate?.payload_example || null,
