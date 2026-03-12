@@ -169,8 +169,8 @@ export default function SnelstartSettings() {
                             {saveConfig.isPending ? "Opslaan..." : "Configuratie opslaan"}
                         </ErpButton>
                         {activationUrl && (
-                            <ErpButton onClick={() => window.open(activationUrl, "_blank")}>
-                                Koppel met Snelstart ↗
+                            <ErpButton onClick={() => window.location.assign(activationUrl)}>
+                                Koppel met Snelstart →
                             </ErpButton>
                         )}
                     </div>

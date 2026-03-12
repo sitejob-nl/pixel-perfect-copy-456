@@ -99,11 +99,14 @@ export function PageHeader({ title, desc, children }: { title: string; desc?: st
   );
 }
 
-export function ErpButton({ children, primary, onClick, disabled }: {
+import React from "react";
+
+export const ErpButton = React.forwardRef<HTMLButtonElement, {
   children: React.ReactNode; primary?: boolean; onClick?: () => void; disabled?: boolean;
-}) {
+}>(({ children, primary, onClick, disabled }, ref) => {
   return (
     <button
+      ref={ref}
       onClick={onClick}
       disabled={disabled}
       className={cn(
@@ -117,7 +120,8 @@ export function ErpButton({ children, primary, onClick, disabled }: {
       {children}
     </button>
   );
-}
+});
+ErpButton.displayName = "ErpButton";
 
 export function FilterButton({ children, active, onClick }: {
   children: React.ReactNode; active?: boolean; onClick?: () => void;
