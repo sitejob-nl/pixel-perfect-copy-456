@@ -25,7 +25,7 @@ export function useApiKeyStatus() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organization_api_keys")
-        .select("anthropic_key_set, anthropic_key_hint, anthropic_key_verified_at, apify_key_set, apify_key_hint, apify_key_verified_at, selected_model")
+        .select("anthropic_key_set, anthropic_key_hint, anthropic_key_verified_at, apify_key_set, apify_key_hint, apify_key_verified_at, resend_key_set, resend_key_hint, resend_key_verified_at, selected_model")
         .eq("organization_id", orgId!)
         .maybeSingle();
       if (error) throw error;
