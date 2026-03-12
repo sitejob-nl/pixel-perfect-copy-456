@@ -118,6 +118,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/sign" element={<ContractSigningPage />} />
             <Route path="/portal" element={<ClientPortalPage />} />
+            <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
 
             {/* Protected layout with sidebar */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
