@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrganization } from "@/hooks/useOrganization";
 import { cn } from "@/lib/utils";
 import SnelstartSettings from "@/components/erp/SnelstartSettings";
 import ApiKeysSettings from "@/components/erp/ApiKeysSettings";
@@ -7,21 +8,41 @@ import TeamSettings from "@/components/erp/TeamSettings";
 import OrgSettings from "@/components/erp/OrgSettings";
 import ResendSettings from "@/components/erp/ResendSettings";
 
-const tabs = [
-  { key: "algemeen", label: "Algemeen", icon: "⚙️" },
-  { key: "team", label: "Team", icon: "👥" },
-  { key: "api-keys", label: "API Keys", icon: "🔑" },
-  { key: "email", label: "E-mail", icon: "✉️" },
-  { key: "snelstart", label: "Snelstart", icon: "🔗" },
-  { key: "notificaties", label: "Notificaties", icon: "🔔" },
-  { key: "account", label: "Account", icon: "👤" },
+const allTabs = [
+  { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
+  { key: "team", label: "Team", icon: "👥", adminOnly: true },
+  { key: "api-keys", label: "API Keys", icon: "🔑", adminOnly: true },
+  { key: "email", label: "E-mail", icon: "✉️", adminOnly: true },
+  { key: "snelstart", label: "Snelstart", icon: "🔗", adminOnly: true },
+  { key: "notificaties", label: "Notificaties", icon: "🔔", adminOnly: false },
+  { key: "account", label: "Account", icon: "👤", adminOnly: false },
 ] as const;
 
-type TabKey = (typeof tabs)[number]["key"];
+type TabKey = (typeof allTabs)[number]["key"];
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("algemeen");
   const { user } = useAuth();
+  const { data: org } = useOrganization();
+  const role = org?.role as string | undefined;
+  const isAdmin = role === "owner" || role === "admin";
+
+  const tabs = useMemo(
+    () => allTabs.filter((t) => !t.adminOnly || isAdmin),
+    [isAdmin]
+  );
+
+  const [activeTab, setActiveTab] = useState<TabKey>(() =>
+    isAdmin ? "algemeen" : "account"
+  );
+
+  // If current tab is no longer allowed, reset
+  const safeTab = tabs.some((t) => t.key === activeTab)
+    ? activeTab
+    : tabs[0]?.key ?? "account";
+
+  if (safeTab !== activeTab) {
+    setActiveTab(safeTab);
+  }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -38,7 +59,7 @@ export default function SettingsPage() {
             onClick={() => setActiveTab(tab.key)}
             className={cn(
               "flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 flex-1 justify-center",
-              activeTab === tab.key
+              safeTab === tab.key
                 ? "bg-erp-bg3 text-erp-text0 shadow-sm border border-erp-border0"
                 : "text-erp-text3 hover:text-erp-text1"
             )}
@@ -49,18 +70,14 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* Tab Content */}
-      {activeTab === "team" && <TeamSettings />}
+      {/* Tab Content — admin-only panels only rendered for admins */}
+      {isAdmin && safeTab === "algemeen" && <OrgSettings />}
+      {isAdmin && safeTab === "team" && <TeamSettings />}
+      {isAdmin && safeTab === "api-keys" && <ApiKeysSettings />}
+      {isAdmin && safeTab === "email" && <ResendSettings />}
+      {isAdmin && safeTab === "snelstart" && <SnelstartSettings />}
 
-      {activeTab === "api-keys" && <ApiKeysSettings />}
-
-      {activeTab === "email" && <ResendSettings />}
-
-      {activeTab === "snelstart" && <SnelstartSettings />}
-
-      {activeTab === "algemeen" && <OrgSettings />}
-
-      {activeTab === "notificaties" && (
+      {safeTab === "notificaties" && (
         <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
           <h3 className="text-[15px] font-semibold text-erp-text0 mb-4">Notificatie voorkeuren</h3>
           <div className="space-y-3">
@@ -85,7 +102,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {activeTab === "account" && (
+      {safeTab === "account" && (
         <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
           <h3 className="text-[15px] font-semibold text-erp-text0 mb-4">Account</h3>
           <div className="space-y-4">
