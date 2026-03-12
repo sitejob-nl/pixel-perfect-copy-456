@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 const services = [
   { key: "anthropic" as const, label: "Anthropic (Claude)", desc: "Voor de AI Agent chat functionaliteit", placeholder: "sk-ant-..." },
   { key: "apify" as const, label: "Apify", desc: "Voor web scraping en data intelligence", placeholder: "apify_api_..." },
+  { key: "resend" as const, label: "Resend", desc: "Voor transactionele en auth e-mails", placeholder: "re_..." },
 ] as const;
 
 const tierConfig: Record<string, { label: string; className: string; emoji: string }> = {
