@@ -4,11 +4,13 @@ import SnelstartSettings from "@/components/erp/SnelstartSettings";
 import ApiKeysSettings from "@/components/erp/ApiKeysSettings";
 import TeamSettings from "@/components/erp/TeamSettings";
 import OrgSettings from "@/components/erp/OrgSettings";
+import ResendSettings from "@/components/erp/ResendSettings";
 
 const tabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️" },
   { key: "team", label: "Team", icon: "👥" },
   { key: "api-keys", label: "API Keys", icon: "🔑" },
+  { key: "email", label: "E-mail", icon: "✉️" },
   { key: "snelstart", label: "Snelstart", icon: "🔗" },
   { key: "notificaties", label: "Notificaties", icon: "🔔" },
   { key: "account", label: "Account", icon: "👤" },
@@ -49,6 +51,8 @@ export default function SettingsPage() {
       {activeTab === "team" && <TeamSettings />}
 
       {activeTab === "api-keys" && <ApiKeysSettings />}
+
+      {activeTab === "email" && <ResendSettings />}
 
       {activeTab === "snelstart" && <SnelstartSettings />}
 
