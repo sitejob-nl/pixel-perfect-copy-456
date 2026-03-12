@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,10 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Loader2, Play, ArrowLeft, Download, Save, ExternalLink, Clock, DollarSign, Hash } from "lucide-react";
+import { Loader2, Play, ArrowLeft, Download, Save, ExternalLink, Clock, DollarSign, Hash, ChevronDown, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import {
@@ -78,6 +80,104 @@ function ActorGrid({ actors, onSelect }: { actors: any[]; onSelect: (id: string)
   );
 }
 
+// ─── Tag Input Field ────────────────────────────────────────
+function TagInputField({ field, value, onChange }: { field: any; value: any; onChange: (v: any) => void }) {
+  const [input, setInput] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const tags: string[] = Array.isArray(value) ? value : [];
+  const suggestions: string[] = field.suggestions || [];
+
+  const filtered = suggestions.filter(
+    (s) => s.toLowerCase().includes(input.toLowerCase()) && !tags.includes(s)
+  );
+
+  const addTag = (tag: string) => {
+    if (tag && !tags.includes(tag)) {
+      onChange([...tags, tag]);
+    }
+    setInput("");
+    setShowSuggestions(false);
+  };
+
+  const removeTag = (tag: string) => onChange(tags.filter((t) => t !== tag));
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+      <div className="flex flex-wrap gap-1.5 mb-1.5">
+        {tags.map((tag) => (
+          <Badge key={tag} variant="secondary" className="text-xs gap-1 pr-1">
+            {tag}
+            <button onClick={() => removeTag(tag)} className="hover:text-destructive"><X className="w-3 h-3" /></button>
+          </Badge>
+        ))}
+      </div>
+      <div className="relative">
+        <Input
+          placeholder={field.placeholder || "Typ en druk Enter..."}
+          value={input}
+          onChange={(e) => { setInput(e.target.value); setShowSuggestions(true); }}
+          onKeyDown={(e) => { if (e.key === "Enter" && input.trim()) { e.preventDefault(); addTag(input.trim()); } }}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+        />
+        {showSuggestions && input && filtered.length > 0 && (
+          <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-40 overflow-auto">
+            {filtered.slice(0, 8).map((s) => (
+              <button
+                key={s}
+                className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+                onMouseDown={(e) => { e.preventDefault(); addTag(s); }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {field.description && <p className="text-[11px] text-muted-foreground">{field.description}</p>}
+    </div>
+  );
+}
+
+// ─── Combobox Field ─────────────────────────────────────────
+function ComboboxField({ field, value, onChange }: { field: any; value: any; onChange: (v: any) => void }) {
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestions: string[] = field.suggestions || [];
+  const filtered = suggestions.filter((s) =>
+    !value || s.toLowerCase().includes(String(value).toLowerCase())
+  );
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+      <div className="relative">
+        <Input
+          placeholder={field.placeholder || ""}
+          value={value || ""}
+          onChange={(e) => { onChange(e.target.value); setShowSuggestions(true); }}
+          onFocus={() => setShowSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+        />
+        {showSuggestions && filtered.length > 0 && (
+          <div className="absolute z-10 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-40 overflow-auto">
+            {filtered.slice(0, 8).map((s) => (
+              <button
+                key={s}
+                className="w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors"
+                onMouseDown={(e) => { e.preventDefault(); onChange(s); setShowSuggestions(false); }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {field.description && <p className="text-[11px] text-muted-foreground">{field.description}</p>}
+    </div>
+  );
+}
+
 // ─── Dynamic Form Field ─────────────────────────────────────
 function DynamicField({ field, value, onChange }: { field: any; value: any; onChange: (v: any) => void }) {
   switch (field.type) {
@@ -130,6 +230,32 @@ function DynamicField({ field, value, onChange }: { field: any; value: any; onCh
           {field.description && <p className="text-[11px] text-muted-foreground">{field.description}</p>}
         </div>
       );
+    case "multi_select": {
+      const selected: string[] = Array.isArray(value) ? value : [];
+      const options = (field.options || []).map((opt: any) =>
+        typeof opt === "string" ? { value: opt, label: opt } : opt
+      );
+      return (
+        <div className="space-y-1.5">
+          <Label className="text-xs">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {options.map((opt: any) => (
+              <label key={opt.value} className="flex items-center gap-2 text-xs cursor-pointer">
+                <Checkbox
+                  checked={selected.includes(opt.value)}
+                  onCheckedChange={(checked) => {
+                    if (checked) onChange([...selected, opt.value]);
+                    else onChange(selected.filter((v: string) => v !== opt.value));
+                  }}
+                />
+                {opt.label}
+              </label>
+            ))}
+          </div>
+          {field.description && <p className="text-[11px] text-muted-foreground">{field.description}</p>}
+        </div>
+      );
+    }
     case "boolean":
       return (
         <div className="flex items-center justify-between gap-4">
@@ -140,6 +266,10 @@ function DynamicField({ field, value, onChange }: { field: any; value: any; onCh
           <Switch checked={!!value} onCheckedChange={onChange} />
         </div>
       );
+    case "tag_input":
+      return <TagInputField field={field} value={value} onChange={onChange} />;
+    case "combobox":
+      return <ComboboxField field={field} value={value} onChange={onChange} />;
     case "multi_text":
       return (
         <div className="space-y-1.5">
@@ -166,9 +296,79 @@ function DynamicField({ field, value, onChange }: { field: any; value: any; onCh
           {field.description && <p className="text-[11px] text-muted-foreground">{field.description}</p>}
         </div>
       );
+    case "date":
+      return (
+        <div className="space-y-1.5">
+          <Label className="text-xs">{field.label} {field.required && <span className="text-destructive">*</span>}</Label>
+          <Input
+            type="date"
+            value={value || ""}
+            onChange={e => onChange(e.target.value)}
+          />
+          {field.description && <p className="text-[11px] text-muted-foreground">{field.description}</p>}
+        </div>
+      );
     default:
       return null;
   }
+}
+
+// ─── Grouped Form with collapsible sections ─────────────────
+function GroupedForm({
+  inputFields,
+  formValues,
+  setFormValues,
+}: {
+  inputFields: any[];
+  formValues: Record<string, any>;
+  setFormValues: React.Dispatch<React.SetStateAction<Record<string, any>>>;
+}) {
+  // Split fields into ungrouped (no section) and grouped
+  const ungrouped = inputFields.filter((f: any) => !f.section);
+  const sections = useMemo(() => {
+    const map = new Map<string, any[]>();
+    inputFields.forEach((f: any) => {
+      if (f.section) {
+        if (!map.has(f.section)) map.set(f.section, []);
+        map.get(f.section)!.push(f);
+      }
+    });
+    return Array.from(map.entries());
+  }, [inputFields]);
+
+  return (
+    <div className="space-y-4">
+      {/* Ungrouped fields first */}
+      {ungrouped.map((field: any) => (
+        <DynamicField
+          key={field.key}
+          field={field}
+          value={formValues[field.key] ?? field.default ?? null}
+          onChange={(v) => setFormValues((prev) => ({ ...prev, [field.key]: v }))}
+        />
+      ))}
+
+      {/* Collapsible sections */}
+      {sections.map(([sectionName, fields]) => (
+        <Collapsible key={sectionName} defaultOpen={false}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 bg-muted/50 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted transition-colors group">
+            <span>{sectionName}</span>
+            <ChevronDown className="w-3.5 h-3.5 transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-3 space-y-4 pl-1">
+            {fields.map((field: any) => (
+              <DynamicField
+                key={field.key}
+                field={field}
+                value={formValues[field.key] ?? field.default ?? null}
+                onChange={(v) => setFormValues((prev) => ({ ...prev, [field.key]: v }))}
+              />
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+      ))}
+    </div>
+  );
 }
 
 // ─── Results Table ──────────────────────────────────────────
@@ -257,6 +457,23 @@ function ResultsTable({ results, outputFields, runId }: { results: any[]; output
   );
 }
 
+// ─── Leads Finder Validation ────────────────────────────────
+const STRONG_FILTER_KEYS = [
+  "job_title", "job_titles", "company_domain", "company_domains",
+  "industry", "industries", "technology", "technologies",
+  "keywords", "keyword",
+];
+
+function hasStrongFilter(formValues: Record<string, any>, inputFields: any[]): boolean {
+  return inputFields.some((f: any) => {
+    if (!STRONG_FILTER_KEYS.includes(f.key)) return false;
+    const v = formValues[f.key];
+    if (Array.isArray(v)) return v.length > 0;
+    if (typeof v === "string") return v.trim().length > 0;
+    return v != null;
+  });
+}
+
 // ─── Scraper Tab (actors + form + run) ──────────────────────
 function ScraperTab() {
   const { data: actors, isLoading: loadingActors } = useApifyActors();
@@ -268,20 +485,44 @@ function ScraperTab() {
   const pollerStatus = useApifyRunPoller(activeRunId);
   const getResults = useGetRunResults();
   const [results, setResults] = useState<any[] | null>(null);
+  const defaultsInitialized = useRef<string | null>(null);
 
-  // Initialize defaults when actor loads
   const inputFields = actorDetail?.input_fields || [];
   const outputFields = actorDetail?.output_fields || [];
+  const isLeadsFinder = selectedActorId?.includes("leads") || actorDetail?.category === "lead_generation";
+
+  // Initialize defaults when actor loads
+  useEffect(() => {
+    if (actorDetail && defaultsInitialized.current !== actorDetail.id) {
+      defaultsInitialized.current = actorDetail.id;
+      const defaults: Record<string, any> = {};
+      (actorDetail.input_fields || []).forEach((f: any) => {
+        if (f.default != null) defaults[f.key] = f.default;
+      });
+      if (actorDetail.default_input) {
+        Object.assign(defaults, actorDetail.default_input);
+      }
+      setFormValues(defaults);
+    }
+  }, [actorDetail]);
 
   const handleSelectActor = (id: string) => {
     setSelectedActorId(id);
     setFormValues({});
     setActiveRunId(null);
     setResults(null);
+    defaultsInitialized.current = null;
   };
 
   const handleStart = async () => {
     if (!selectedActorId) return;
+
+    // Leads Finder validation
+    if (isLeadsFinder && !hasStrongFilter(formValues, inputFields)) {
+      toast.error("Vul minimaal 1 sterk filter in (functietitel, bedrijfsdomein, industrie, technologie of keywords)");
+      return;
+    }
+
     try {
       const res = await startRun.mutateAsync({ actorId: selectedActorId, input: formValues });
       setActiveRunId(res.run_id);
@@ -292,7 +533,6 @@ function ScraperTab() {
     }
   };
 
-  // Load results when run succeeds
   const runFinished = pollerStatus?.status === "succeeded";
   const runFailed = pollerStatus?.status === "failed" || pollerStatus?.status === "aborted";
 
@@ -306,11 +546,6 @@ function ScraperTab() {
     }
   };
 
-  // Auto-load results on success
-  useState(() => {
-    // handled via effect below
-  });
-
   if (runFinished && !results && !getResults.isPending) {
     loadResults();
   }
@@ -319,10 +554,11 @@ function ScraperTab() {
     return <div className="flex items-center justify-center py-20"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>;
   }
 
-  // If no actor selected → show grid
   if (!selectedActorId) {
     return <ActorGrid actors={actors || []} onSelect={handleSelectActor} />;
   }
+
+  const hasSections = inputFields.some((f: any) => f.section);
 
   return (
     <div className="space-y-5">
@@ -345,14 +581,25 @@ function ScraperTab() {
             {actorDetail?.description && <CardDescription className="text-xs">{actorDetail.description}</CardDescription>}
           </CardHeader>
           <CardContent className="space-y-4">
-            {inputFields.map((field: any) => (
-              <DynamicField
-                key={field.key}
-                field={field}
-                value={formValues[field.key] ?? field.default ?? null}
-                onChange={v => setFormValues(prev => ({ ...prev, [field.key]: v }))}
-              />
-            ))}
+            {hasSections ? (
+              <GroupedForm inputFields={inputFields} formValues={formValues} setFormValues={setFormValues} />
+            ) : (
+              inputFields.map((field: any) => (
+                <DynamicField
+                  key={field.key}
+                  field={field}
+                  value={formValues[field.key] ?? field.default ?? null}
+                  onChange={v => setFormValues(prev => ({ ...prev, [field.key]: v }))}
+                />
+              ))
+            )}
+
+            {isLeadsFinder && !hasStrongFilter(formValues, inputFields) && (
+              <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2">
+                ⚠️ Vul minimaal 1 sterk filter in: functietitel, bedrijfsdomein, industrie, technologie of keywords
+              </p>
+            )}
+
             <Button onClick={handleStart} disabled={startRun.isPending} className="w-full">
               {startRun.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
               Start Scraper
