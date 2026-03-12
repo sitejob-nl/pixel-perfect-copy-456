@@ -22,7 +22,7 @@ export function useApiKeyStatus() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organization_api_keys")
-        .select("anthropic_key_set, anthropic_key_hint, anthropic_key_verified_at, apify_key_set, apify_key_hint, apify_key_verified_at")
+        .select("anthropic_key_set, anthropic_key_hint, anthropic_key_verified_at, apify_key_set, apify_key_hint, apify_key_verified_at, selected_model")
         .eq("organization_id", orgId!)
         .maybeSingle();
       if (error) throw error;
@@ -33,6 +33,7 @@ export function useApiKeyStatus() {
         apify_key_set: false,
         apify_key_hint: null,
         apify_key_verified_at: null,
+        selected_model: null,
       };
     },
   });
