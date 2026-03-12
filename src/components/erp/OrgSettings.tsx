@@ -148,6 +148,7 @@ export default function OrgSettings() {
         iban: org.iban || "",
         primary_color: org.primary_color || "#2563EB",
         secondary_color: org.secondary_color || "#1E40AF",
+        bg_color: org.bg_color || "",
         invoice_prefix: org.invoice_prefix || "INV",
         quote_prefix: org.quote_prefix || "OFF",
         project_prefix: org.project_prefix || "PRJ",
