@@ -200,10 +200,14 @@ Deno.serve(async (req: Request) => {
       .single();
     if (inviteErr) throw inviteErr;
 
-    // Generate Supabase invite link
+    // Generate Supabase invite link or handle existing user
     const baseRedirect = redirect_url || body.origin || "https://pixel-perfect-copy-456.lovable.app";
     const redirectTo = `${baseRedirect}/accept-invite?invite_token=${invite.token}`;
 
+    let actionLink: string | null = null;
+    let existingUser = false;
+
+    // First try invite link (for new users)
     const { data: linkData, error: linkErr } =
       await adminClient.auth.admin.generateLink({
         type: "invite",
@@ -213,11 +217,72 @@ Deno.serve(async (req: Request) => {
           data: { full_name: "" },
         },
       });
-    if (linkErr) throw linkErr;
 
-    const actionLink =
-      linkData?.properties?.action_link || linkData?.properties?.hashed_token;
-    if (!actionLink) throw new Error("Kon geen uitnodigingslink genereren");
+    if (linkErr) {
+      // If user already exists, check if they're already in this org
+      if (linkErr.message?.includes("already been registered") || (linkErr as any).code === "email_exists") {
+        existingUser = true;
+
+        // Look up existing user
+        const { data: usersData } = await adminClient.auth.admin.listUsers();
+        const existingAuthUser = usersData?.users?.find((u: any) => u.email === email);
+
+        if (existingAuthUser) {
+          // Check if already a member of this org
+          const { data: existingMember } = await adminClient
+            .from("organization_members")
+            .select("id, is_active")
+            .eq("organization_id", orgId)
+            .eq("user_id", existingAuthUser.id)
+            .maybeSingle();
+
+          if (existingMember?.is_active) {
+            // Already active member — clean up invite and inform
+            await adminClient.from("organization_invites").delete().eq("id", invite.id);
+            throw new Error("Deze gebruiker is al lid van je organisatie");
+          }
+
+          if (existingMember && !existingMember.is_active) {
+            // Re-activate existing membership
+            await adminClient
+              .from("organization_members")
+              .update({ is_active: true, role: inviteRole, joined_at: new Date().toISOString() })
+              .eq("id", existingMember.id);
+          } else {
+            // Add as new member
+            await adminClient.from("organization_members").insert({
+              organization_id: orgId,
+              user_id: existingAuthUser.id,
+              role: inviteRole,
+              is_active: true,
+              joined_at: new Date().toISOString(),
+            });
+          }
+
+          // Mark invite as accepted
+          await adminClient
+            .from("organization_invites")
+            .update({ accepted_at: new Date().toISOString() })
+            .eq("id", invite.id);
+
+          // Generate a magic link so they can sign in
+          const { data: magicData } = await adminClient.auth.admin.generateLink({
+            type: "magiclink",
+            email,
+            options: { redirectTo: `${baseRedirect}/dashboard` },
+          });
+          actionLink = magicData?.properties?.action_link || null;
+        } else {
+          throw new Error("Gebruiker niet gevonden ondanks bestaande registratie");
+        }
+      } else {
+        throw linkErr;
+      }
+    } else {
+      actionLink = linkData?.properties?.action_link || linkData?.properties?.hashed_token || null;
+    }
+
+    if (!actionLink && !existingUser) throw new Error("Kon geen uitnodigingslink genereren");
 
     // Get Resend key
     const { data: apiKeys } = await adminClient
@@ -243,12 +308,26 @@ Deno.serve(async (req: Request) => {
 
     const resendKey = decrypt(resendEncrypted as string, encryptionKey);
 
+    // For existing users already added, we can skip email or send a notification
+    if (existingUser && !actionLink) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          invite_id: invite.id,
+          email_sent: false,
+          existing_user: true,
+          message: "Bestaande gebruiker is direct toegevoegd aan je organisatie.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Build and send email with branding
     const html = buildInviteHtml({
       orgName,
       inviterName,
       role: inviteRole,
-      actionUrl: actionLink,
+      actionUrl: actionLink!,
       logoUrl,
       primaryColor,
     });
