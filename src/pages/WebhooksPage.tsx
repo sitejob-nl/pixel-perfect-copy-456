@@ -231,7 +231,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       setMappings(tmpl.default_field_mappings.map((m: any) => ({
         source_path: m.source_path || "",
         target_field: m.target_field || "",
-        transform: m.transform || "",
+        transform: m.transform || "none",
       })));
     }
     setStep(2);
