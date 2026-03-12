@@ -445,9 +445,11 @@ Deno.serve(async (req) => {
       return json({ error: "PDF upload mislukt: " + uploadErr.message }, 500);
     }
 
-    // Get public URL
-    const { data: urlData } = sb.storage.from("signed-contracts").getPublicUrl(filePath);
-    const pdfUrl = urlData?.publicUrl || "";
+    // Get signed URL (bucket is private)
+    const { data: urlData, error: urlErr } = await sb.storage
+      .from("signed-contracts")
+      .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year expiry
+    const pdfUrl = urlData?.signedUrl || "";
 
     // Step 5: Update contract record
     await sb
