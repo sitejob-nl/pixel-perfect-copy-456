@@ -5,6 +5,7 @@ import { Icons, type IconName } from "@/components/erp/ErpIcons";
 import { Dot } from "@/components/erp/ErpPrimitives";
 import { useOrgModules } from "@/hooks/useOrgModules";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useBranding } from "@/contexts/BrandingContext";
 
 interface NavItem {
   k: string;
@@ -73,12 +74,19 @@ export default function ErpSidebar() {
   const [hov, setHov] = useState<string | null>(null);
   const { data: modules } = useOrgModules();
   const { data: isSuperAdmin } = useIsSuperAdmin();
+  const { org: brandOrg } = useBranding();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Derive active page from pathname
   const pathSegment = location.pathname.split("/")[1] || "dashboard";
   const activePage = pathSegment;
+
+  const orgName = brandOrg?.name || "SiteJob";
+  const orgLogo = brandOrg?.logo_url;
+  const orgInitials = orgName.slice(0, 2).toUpperCase();
+  const primaryColor = brandOrg?.primary_color || "#2563EB";
+  const secondaryColor = brandOrg?.secondary_color || "#1E40AF";
 
   const isModuleEnabled = (pageKey: string) => {
     const moduleKey = moduleMap[pageKey];
@@ -96,14 +104,18 @@ export default function ErpSidebar() {
       {/* Logo */}
       <div className="px-4 pt-[18px] pb-[14px] border-b border-erp-border0">
         <div className="flex items-center gap-[10px]">
-          <div className="w-[34px] h-[34px] rounded-[9px] bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" fill="#fff" fillOpacity="0.9" />
-              <path d="M12 12V22M12 12L4 7M12 12l8-5" stroke="hsl(225, 93%, 64%)" strokeWidth="1.5" />
-            </svg>
+          <div
+            className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center overflow-hidden"
+            style={{ background: orgLogo ? "transparent" : `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+          >
+            {orgLogo ? (
+              <img src={orgLogo} alt={orgName} className="w-full h-full object-contain" />
+            ) : (
+              <span className="text-[13px] font-bold text-white">{orgInitials}</span>
+            )}
           </div>
           <div>
-            <div className="text-base font-bold tracking-tight leading-tight">SiteJob</div>
+            <div className="text-base font-bold tracking-tight leading-tight">{orgName}</div>
             <div className="text-[10.5px] text-erp-text3 font-medium mt-[1px]">ERP Platform</div>
           </div>
         </div>
@@ -171,9 +183,18 @@ export default function ErpSidebar() {
 
       {/* Footer */}
       <div className="px-3 py-3 border-t border-erp-border0 flex items-center gap-[10px]">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center text-[11px] font-bold text-white">SJ</div>
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold text-white overflow-hidden"
+          style={{ background: orgLogo ? "transparent" : `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+        >
+          {orgLogo ? (
+            <img src={orgLogo} alt="" className="w-full h-full object-contain" />
+          ) : (
+            orgInitials
+          )}
+        </div>
         <div className="flex-1">
-          <div className="text-[13px] font-semibold">SiteJob B.V.</div>
+          <div className="text-[13px] font-semibold">{orgName}</div>
           <div className="text-[10.5px] text-erp-text3">Professional</div>
         </div>
         <span className="text-erp-text3 cursor-pointer flex" onClick={() => handleNavigate("settings")}><Icons.Settings className="w-[17px] h-[17px]" /></span>

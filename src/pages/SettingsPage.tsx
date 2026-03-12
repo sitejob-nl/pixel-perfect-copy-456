@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import SnelstartSettings from "@/components/erp/SnelstartSettings";
 import ApiKeysSettings from "@/components/erp/ApiKeysSettings";
 import TeamSettings from "@/components/erp/TeamSettings";
+import OrgSettings from "@/components/erp/OrgSettings";
 
 const tabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️" },
@@ -51,36 +52,7 @@ export default function SettingsPage() {
 
       {activeTab === "snelstart" && <SnelstartSettings />}
 
-      {activeTab === "algemeen" && (
-        <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
-          <h3 className="text-[15px] font-semibold text-erp-text0 mb-4">Organisatie</h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Organisatie naam</label>
-              <input
-                type="text"
-                defaultValue="SiteJob B.V."
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Tijdzone</label>
-              <select className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue">
-                <option>Europe/Amsterdam</option>
-                <option>Europe/London</option>
-                <option>America/New_York</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Taal</label>
-              <select className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue">
-                <option>Nederlands</option>
-                <option>English</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === "algemeen" && <OrgSettings />}
 
       {activeTab === "notificaties" && (
         <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
