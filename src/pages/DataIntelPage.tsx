@@ -65,7 +65,7 @@ export default function DataIntelPage() {
 
   const handleProcessAll = async () => {
     try {
-      const result = await processLeads.mutateAsync();
+      const result = await processLeads.mutateAsync({});
       const p = result.pipeline;
       toast.success(`Pipeline klaar: ${p.enriched ?? 0} verrijkt, ${p.imported ?? 0} geïmporteerd, ${p.duplicates_skipped ?? 0} duplicaten overgeslagen`);
     } catch (e: any) {
