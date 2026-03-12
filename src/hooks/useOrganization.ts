@@ -9,19 +9,35 @@ export function useOrganization() {
     queryKey: ["organization", user?.id],
     enabled: !!user,
     queryFn: async () => {
+      // First try active membership
       const { data, error } = await supabase
         .from("organization_members")
-        .select("organization_id, role, organizations(id, name, slug)")
+        .select("organization_id, role, organizations(id, name, slug), is_active")
         .eq("user_id", user!.id)
         .eq("is_active", true)
         .limit(1)
         .single();
 
-      if (error) {
-        if (error.code === "PGRST116") return null; // No rows
-        throw error;
+      if (!error && data) {
+        return { ...data, deactivated: false };
       }
-      return data;
+
+      if (error && error.code !== "PGRST116") throw error;
+
+      // Check for inactive membership
+      const { data: inactive, error: inactiveErr } = await supabase
+        .from("organization_members")
+        .select("organization_id, role, organizations(id, name, slug), is_active")
+        .eq("user_id", user!.id)
+        .eq("is_active", false)
+        .limit(1)
+        .single();
+
+      if (!inactiveErr && inactive) {
+        return { ...inactive, deactivated: true };
+      }
+
+      return null; // No membership at all
     },
   });
 }

@@ -1,0 +1,1 @@
+UPDATE organization_members SET is_active = true WHERE id = 'c4d0f419-6f6e-4c56-9ff4-34687e7eaab0';
