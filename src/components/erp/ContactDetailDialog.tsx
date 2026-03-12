@@ -13,6 +13,15 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex gap-2">
+      <span className="text-erp-text3 w-28 shrink-0">{label}</span>
+      <span className="text-erp-text0 truncate">{value}</span>
+    </div>
+  );
+}
+
 interface Props {
   contact: ContactWithCompany | null;
   open: boolean;
