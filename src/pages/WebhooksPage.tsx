@@ -26,7 +26,7 @@ const TARGET_LABELS: Record<string, string> = {
 };
 
 const TRANSFORMS = [
-  { value: "", label: "Geen" },
+  { value: "none", label: "Geen" },
   { value: "lowercase", label: "Kleine letters" },
   { value: "uppercase", label: "Hoofdletters" },
   { value: "trim", label: "Trim" },
