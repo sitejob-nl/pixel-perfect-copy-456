@@ -45,7 +45,16 @@ function SortableBlock({ block, settings, selected, onSelect, onMove, onDuplicat
 }
 
 export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
-  const [design, setDesign] = useState<DesignJson>(initialDesign || getDefaultDesign());
+  // Ensure we always have valid design with settings
+  const getValidDesign = (d: DesignJson | null | undefined): DesignJson => {
+    if (!d) return getDefaultDesign();
+    return {
+      settings: { ...getDefaultDesign().settings, ...d.settings },
+      blocks: d.blocks || [],
+    };
+  };
+
+  const [design, setDesign] = useState<DesignJson>(getValidDesign(initialDesign));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | "html">("desktop");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
