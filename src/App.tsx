@@ -27,6 +27,7 @@ import PlaceholderPage from "./pages/PlaceholderPage";
 import ContractsPage from "./pages/ContractsPage";
 import ContractSigningPage from "./pages/ContractSigningPage";
 import ScrapersPage from "./pages/ScrapersPage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -127,6 +128,7 @@ const App = () => (
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="quotes" element={<QuotesPage />} />
               <Route path="contracts" element={<ContractsPage />} />
+              <Route path="knowledgebase" element={<KnowledgeBasePage />} />
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="scrapers" element={<ScrapersPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
