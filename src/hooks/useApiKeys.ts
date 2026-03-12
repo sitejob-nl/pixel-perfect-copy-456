@@ -50,7 +50,7 @@ export function useSetApiKey() {
   const { data: org } = useOrganization();
 
   return useMutation({
-    mutationFn: async ({ service, apiKey }: { service: "anthropic" | "apify"; apiKey: string }) => {
+    mutationFn: async ({ service, apiKey }: { service: "anthropic" | "apify" | "resend"; apiKey: string }) => {
       const { data, error } = await supabase.functions.invoke("manage-api-keys", {
         body: { action: "set", service, api_key: apiKey, organization_id: org!.organization_id },
       });
