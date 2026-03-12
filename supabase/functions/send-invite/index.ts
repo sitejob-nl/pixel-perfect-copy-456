@@ -253,6 +253,23 @@ Deno.serve(async (req: Request) => {
       primaryColor,
     });
 
+    // Fetch verified domain from Resend to use as sender
+    let fromAddress = `${orgName} <onboarding@resend.dev>`;
+    try {
+      const domainsRes = await fetch("https://api.resend.com/domains", {
+        headers: { Authorization: `Bearer ${resendKey}` },
+      });
+      if (domainsRes.ok) {
+        const domainsData = await domainsRes.json();
+        const verifiedDomain = domainsData?.data?.find((d: any) => d.status === "verified");
+        if (verifiedDomain) {
+          fromAddress = `${orgName} <noreply@${verifiedDomain.name}>`;
+        }
+      }
+    } catch (domainErr) {
+      console.warn("Could not fetch Resend domains, using fallback:", domainErr);
+    }
+
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -260,7 +277,7 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: `${orgName} <noreply@${orgId}.resend.dev>`,
+        from: fromAddress,
         to: [email],
         subject: `${inviterName} nodigt je uit voor ${orgName}`,
         html,
