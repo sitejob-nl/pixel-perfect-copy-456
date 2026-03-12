@@ -117,7 +117,10 @@ function DynamicField({ field, value, onChange }: { field: any; value: any; onCh
           <Select value={value || ""} onValueChange={onChange}>
             <SelectTrigger><SelectValue placeholder={field.placeholder || "Kies..."} /></SelectTrigger>
             <SelectContent>
-              {(field.options || []).map((opt: any) => (
+              {(field.options || []).filter((opt: any) => {
+                const v = typeof opt === "string" ? opt : opt.value;
+                return v !== "" && v != null;
+              }).map((opt: any) => (
                 <SelectItem key={typeof opt === "string" ? opt : opt.value} value={typeof opt === "string" ? opt : opt.value}>
                   {typeof opt === "string" ? opt : opt.label}
                 </SelectItem>

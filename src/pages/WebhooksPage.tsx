@@ -71,7 +71,7 @@ export default function WebhooksPage() {
   const [apiKeyDialog, setApiKeyDialog] = useState<{ open: boolean; endpointId?: string; key?: string }>({ open: false });
   const [testDialog, setTestDialog] = useState<{ open: boolean; endpointId?: string; result?: any }>({ open: false });
   const [logDetail, setLogDetail] = useState<any>(null);
-  const [logFilter, setLogFilter] = useState<string>("");
+  const [logFilter, setLogFilter] = useState<string>("all");
 
   return (
     <div>
@@ -207,7 +207,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [config, setConfig] = useState({
     name: "", description: "", target_table: "contacts",
-    dedup_field: "", dedup_action: "update",
+    dedup_field: "none", dedup_action: "update",
     default_source: "", default_temperature: "warm",
   });
   const [mappings, setMappings] = useState<{ source_path: string; target_field: string; transform: string }[]>([]);
@@ -219,7 +219,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const reset = () => {
     setStep(1);
     setSelectedTemplate(null);
-    setConfig({ name: "", description: "", target_table: "contacts", dedup_field: "", dedup_action: "update", default_source: "", default_temperature: "warm" });
+    setConfig({ name: "", description: "", target_table: "contacts", dedup_field: "none", dedup_action: "update", default_source: "", default_temperature: "warm" });
     setMappings([]);
   };
 
@@ -249,7 +249,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
         source_platform: selectedTemplate?.platform_key || "custom",
         target_table: config.target_table,
         field_mappings: mappings.filter((m) => m.source_path && m.target_field),
-        dedup_field: config.dedup_field || null,
+        dedup_field: config.dedup_field === "none" ? null : config.dedup_field || null,
         dedup_action: config.dedup_action,
         default_values: Object.keys(defaultValues).length ? defaultValues : null,
         sample_payload: selectedTemplate?.payload_example || null,
@@ -330,7 +330,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                 <Select value={config.dedup_field} onValueChange={(v) => setConfig((c) => ({ ...c, dedup_field: v }))}>
                   <SelectTrigger><SelectValue placeholder="Geen" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen</SelectItem>
+                    <SelectItem value="none">Geen</SelectItem>
                     <SelectItem value="email">E-mail</SelectItem>
                     <SelectItem value="phone">Telefoon</SelectItem>
                     <SelectItem value="name">Naam</SelectItem>
@@ -598,7 +598,7 @@ function TestDialog({ state, onClose }: { state: { open: boolean; endpointId?: s
 // ===================== LOGS TABLE =====================
 function LogsTable({ filter, onFilterChange, onSelect }: { filter: string; onFilterChange: (v: string) => void; onSelect: (log: any) => void }) {
   const { data: endpoints } = useWebhookEndpoints();
-  const { data: logs, isLoading } = useWebhookLogs(filter || undefined);
+  const { data: logs, isLoading } = useWebhookLogs(filter === "all" ? undefined : filter || undefined);
 
   const statusColor: Record<string, string> = {
     processed: "bg-green-500/10 text-green-600",
@@ -613,7 +613,7 @@ function LogsTable({ filter, onFilterChange, onSelect }: { filter: string; onFil
         <Select value={filter} onValueChange={onFilterChange}>
           <SelectTrigger className="w-[240px]"><SelectValue placeholder="Alle endpoints" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle endpoints</SelectItem>
+            <SelectItem value="all">Alle endpoints</SelectItem>
             {endpoints?.map((ep: any) => (
               <SelectItem key={ep.id} value={ep.id}>{ep.name}</SelectItem>
             ))}
