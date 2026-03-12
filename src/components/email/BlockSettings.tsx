@@ -71,6 +71,123 @@ function AlignSelect({ value, onChange }: { value: string; onChange: (v: string)
   );
 }
 
+function ImageBlockSettings({ data: d, onUpdate }: { data: Record<string, any>; onUpdate: (key: string, val: any) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Alleen afbeeldingen zijn toegestaan");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Bestand mag maximaal 5MB zijn");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `email-images/${crypto.randomUUID()}.${ext}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from("org-assets")
+        .upload(path, file, { cacheControl: "3600", upsert: false });
+
+      if (uploadErr) throw uploadErr;
+
+      const { data: urlData } = supabase.storage
+        .from("org-assets")
+        .getPublicUrl(path);
+
+      onUpdate("src", urlData.publicUrl);
+      toast.success("Afbeelding geüpload");
+    } catch (err: any) {
+      toast.error(err.message || "Upload mislukt");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  return (
+    <>
+      {/* Upload button */}
+      <div>
+        <FieldLabel>Afbeelding</FieldLabel>
+        <input ref={fileRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
+        <div className="space-y-2">
+          {d.src && (
+            <div className="relative rounded-lg overflow-hidden border border-erp-border0 bg-erp-bg2">
+              <img src={d.src} alt={d.alt || ""} className="w-full h-24 object-contain" />
+              <button
+                onClick={() => onUpdate("src", "")}
+                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-erp-bg0/80 text-erp-text3 hover:text-erp-red text-[10px] flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="w-full py-2 rounded-lg bg-erp-bg2 border border-erp-border0 border-dashed text-[12px] text-erp-text2 hover:text-erp-text0 hover:border-erp-blue/40 transition-all disabled:opacity-50"
+          >
+            {uploading ? "Uploaden..." : d.src ? "🔄 Vervangen" : "📷 Upload afbeelding"}
+          </button>
+        </div>
+      </div>
+
+      {/* URL fallback */}
+      <div>
+        <FieldLabel>Of plak een URL</FieldLabel>
+        <input
+          type="text"
+          value={d.src || ""}
+          onChange={(e) => onUpdate("src", e.target.value)}
+          className="w-full bg-erp-bg2 border border-erp-border0 rounded px-2 py-1.5 text-[12px] text-erp-text0"
+          placeholder="https://..."
+        />
+      </div>
+      <div>
+        <FieldLabel>Alt tekst</FieldLabel>
+        <input
+          type="text"
+          value={d.alt || ""}
+          onChange={(e) => onUpdate("alt", e.target.value)}
+          className="w-full bg-erp-bg2 border border-erp-border0 rounded px-2 py-1.5 text-[12px] text-erp-text0"
+        />
+      </div>
+      <div>
+        <FieldLabel>Breedte: {d.width || "100%"}</FieldLabel>
+        <input
+          type="range"
+          min={50}
+          max={100}
+          value={parseInt(d.width) || 100}
+          onChange={(e) => onUpdate("width", `${e.target.value}%`)}
+          className="w-full"
+        />
+      </div>
+      <div>
+        <FieldLabel>Link URL</FieldLabel>
+        <input
+          type="text"
+          value={d.url || ""}
+          onChange={(e) => onUpdate("url", e.target.value)}
+          className="w-full bg-erp-bg2 border border-erp-border0 rounded px-2 py-1.5 text-[12px] text-erp-text0"
+          placeholder="Optioneel"
+        />
+      </div>
+      <AlignSelect value={d.align || "center"} onChange={(v) => onUpdate("align", v)} />
+    </>
+  );
+}
+
 export default function BlockSettings({ block, settings, onUpdateBlock, onUpdateSettings }: Props) {
   const d = block?.data || {};
   const update = (key: string, val: any) => onUpdateBlock({ ...d, [key]: val });
