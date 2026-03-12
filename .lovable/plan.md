@@ -1,68 +1,37 @@
 
 
-# Fix Build Errors: Snelstart Type Mismatches
+## Problem
 
-## Wat er nu is opgezet voor Snelstart
+User info@sitejob.nl has `is_active: false` in `organization_members`. When they log in, `useOrganization` returns null, causing a redirect to the onboarding page ("Maak je organisatie aan"). The accept-invite page handles reactivation, but only if the user follows the invite link -- if they log in directly, they're stuck.
 
-**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
+## Root Cause
 
-**Frontend:**
-- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
-- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
-- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
+Two issues:
+1. When you click the X to remove a member, it sets `is_active = false` but the user's auth account still exists. If they log in again, they see onboarding.
+2. When re-inviting the same user, the accept-invite flow *can* reactivate them, but the user has to actually click the invite link and go through accept-invite. If they skip that and just log in, they're stuck.
 
-**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
+## Plan
 
-## Root Cause van de Build Errors
+### 1. Fix the immediate data issue
+Run a query to reactivate info@sitejob.nl's membership since they were clearly re-invited and accepted (the auth logs show successful invite acceptance at 12:59:55).
 
-De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
+### 2. Fix the remove member flow
+When removing a member (clicking X), **properly delete** the `organization_members` row instead of just setting `is_active = false`. Also delete the user's Supabase auth account via an edge function so they can be cleanly re-invited later. This prevents zombie memberships.
 
-## Fix (2 bestanden)
+Alternatively (simpler): Keep the soft-delete approach but fix the **onboarding page** to show a message like "Je account is gedeactiveerd. Neem contact op met de beheerder." instead of showing the "create organization" form when a user has an *inactive* membership.
 
-### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
+### 3. Fix the AcceptInvitePage redirect
+After accepting an invite, invalidate the `organization` query cache so the `ProtectedRoute` picks up the new membership immediately.
 
-Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
+### Recommended approach (simplest, least disruptive)
 
-Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
-```
-// FOUT: profiles heeft geen organization_id
-const { data: profile } = await supabase
-  .from("profiles")
-  .select("organization_id")
-  .eq("id", user.id)
-  .single();
+1. **Reactivate info@sitejob.nl now** via SQL
+2. **Update `useOrganization`** to also check for inactive memberships and return a distinct state
+3. **Update `ProtectedRoute`** in App.tsx: if user has an inactive membership, show "Account gedeactiveerd" instead of redirecting to onboarding
+4. **Update `AcceptInvitePage`**: after accepting, invalidate the `["organization"]` query key so routing works immediately
 
-// FIX: gebruik organization_members
-const { data: membership } = await supabase
-  .from("organization_members")
-  .select("organization_id")
-  .eq("user_id", user.id)
-  .eq("is_active", true)
-  .limit(1)
-  .single();
-```
-
-Voor de tabellen die niet in types staan, cast naar `any`:
-```
-const { data, error } = await (supabase as any)
-  .from("snelstart_config")
-  ...
-```
-
-### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
-
-Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
-```
-const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
-const actorId = providerConfig?.actorId || "";
-```
-
-### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
-
-De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
-
-## Bestanden
-
-- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
-- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
+### Files to change
+- `src/hooks/useOrganization.ts` -- return inactive membership info
+- `src/App.tsx` -- handle deactivated state in ProtectedRoute
+- `src/pages/AcceptInvitePage.tsx` -- invalidate org query after accepting
 
