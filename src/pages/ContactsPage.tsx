@@ -12,7 +12,7 @@ export default function ContactsPage() {
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedContact, setSelectedContact] = useState<ContactWithCompany | null>(null);
+  const navigate = useNavigate();
 
   const { data: contacts = [], isLoading, error } = useContacts();
 
