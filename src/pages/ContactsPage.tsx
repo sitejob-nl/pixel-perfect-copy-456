@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader, ErpButton, ErpCard, FilterButton, Avatar, Badge, Dot, Chip, TH, TD, TR } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { stageColors, stageLabels, tierColors } from "@/data/mockData";
-import { useContacts, type ContactWithCompany } from "@/hooks/useContacts";
+import { useContacts } from "@/hooks/useContacts";
 import CreateContactDialog from "@/components/erp/CreateContactDialog";
-import ContactDetailDialog from "@/components/erp/ContactDetailDialog";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
