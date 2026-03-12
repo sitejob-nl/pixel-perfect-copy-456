@@ -141,16 +141,7 @@ export default function BlockSettings({ block, settings, onUpdateBlock, onUpdate
               </>
             )}
             {block.type === "image" && (
-              <>
-                <div><FieldLabel>Afbeelding URL</FieldLabel><input type="text" value={d.src || ""} onChange={(e) => update("src", e.target.value)} className="w-full bg-erp-bg2 border border-erp-border0 rounded px-2 py-1.5 text-[12px] text-erp-text0" placeholder="https://..." /></div>
-                <div><FieldLabel>Alt tekst</FieldLabel><input type="text" value={d.alt || ""} onChange={(e) => update("alt", e.target.value)} className="w-full bg-erp-bg2 border border-erp-border0 rounded px-2 py-1.5 text-[12px] text-erp-text0" /></div>
-                <div>
-                  <FieldLabel>Breedte: {d.width || "100%"}</FieldLabel>
-                  <input type="range" min={50} max={100} value={parseInt(d.width) || 100} onChange={(e) => update("width", `${e.target.value}%`)} className="w-full" />
-                </div>
-                <div><FieldLabel>Link URL</FieldLabel><input type="text" value={d.url || ""} onChange={(e) => update("url", e.target.value)} className="w-full bg-erp-bg2 border border-erp-border0 rounded px-2 py-1.5 text-[12px] text-erp-text0" placeholder="Optioneel" /></div>
-                <AlignSelect value={d.align || "center"} onChange={(v) => update("align", v)} />
-              </>
+              <ImageBlockSettings data={d} onUpdate={update} />
             )}
             {block.type === "button" && (
               <>
