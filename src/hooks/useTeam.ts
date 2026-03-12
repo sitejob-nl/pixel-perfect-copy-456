@@ -111,9 +111,7 @@ export function useInviteMember() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["org-invites"] });
       qc.invalidateQueries({ queryKey: ["org-members"] });
-      if (data?.existing_user) {
-        toast.success("Bestaande gebruiker is direct toegevoegd aan je organisatie.");
-      } else if (data?.email_sent) {
+      if (data?.email_sent) {
         toast.success("Uitnodiging verstuurd!");
       } else if (data?.action_link) {
         toast.info("Resend niet geconfigureerd. Kopieer de uitnodigingslink handmatig.");
