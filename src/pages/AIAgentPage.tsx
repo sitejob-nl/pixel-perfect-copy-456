@@ -234,7 +234,15 @@ export default function AIAgentPage() {
               }
 
               case "done": {
-                // Stream complete
+                // Stream complete — capture usage
+                if (event.usage) {
+                  setLastUsage(event.usage);
+                }
+                break;
+              }
+
+              case "model": {
+                setActiveModel(event.id || event.model || null);
                 break;
               }
 
