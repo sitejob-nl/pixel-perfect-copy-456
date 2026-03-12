@@ -13,6 +13,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import NotFound from "./pages/NotFound";
 import DashboardPage from "./pages/DashboardPage";
 import ContactsPage from "./pages/ContactsPage";
+import ContactDetailPage from "./pages/ContactDetailPage";
 import CompaniesPage from "./pages/CompaniesPage";
 import PipelinePage from "./pages/PipelinePage";
 import { ProjectsPage, InvoicesPage } from "./pages/ProjectsInvoicesPage";
