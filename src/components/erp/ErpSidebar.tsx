@@ -183,9 +183,18 @@ export default function ErpSidebar() {
 
       {/* Footer */}
       <div className="px-3 py-3 border-t border-erp-border0 flex items-center gap-[10px]">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center text-[11px] font-bold text-white">SJ</div>
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold text-white overflow-hidden"
+          style={{ background: orgLogo ? "transparent" : `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})` }}
+        >
+          {orgLogo ? (
+            <img src={orgLogo} alt="" className="w-full h-full object-contain" />
+          ) : (
+            orgInitials
+          )}
+        </div>
         <div className="flex-1">
-          <div className="text-[13px] font-semibold">SiteJob B.V.</div>
+          <div className="text-[13px] font-semibold">{orgName}</div>
           <div className="text-[10.5px] text-erp-text3">Professional</div>
         </div>
         <span className="text-erp-text3 cursor-pointer flex" onClick={() => handleNavigate("settings")}><Icons.Settings className="w-[17px] h-[17px]" /></span>
