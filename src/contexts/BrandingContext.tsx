@@ -121,20 +121,17 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => {
-      root.style.removeProperty("--erp-blue");
-      root.style.removeProperty("--primary");
-      root.style.removeProperty("--ring");
-      root.style.removeProperty("--erp-purple");
-      root.style.removeProperty("--font-sans");
-      root.style.removeProperty("--background");
-      root.style.removeProperty("--erp-bg-0");
-      root.style.removeProperty("--erp-bg-1");
-      root.style.removeProperty("--erp-bg-2");
-      root.style.removeProperty("--erp-bg-3");
-      root.style.removeProperty("--erp-bg-4");
-      root.style.removeProperty("--card");
-      root.style.removeProperty("--popover");
-      root.style.removeProperty("--sidebar-background");
+      const props = [
+        "--erp-blue", "--primary", "--ring", "--erp-purple", "--font-sans",
+        "--background", "--foreground", "--card-foreground", "--popover-foreground",
+        "--sidebar-foreground", "--erp-bg-0", "--erp-bg-1", "--erp-bg-2", "--erp-bg-3",
+        "--erp-bg-4", "--erp-bg-hover", "--card", "--popover", "--sidebar-background",
+        "--erp-text-0", "--erp-text-1", "--erp-text-2", "--erp-text-3",
+        "--erp-border-0", "--erp-border-1", "--border", "--input",
+        "--muted", "--muted-foreground", "--secondary", "--secondary-foreground",
+        "--accent", "--accent-foreground",
+      ];
+      props.forEach((p) => root.style.removeProperty(p));
     };
   }, [org?.primary_color, org?.secondary_color, org?.bg_color, org?.font_family]);
 
