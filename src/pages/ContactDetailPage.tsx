@@ -214,7 +214,7 @@ export default function ContactDetailPage() {
           onClick={() => navigate("/contacts")}
           className="text-xs text-erp-text3 hover:text-erp-text0 mb-3 flex items-center gap-1 transition-colors"
         >
-          <Icons.ChevronLeft className="w-3.5 h-3.5" /> Contacten
+          <Icons.ChevDown className="w-3.5 h-3.5 rotate-90" /> Contacten
         </button>
         <div className="flex items-center gap-4">
           <Avatar name={`${contact.first_name} ${contact.last_name ?? ""}`} id={contact.id.charCodeAt(0)} size={48} />
