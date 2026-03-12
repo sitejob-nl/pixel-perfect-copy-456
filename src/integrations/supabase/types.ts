@@ -1947,6 +1947,10 @@ export type Database = {
           demo_type: string
           email_sent_at: string | null
           feedback: Json | null
+          generation_duration_seconds: number | null
+          generation_error: string | null
+          generation_started_at: string | null
+          generation_status: string | null
           id: string
           is_multipage: boolean | null
           is_public: boolean | null
@@ -1973,6 +1977,10 @@ export type Database = {
           demo_type: string
           email_sent_at?: string | null
           feedback?: Json | null
+          generation_duration_seconds?: number | null
+          generation_error?: string | null
+          generation_started_at?: string | null
+          generation_status?: string | null
           id?: string
           is_multipage?: boolean | null
           is_public?: boolean | null
@@ -1999,6 +2007,10 @@ export type Database = {
           demo_type?: string
           email_sent_at?: string | null
           feedback?: Json | null
+          generation_duration_seconds?: number | null
+          generation_error?: string | null
+          generation_started_at?: string | null
+          generation_status?: string | null
           id?: string
           is_multipage?: boolean | null
           is_public?: boolean | null

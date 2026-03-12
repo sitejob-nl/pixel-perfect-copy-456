@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -45,7 +45,16 @@ function SortableBlock({ block, settings, selected, onSelect, onMove, onDuplicat
 }
 
 export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
-  const [design, setDesign] = useState<DesignJson>(initialDesign || getDefaultDesign());
+  // Ensure we always have valid design with settings
+  const getValidDesign = (d: DesignJson | null | undefined): DesignJson => {
+    if (!d) return getDefaultDesign();
+    return {
+      settings: { ...getDefaultDesign().settings, ...d.settings },
+      blocks: d.blocks || [],
+    };
+  };
+
+  const [design, setDesign] = useState<DesignJson>(getValidDesign(initialDesign));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile" | "html">("desktop");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -59,7 +68,10 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
   }, []);
 
   const updateSettings = useCallback((partial: Partial<DesignSettings>) => {
-    setDesign(d => ({ ...d, settings: { ...d.settings, ...partial } }));
+    setDesign(d => ({
+      ...d,
+      settings: { ...(d.settings || getDefaultDesign().settings), ...partial },
+    }));
   }, []);
 
   const updateBlockData = useCallback((data: Record<string, any>) => {
@@ -137,7 +149,14 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
     setSelectedId(newBlock.id);
   };
 
-  const htmlPreview = generateHtml(design);
+  // Safely generate HTML with fallback settings
+  const htmlPreview = useMemo(() => {
+    const safeDesign = {
+      ...design,
+      settings: { ...getDefaultDesign().settings, ...design.settings },
+    };
+    return generateHtml(safeDesign);
+  }, [design]);
 
   const handleSave = () => {
     onSave(design, htmlPreview);
@@ -166,7 +185,7 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
           </div>
 
           {/* Canvas */}
-          <div className="flex-1 overflow-auto p-6" onClick={() => setSelectedId(null)} style={{ backgroundColor: design.settings.backgroundColor }}>
+          <div className="flex-1 overflow-auto p-6" onClick={() => setSelectedId(null)} style={{ backgroundColor: design.settings?.backgroundColor || "#f4f4f5" }}>
             {previewMode === "html" ? (
               <div className="max-w-3xl mx-auto">
                 <div className="flex justify-end mb-2">
@@ -177,7 +196,7 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
             ) : (
               <div
                 className="mx-auto bg-white rounded-lg shadow-sm"
-                style={{ maxWidth: previewMode === "mobile" ? "375px" : `${design.settings.contentWidth}px`, padding: "32px 24px" }}
+                style={{ maxWidth: previewMode === "mobile" ? "375px" : `${design.settings?.contentWidth || 600}px`, padding: "32px 24px" }}
               >
                 <SortableContext items={design.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                   {design.blocks.map(block => (
@@ -214,7 +233,7 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
       </DndContext>
 
       {/* Right: Settings */}
-      <BlockSettings block={selectedBlock} settings={design.settings} onUpdateBlock={updateBlockData} onUpdateSettings={updateSettings} />
+      <BlockSettings block={selectedBlock} settings={design.settings || getDefaultDesign().settings} onUpdateBlock={updateBlockData} onUpdateSettings={updateSettings} />
     </div>
   );
 }
