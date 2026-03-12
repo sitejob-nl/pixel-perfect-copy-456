@@ -80,7 +80,7 @@ export default function ContactsPage() {
                 const tier = c.temperature ?? "warm";
                 const stage = c.lifecycle_stage ?? "lead";
                 return (
-                  <TR key={c.id} onClick={() => setSelectedContact(c)}>
+                  <TR key={c.id} onClick={() => navigate(`/contacts/${c.id}`)}>
                     <TD>
                       <div className="flex items-center gap-[10px]">
                         <Avatar name={`${c.first_name} ${c.last_name ?? ""}`} id={c.id.charCodeAt(0)} />
