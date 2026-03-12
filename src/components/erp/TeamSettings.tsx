@@ -20,8 +20,9 @@ import {
   useDeleteInvite,
   useSetModuleOverride,
 } from "@/hooks/useTeam";
+import { useContracts } from "@/hooks/useContracts";
 import { toast } from "sonner";
-import { Eye } from "lucide-react";
+import { Eye, FileText, ExternalLink } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Eigenaar",
