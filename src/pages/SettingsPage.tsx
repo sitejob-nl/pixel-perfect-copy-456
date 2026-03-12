@@ -93,7 +93,7 @@ export default function SettingsPage() {
               <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">E-mailadres</label>
               <input
                 type="email"
-                defaultValue="kas@sitejob.nl"
+                defaultValue={user?.email || ""}
                 className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
                 disabled
               />
