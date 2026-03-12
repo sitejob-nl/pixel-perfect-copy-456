@@ -51,7 +51,7 @@ export default function ApiKeysSettings() {
     }
   };
 
-  const handleDelete = async (service: "anthropic" | "apify") => {
+  const handleDelete = async (service: "anthropic" | "apify" | "resend") => {
     try {
       await deleteKey.mutateAsync(service);
       toast({ title: "API key verwijderd" });

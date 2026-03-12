@@ -86,7 +86,7 @@ export function useDeleteApiKey() {
   const { data: org } = useOrganization();
 
   return useMutation({
-    mutationFn: async (service: "anthropic" | "apify") => {
+    mutationFn: async (service: "anthropic" | "apify" | "resend") => {
       const { data, error } = await supabase.functions.invoke("manage-api-keys", {
         body: { action: "delete", service, organization_id: org!.organization_id },
       });
