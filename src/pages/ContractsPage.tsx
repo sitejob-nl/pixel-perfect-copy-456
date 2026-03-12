@@ -7,6 +7,7 @@ import {
   useCreateContract, useUpdateContract, useCreateSigningSession, useResolveVariables,
   useCreateTemplate, useUpdateTemplate,
 } from "@/hooks/useContracts";
+import PDFFieldEditor, { type SignatureField } from "@/components/contracts/PDFFieldEditor";
 import { useContacts } from "@/hooks/useContacts";
 import { useCompanies } from "@/hooks/useCompanies";
 import { useDeals } from "@/hooks/useDeals";
