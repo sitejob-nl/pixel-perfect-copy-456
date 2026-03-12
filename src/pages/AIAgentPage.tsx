@@ -33,6 +33,8 @@ export default function AIAgentPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [lastUsage, setLastUsage] = useState<{ input_tokens: number; output_tokens: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -232,7 +234,15 @@ export default function AIAgentPage() {
               }
 
               case "done": {
-                // Stream complete
+                // Stream complete — capture usage
+                if (event.usage) {
+                  setLastUsage(event.usage);
+                }
+                break;
+              }
+
+              case "model": {
+                setActiveModel(event.id || event.model || null);
                 break;
               }
 
@@ -534,9 +544,14 @@ export default function AIAgentPage() {
               )}
             </button>
           </div>
-          <p className="text-[10px] text-erp-text3 mt-2 text-center">
-            Claude Sonnet 4 · Apify Tools · Shift+Enter voor nieuwe regel
-          </p>
+          <div className="flex items-center justify-center gap-3 text-[10px] text-erp-text3 mt-2">
+            <span>{activeModel || "Claude Sonnet 4"} · Apify Tools · Shift+Enter voor nieuwe regel</span>
+            {lastUsage && (
+              <span className="text-erp-text3/60">
+                ↑ {lastUsage.input_tokens >= 1000 ? `${(lastUsage.input_tokens / 1000).toFixed(1)}K` : lastUsage.input_tokens} · ↓ {lastUsage.output_tokens >= 1000 ? `${(lastUsage.output_tokens / 1000).toFixed(1)}K` : lastUsage.output_tokens} tokens
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
