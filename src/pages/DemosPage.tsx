@@ -193,6 +193,17 @@ function GenerateTab() {
     );
   };
 
+  // Show website analysis loading screen
+  if (isAnalyzing) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Website wordt geanalyseerd...</p>
+        <p className="text-xs text-muted-foreground">We verzamelen informatie over kleuren, branding en content</p>
+      </div>
+    );
+  }
+
   if (step === 2) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
