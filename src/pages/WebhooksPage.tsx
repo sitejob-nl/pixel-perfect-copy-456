@@ -71,7 +71,7 @@ export default function WebhooksPage() {
   const [apiKeyDialog, setApiKeyDialog] = useState<{ open: boolean; endpointId?: string; key?: string }>({ open: false });
   const [testDialog, setTestDialog] = useState<{ open: boolean; endpointId?: string; result?: any }>({ open: false });
   const [logDetail, setLogDetail] = useState<any>(null);
-  const [logFilter, setLogFilter] = useState<string>("");
+  const [logFilter, setLogFilter] = useState<string>("all");
 
   return (
     <div>
