@@ -287,7 +287,7 @@ function GenerateTab() {
           </SelectContent>
         </Select>
       </div>
-      <Button onClick={handleGenerate} disabled={!companyName.trim()} className="w-full">
+      <Button onClick={handleGenerate} disabled={!companyName.trim() || !websiteUrl.trim()} className="w-full">
         <Wand2 className="h-4 w-4 mr-2" />Demo genereren
       </Button>
     </div>
