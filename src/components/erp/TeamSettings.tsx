@@ -408,6 +408,11 @@ export default function TeamSettings() {
                     </div>
                   )}
 
+                  {/* Expanded: Signed contracts for this member */}
+                  {isExpanded && (
+                    <MemberContracts memberName={displayName} memberEmail={member.profiles?.full_name ? undefined : undefined} memberUserId={member.user_id} />
+                  )}
+
                   {/* Expanded but not admin: just show modules read-only */}
                   {isExpanded && !isAdmin && activeModules.length > 0 && (
                     <div className="px-4 pb-4 pt-1 border-t border-erp-border0 bg-erp-bg2">
