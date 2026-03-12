@@ -476,13 +476,12 @@ Deno.serve(async (req) => {
     try {
       const { data: apiKeyRow } = await sb
         .from("organization_api_keys")
-        .select("encrypted_key")
+        .select("resend_api_key_encrypted")
         .eq("organization_id", contract.organization_id)
-        .eq("provider", "resend")
         .single();
 
-      if (apiKeyRow?.encrypted_key) {
-        const encKey = Deno.env.get("ENCRYPTION_KEY") || "";
+      if (apiKeyRow?.resend_api_key_encrypted) {
+        const encKey = Deno.env.get("ENCRYPTION_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!.slice(0, 32);
         const resendKey = decryptKey(apiKeyRow.encrypted_key, encKey);
 
         for (const session of signedSessions) {
