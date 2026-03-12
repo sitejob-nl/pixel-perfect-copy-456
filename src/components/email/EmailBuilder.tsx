@@ -198,7 +198,6 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
                 className="mx-auto bg-white rounded-lg shadow-sm"
                 style={{ maxWidth: previewMode === "mobile" ? "375px" : `${design.settings?.contentWidth || 600}px`, padding: "32px 24px" }}
               >
-              >
                 <SortableContext items={design.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                   {design.blocks.map(block => (
                     <SortableBlock
