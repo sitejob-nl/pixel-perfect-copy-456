@@ -162,10 +162,16 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   open: boolean; onClose: () => void; onCreated: (id: string) => void;
 }) {
   const [step, setStep] = useState(1);
+  const [contractMode, setContractMode] = useState<"template" | "empty" | "pdf">("template");
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [linkedRecords, setLinkedRecords] = useState<Record<string, string>>({});
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  const [emptyContent, setEmptyContent] = useState("");
+  const [uploadedPdfUrl, setUploadedPdfUrl] = useState<string | null>(null);
+  const [pdfPageImages, setPdfPageImages] = useState<string[]>([]);
+  const [pdfUploading, setPdfUploading] = useState(false);
+  const [signatureFields, setSignatureFields] = useState<SignatureField[]>([]);
   const [signers, setSigners] = useState<Array<{ name: string; email: string; phone: string; role: string }>>([
     { name: "", email: "", phone: "", role: "Klant" },
   ]);
@@ -235,6 +241,8 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   }, [linkedRecords.contact_id, contacts]);
 
   const renderHtml = useMemo(() => {
+    if (contractMode === "empty") return emptyContent;
+    if (contractMode === "pdf") return "";
     if (!selectedTemplate?.content_html) return "";
     let html = selectedTemplate.content_html;
     for (const varName of templateVars) {
@@ -242,21 +250,58 @@ function CreateContractDialog({ open, onClose, onCreated }: {
       html = html.replaceAll(`{{${varName}}}`, val);
     }
     return html;
-  }, [selectedTemplate, templateVars, variableValues]);
+  }, [contractMode, selectedTemplate, templateVars, variableValues, emptyContent]);
+
+  // PDF upload handler
+  const handlePdfUpload = async (file: File) => {
+    setPdfUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "pdf";
+      const path = `contracts/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("org-assets").upload(path, file, { contentType: file.type });
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("org-assets").getPublicUrl(path);
+      setUploadedPdfUrl(urlData.publicUrl);
+
+      // Render PDF pages to images using pdfjs-dist
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const images: string[] = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        images.push(canvas.toDataURL("image/png"));
+      }
+      setPdfPageImages(images);
+      toast.success(`PDF geladen — ${images.length} pagina('s)`);
+    } catch (e: any) {
+      toast.error(e.message || "PDF upload mislukt");
+    }
+    setPdfUploading(false);
+  };
 
   const handleCreate = async () => {
     try {
       const contract = await createContract.mutateAsync({
         title: title || selectedTemplate?.name || "Contract",
-        template_id: templateId,
+        template_id: contractMode === "template" ? templateId : null,
         contact_id: linkedRecords.contact_id || null,
         company_id: linkedRecords.company_id || null,
         deal_id: linkedRecords.deal_id || null,
         project_id: linkedRecords.project_id || null,
         quote_id: linkedRecords.quote_id || null,
         variable_values: variableValues,
-        rendered_html: renderHtml,
-        content: renderHtml,
+        rendered_html: contractMode !== "pdf" ? renderHtml : null,
+        content: contractMode !== "pdf" ? renderHtml : null,
+        pdf_url: contractMode === "pdf" ? uploadedPdfUrl : null,
+        signature_fields: signatureFields.length > 0 ? signatureFields : null,
         status: "draft",
       });
 
@@ -283,6 +328,16 @@ function CreateContractDialog({ open, onClose, onCreated }: {
     }
   };
 
+  // Determine step labels based on mode
+  const stepLabels = contractMode === "pdf"
+    ? ["Bron kiezen", "PDF uploaden", "Velden & Ondertekenaars"]
+    : contractMode === "empty"
+    ? ["Bron kiezen", "Content schrijven", "Preview & Ondertekenaars"]
+    : ["Template", "Variabelen", "Preview & Ondertekenaars"];
+
+  const canProceedStep1 = !!title;
+  const canProceedStep2 = contractMode !== "pdf" || pdfPageImages.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-erp-bg2 border-erp-border0">
@@ -294,7 +349,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
 
         {/* Step indicators */}
         <div className="flex gap-2 mb-4">
-          {["Template", "Variabelen", "Preview & Ondertekenaars"].map((label, i) => (
+          {stepLabels.map((label, i) => (
             <div
               key={i}
               className={cn(
@@ -309,17 +364,37 @@ function CreateContractDialog({ open, onClose, onCreated }: {
           <Step1Templates
             templates={templates || []}
             selected={templateId}
+            contractMode={contractMode}
             onSelect={(id) => {
               setTemplateId(id);
-              const tmpl = templates?.find((t: any) => t.id === id);
-              if (tmpl) setTitle(tmpl.name);
+              if (id) {
+                setContractMode("template");
+                const tmpl = templates?.find((t: any) => t.id === id);
+                if (tmpl) setTitle(tmpl.name);
+              }
+            }}
+            onModeChange={(mode) => {
+              setContractMode(mode);
+              setTemplateId(null);
             }}
             title={title}
             onTitleChange={setTitle}
           />
         )}
 
-        {step === 2 && (
+        {step === 2 && contractMode === "empty" && (
+          <Step2Empty content={emptyContent} onContentChange={setEmptyContent} />
+        )}
+
+        {step === 2 && contractMode === "pdf" && (
+          <Step2PdfUpload
+            pdfPageImages={pdfPageImages}
+            uploading={pdfUploading}
+            onUpload={handlePdfUpload}
+          />
+        )}
+
+        {step === 2 && contractMode === "template" && (
           <Step2Variables
             contacts={contacts || []}
             companies={companies || []}
@@ -341,6 +416,10 @@ function CreateContractDialog({ open, onClose, onCreated }: {
             signers={signers}
             onSignersChange={setSigners}
             members={members || []}
+            contractMode={contractMode}
+            pdfPageImages={pdfPageImages}
+            signatureFields={signatureFields}
+            onSignatureFieldsChange={setSignatureFields}
           />
         )}
 
@@ -349,7 +428,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
             {step === 1 ? "Annuleren" : "Vorige"}
           </ErpButton>
           {step < 3 ? (
-            <ErpButton primary onClick={() => setStep(step + 1)} disabled={step === 1 && !title}>
+            <ErpButton primary onClick={() => setStep(step + 1)} disabled={step === 1 ? !canProceedStep1 : !canProceedStep2}>
               Volgende
             </ErpButton>
           ) : (
