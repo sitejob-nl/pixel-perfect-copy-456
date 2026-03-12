@@ -4,11 +4,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader, ErpButton, ErpCard, Badge, Dot, Chip, Avatar } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { stageColors, stageLabels, tierColors } from "@/data/mockData";
 import type { ContactWithCompany } from "@/hooks/useContacts";
+import { useAuth } from "@/contexts/AuthContext";
+import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -53,7 +56,10 @@ export default function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { data: org } = useOrganization();
   const [editing, setEditing] = useState(false);
+  const [noteText, setNoteText] = useState("");
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -138,6 +144,60 @@ export default function ContactDetailPage() {
       return data;
     },
     enabled: !!id,
+  });
+
+  // Internal notes with author info
+  const { data: notes = [] } = useQuery({
+    queryKey: ["contact-notes", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contact_notes")
+        .select("id, content, created_at, updated_at, user_id, profiles:user_id(full_name, email)")
+        .eq("contact_id", id!)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        content: string;
+        created_at: string;
+        updated_at: string;
+        user_id: string;
+        profiles: { full_name: string | null; email: string | null } | null;
+      }>;
+    },
+    enabled: !!id,
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!user || !org) throw new Error("Niet ingelogd");
+      const { error } = await supabase.from("contact_notes").insert({
+        contact_id: id!,
+        organization_id: org.organization_id,
+        user_id: user.id,
+        content,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-notes", id] });
+      setNoteText("");
+      toast.success("Notitie toegevoegd");
+    },
+    onError: (err) => toast.error(`Fout: ${err.message}`),
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      const { error } = await supabase.from("contact_notes").delete().eq("id", noteId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-notes", id] });
+      toast.success("Notitie verwijderd");
+    },
+    onError: (err) => toast.error(`Fout: ${err.message}`),
   });
 
   const updateMutation = useMutation({
@@ -450,6 +510,65 @@ export default function ContactDetailPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </ErpCard>
+
+          {/* Internal Notes */}
+          <ErpCard className="p-5">
+            <SectionTitle>Interne notities</SectionTitle>
+            <div className="mb-3">
+              <Textarea
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                placeholder="Schrijf een interne notitie..."
+                className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm min-h-[60px] resize-none"
+                rows={2}
+              />
+              <div className="flex justify-end mt-2">
+                <ErpButton
+                  primary
+                  onClick={() => {
+                    if (noteText.trim()) addNoteMutation.mutate(noteText.trim());
+                  }}
+                  disabled={!noteText.trim() || addNoteMutation.isPending}
+                >
+                  {addNoteMutation.isPending ? "Toevoegen..." : "Notitie toevoegen"}
+                </ErpButton>
+              </div>
+            </div>
+            {notes.length === 0 && (
+              <div className="text-xs text-erp-text3">Nog geen notities.</div>
+            )}
+            <div className="space-y-0">
+              {notes.map((n, i) => {
+                const authorName = n.profiles?.full_name || n.profiles?.email || "Onbekend";
+                const isOwn = n.user_id === user?.id;
+                return (
+                  <div key={n.id} className={`py-2.5 ${i < notes.length - 1 ? "border-b border-erp-border0" : ""}`}>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <Avatar name={authorName} id={n.user_id.charCodeAt(0)} size={20} />
+                        <span className="text-xs font-medium text-erp-text0">{authorName}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] text-erp-text3">
+                          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: nl })}
+                        </span>
+                        {isOwn && (
+                          <button
+                            onClick={() => deleteNoteMutation.mutate(n.id)}
+                            className="text-erp-text3 hover:text-erp-red transition-colors ml-1"
+                            title="Verwijderen"
+                          >
+                            <Icons.Trash className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-sm text-erp-text1 whitespace-pre-wrap">{n.content}</div>
+                  </div>
+                );
+              })}
             </div>
           </ErpCard>
         </div>
