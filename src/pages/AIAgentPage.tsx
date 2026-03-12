@@ -544,9 +544,14 @@ export default function AIAgentPage() {
               )}
             </button>
           </div>
-          <p className="text-[10px] text-erp-text3 mt-2 text-center">
-            Claude Sonnet 4 · Apify Tools · Shift+Enter voor nieuwe regel
-          </p>
+          <div className="flex items-center justify-center gap-3 text-[10px] text-erp-text3 mt-2">
+            <span>{activeModel || "Claude Sonnet 4"} · Apify Tools · Shift+Enter voor nieuwe regel</span>
+            {lastUsage && (
+              <span className="text-erp-text3/60">
+                ↑ {lastUsage.input_tokens >= 1000 ? `${(lastUsage.input_tokens / 1000).toFixed(1)}K` : lastUsage.input_tokens} · ↓ {lastUsage.output_tokens >= 1000 ? `${(lastUsage.output_tokens / 1000).toFixed(1)}K` : lastUsage.output_tokens} tokens
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>
