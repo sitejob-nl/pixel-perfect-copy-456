@@ -30,6 +30,7 @@ import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import PortalAdminPage from "./pages/PortalAdminPage";
 import ClientPortalPage from "./pages/ClientPortalPage";
+import EmailPage from "./pages/EmailPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -139,6 +140,7 @@ const App = () => (
               <Route path="content" element={<ContentPage />} />
               <Route path="portals" element={<PortalAdminPage />} />
               <Route path="whatsapp" element={<PlaceholderPage title="WhatsApp" icon="Msg" />} />
+              <Route path="email" element={<EmailPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminRoute />} />
