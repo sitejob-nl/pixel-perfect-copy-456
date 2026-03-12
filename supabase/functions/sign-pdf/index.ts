@@ -416,7 +416,8 @@ Deno.serve(async (req) => {
     const signedPdfBytes = await embedSignaturesInPdf(
       new Uint8Array(basePdfBytes),
       signedSessions,
-      signatureFields
+      signatureFields,
+      contract_id
     );
 
     // Step 3: Generate document hash
