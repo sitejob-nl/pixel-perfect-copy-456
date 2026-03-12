@@ -9,6 +9,9 @@ export interface ApiKeyStatus {
   apify_key_set: boolean;
   apify_key_hint: string | null;
   apify_key_verified_at: string | null;
+  resend_key_set: boolean;
+  resend_key_hint: string | null;
+  resend_key_verified_at: string | null;
   selected_model: string | null;
 }
 
