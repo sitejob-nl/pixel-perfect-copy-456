@@ -1,68 +1,50 @@
 
 
-# Fix Build Errors: Snelstart Type Mismatches
+## Plan: SMS-verificatie vervangen door e-mailverificatie via Resend
 
-## Wat er nu is opgezet voor Snelstart
+### Probleem
+De Twilio connector geeft een 403 "project_not_authorized" fout bij het versturen van SMS. In plaats van Twilio te repareren, schakelen we over naar e-mailverificatie met de bestaande Resend-integratie.
 
-**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
+### Aanpak
+De verificatiecode wordt per e-mail verstuurd i.p.v. per SMS. De bestaande Resend API-key (per organisatie, versleuteld opgeslagen) wordt hergebruikt.
 
-**Frontend:**
-- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
-- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
-- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
+### Wijzigingen
 
-**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
+**1. Edge Function: `supabase/functions/contract-signing/index.ts`**
+- `handleSendSms` hernoemen/aanpassen naar `handleSendVerification`
+- Twilio gateway-aanroep vervangen door Resend API-aanroep:
+  - Org's Resend API key ophalen via `organization_api_keys` tabel (zelfde decrypt-functie als `send-email`)
+  - E-mail versturen naar `session.signer_email` met de 6-cijferige code
+  - Professionele HTML e-mail template met de verificatiecode
+- `organization_id` is al beschikbaar op de session
+- Afzender: dynamisch bepalen via Resend API (of fallback `noreply@` + org domein)
 
-## Root Cause van de Build Errors
+**2. Frontend: `src/components/contracts/SigningVerifyStep.tsx`**
+- Tekst aanpassen: "SMS" → "e-mail" overal
+- "We sturen een verificatiecode naar uw e-mailadres" (al correct!)
+- Button tekst en foutmeldingen updaten
 
-De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
+**3. Frontend: `src/pages/ContractSigningPage.tsx`**
+- Geen wijzigingen nodig (roept alleen `SigningVerifyStep` aan)
 
-## Fix (2 bestanden)
+### Technische details
 
-### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
-
-Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
-
-Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
-```
-// FOUT: profiles heeft geen organization_id
-const { data: profile } = await supabase
-  .from("profiles")
-  .select("organization_id")
-  .eq("id", user.id)
-  .single();
-
-// FIX: gebruik organization_members
-const { data: membership } = await supabase
-  .from("organization_members")
-  .select("organization_id")
-  .eq("user_id", user.id)
-  .eq("is_active", true)
-  .limit(1)
-  .single();
-```
-
-Voor de tabellen die niet in types staan, cast naar `any`:
-```
-const { data, error } = await (supabase as any)
-  .from("snelstart_config")
-  ...
+De Resend e-mail wordt verstuurd via:
+```ts
+const resendRes = await fetch("https://api.resend.com/emails", {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${resendApiKey}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    from: senderAddress,
+    to: [session.signer_email],
+    subject: "Uw verificatiecode voor contractondertekening",
+    html: `<html>...</html>`, // Styled template met de 6-cijferige code
+  }),
+});
 ```
 
-### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
-
-Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
-```
-const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
-const actorId = providerConfig?.actorId || "";
-```
-
-### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
-
-De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
-
-## Bestanden
-
-- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
-- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
+De decrypt-functie en `getResendKey` worden gekopieerd vanuit de bestaande `send-email` functie. De `organization_id` is al beschikbaar op de signing session.
 
