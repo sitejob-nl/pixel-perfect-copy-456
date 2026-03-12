@@ -598,7 +598,7 @@ function TestDialog({ state, onClose }: { state: { open: boolean; endpointId?: s
 // ===================== LOGS TABLE =====================
 function LogsTable({ filter, onFilterChange, onSelect }: { filter: string; onFilterChange: (v: string) => void; onSelect: (log: any) => void }) {
   const { data: endpoints } = useWebhookEndpoints();
-  const { data: logs, isLoading } = useWebhookLogs(filter || undefined);
+  const { data: logs, isLoading } = useWebhookLogs(filter === "all" ? undefined : filter || undefined);
 
   const statusColor: Record<string, string> = {
     processed: "bg-green-500/10 text-green-600",
