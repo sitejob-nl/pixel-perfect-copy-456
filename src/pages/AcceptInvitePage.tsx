@@ -21,23 +21,27 @@ export default function AcceptInvitePage() {
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const providers = user.app_metadata?.providers || [];
-        const hasPassword = providers.includes("email");
-        const confirmedAt = user.confirmed_at;
-        const createdAt = user.created_at;
-        if (hasPassword && confirmedAt && createdAt) {
-          const confirmedTime = new Date(confirmedAt).getTime();
-          const createdTime = new Date(createdAt).getTime();
-          if (confirmedTime - createdTime > 5000) {
-            setIsExistingUser(true);
-          }
+      if (!user) {
+        // Not logged in — redirect to auth with return URL
+        const returnUrl = `/accept-invite?invite_token=${inviteToken || ""}`;
+        navigate(`/auth?redirect=${encodeURIComponent(returnUrl)}`);
+        return;
+      }
+      const providers = user.app_metadata?.providers || [];
+      const hasPassword = providers.includes("email");
+      const confirmedAt = user.confirmed_at;
+      const createdAt = user.created_at;
+      if (hasPassword && confirmedAt && createdAt) {
+        const confirmedTime = new Date(confirmedAt).getTime();
+        const createdTime = new Date(createdAt).getTime();
+        if (confirmedTime - createdTime > 5000) {
+          setIsExistingUser(true);
         }
       }
       setCheckingUser(false);
     };
     checkUser();
-  }, []);
+  }, [inviteToken, navigate]);
 
   const acceptViaEdgeFunction = async () => {
     if (!inviteToken) throw new Error("Geen invite token gevonden");
