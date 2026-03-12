@@ -15,6 +15,7 @@ export default function AcceptInvitePage() {
   const [checkingUser, setCheckingUser] = useState(true);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const inviteToken = searchParams.get("invite_token");
 
   // Check if the user already has a password set (existing user vs new invite)
