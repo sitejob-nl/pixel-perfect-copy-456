@@ -209,6 +209,7 @@ export function useGenerateDemo() {
       contact_id?: string;
       model?: string;
       organization_id: string;
+      scrape_id?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("demo-service", {
         body: { action: "generate", ...payload },

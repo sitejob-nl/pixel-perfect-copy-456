@@ -124,7 +124,7 @@ function GenerateTab() {
   const orgId = (orgData?.organizations as any)?.id;
   const { data: contacts } = useContacts();
   const generateDemo = useGenerateDemo();
-
+  const analyzeWebsite = useAnalyzeWebsite();
   // Dynamic model list from ai_models table
   const { data: aiModels } = useQuery({
     queryKey: ["ai-models"],
@@ -154,22 +154,36 @@ function GenerateTab() {
     { key: "mobile", icon: Smartphone, w: "375px" },
   ];
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setStep(2);
-    generateDemo.mutate(
-      {
-        company_name: companyName,
-        website_url: websiteUrl || undefined,
-        demo_type: demoType,
-        contact_id: contactId || undefined,
-        model,
-        organization_id: orgId,
-      },
-      {
-        onSuccess: (data) => { setResult(data); setStep(3); },
-        onError: () => setStep(1),
+    try {
+      let scrapeId: string | undefined;
+      // If website URL is provided, first analyze to get a scrape_id
+      if (websiteUrl) {
+        const analyzeResult = await analyzeWebsite.mutateAsync({
+          url: websiteUrl,
+          organization_id: orgId,
+        });
+        scrapeId = analyzeResult?.scrape_id || analyzeResult?.id;
       }
-    );
+      generateDemo.mutate(
+        {
+          company_name: companyName,
+          website_url: websiteUrl || undefined,
+          demo_type: demoType,
+          contact_id: contactId || undefined,
+          model,
+          organization_id: orgId,
+          scrape_id: scrapeId,
+        },
+        {
+          onSuccess: (data) => { setResult(data); setStep(3); },
+          onError: () => setStep(1),
+        }
+      );
+    } catch {
+      setStep(1);
+    }
   };
 
   if (step === 2) {
