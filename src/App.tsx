@@ -28,6 +28,8 @@ import ContractsPage from "./pages/ContractsPage";
 import ContractSigningPage from "./pages/ContractSigningPage";
 import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import DemosPage from "./pages/DemosPage";
+import DemoViewPage from "./pages/DemoViewPage";
 import PortalAdminPage from "./pages/PortalAdminPage";
 import ClientPortalPage from "./pages/ClientPortalPage";
 import EmailPage from "./pages/EmailPage";
@@ -119,6 +121,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/sign" element={<ContractSigningPage />} />
             <Route path="/portal" element={<ClientPortalPage />} />
+            <Route path="/demo/:slug" element={<DemoViewPage />} />
             <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
 
             {/* Protected layout with sidebar */}
@@ -136,7 +139,7 @@ const App = () => (
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="scrapers" element={<ScrapersPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
-              <Route path="demos" element={<PlaceholderPage title="Demo Generatie" icon="Globe" />} />
+              <Route path="demos" element={<DemosPage />} />
               <Route path="content" element={<ContentPage />} />
               <Route path="portals" element={<PortalAdminPage />} />
               <Route path="whatsapp" element={<PlaceholderPage title="WhatsApp" icon="Msg" />} />

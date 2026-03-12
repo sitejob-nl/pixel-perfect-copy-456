@@ -1,67 +1,68 @@
 
 
-# Plan: Demo Bouwer Module
+# Fix Build Errors: Snelstart Type Mismatches
 
-## Overzicht
-Volledige Demo Bouwer implementeren: hooks, admin pagina met 3 tabs, publieke demo viewer, en 6 sub-componenten. Er is al een `demo-service` edge function op de backend — we bouwen alleen de frontend.
+## Wat er nu is opgezet voor Snelstart
 
-**Opmerking:** De `demo-service` edge function bestaat niet in de repo maar wordt al door de backend gehost. We roepen deze aan via `supabase.functions.invoke("demo-service", ...)`.
+**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
 
-## Nieuwe bestanden (9)
+**Frontend:**
+- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
+- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
+- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
 
-### 1. `src/hooks/useDemos.ts`
-- `useDemos()` — query demos voor org, met contact relatie
-- `useDemo(id)` — single demo met versions
-- `useCreateDemo()`, `useUpdateDemo()`, `useDeleteDemo()`, `useDuplicateDemo()`
-- `useGenerateDemo()` — mutation → `demo-service { action: "generate" }`
-- `useEditDemo()` — mutation → `demo-service { action: "edit" }`
-- `useAnalyzeWebsite()` — mutation → `demo-service { action: "analyze" }`
-- `usePublicDemo(slug)` — query demo via public_slug (geen auth)
-- `useDemoVersions(demoId)` — query demo_versions
+**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
 
-### 2. `src/pages/DemosPage.tsx` — Admin pagina met 3 tabs
+## Root Cause van de Build Errors
 
-**Tab "Demo's"**: Grid van demo kaarten met company naam, type badge, views, model badge, publiek/privé toggle, acties (bewerken, preview, kopieer link, verwijderen). + "Upload Demo" knop.
+De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
 
-**Tab "Genereren"**: Stap-voor-stap wizard:
-1. Input: bedrijfsnaam, website URL (optioneel scan), contact dropdown, demo type grid selector, model keuze
-2. Genereren: loading met geschatte tijd
-3. Preview + AI Editor: iframe, device switcher, edit instructie, versie historie
-4. Delen: publiek toggle, slug, wachtwoord
+## Fix (2 bestanden)
 
-**Tab "Website Analyse"**: Lijst van website_scrapes met URL, datum, scores. Klik voor detail.
+### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
 
-### 3. `src/pages/DemoViewPage.tsx` — Publieke demo viewer
-- Geen auth vereist, route: `/demo/:slug`
-- Header met logo + bedrijfsnaam
-- Tab navigatie voor meerdere demo types
-- Device switcher (desktop/tablet/mobiel)
-- Iframe met sandbox
-- CTA footer
-- Wachtwoord gate als password_hash aanwezig
-- View tracking (increment `demos.views`)
+Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
 
-### 4-9. Componenten (`src/components/demos/`)
+Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
+```
+// FOUT: profiles heeft geen organization_id
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("organization_id")
+  .eq("id", user.id)
+  .single();
 
-| Component | Functie |
-|---|---|
-| `DemoTypeSelector.tsx` | Grid van 6 klikbare type kaarten (website, dashboard, client_portal, employee_portal, crm, erp) |
-| `DemoTypeBadge.tsx` | Kleine gekleurde badge per demo type |
-| `DemoPreviewModal.tsx` | Fullscreen modal met iframe, device switcher, download/kopieer/screenshot acties |
-| `UploadDemoDialog.tsx` | Dialog met drag & drop HTML upload, bedrijfsnaam, slug, type, wachtwoord |
-| `DemoPasswordGate.tsx` | Wachtwoord invoer pagina voor beveiligde demo's |
-| `DemoEditor.tsx` | AI edit panel met tekst input, quick actions, versie historie |
+// FIX: gebruik organization_members
+const { data: membership } = await supabase
+  .from("organization_members")
+  .select("organization_id")
+  .eq("user_id", user.id)
+  .eq("is_active", true)
+  .limit(1)
+  .single();
+```
 
-## Aanpassingen bestaande bestanden (2)
+Voor de tabellen die niet in types staan, cast naar `any`:
+```
+const { data, error } = await (supabase as any)
+  .from("snelstart_config")
+  ...
+```
 
-### `src/App.tsx`
-- Import `DemosPage` en `DemoViewPage`
-- Vervang `PlaceholderPage` op `demos` route door `<DemosPage />`
-- Publieke route toevoegen: `/demo/:slug` → `<DemoViewPage />`
+### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
 
-### `supabase/config.toml`
-- Geen wijzigingen nodig (demo-service wordt al extern gehost)
+Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
+```
+const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
+const actorId = providerConfig?.actorId || "";
+```
 
-## Geen database migraties nodig
-Alle tabellen bestaan al.
+### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
+
+De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
+
+## Bestanden
+
+- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
+- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
 

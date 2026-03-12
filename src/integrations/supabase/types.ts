@@ -1866,15 +1866,20 @@ export type Database = {
           created_at: string
           demo_html: string
           demo_type: string
+          email_sent_at: string | null
+          feedback: Json | null
           id: string
           is_multipage: boolean | null
           is_public: boolean | null
+          last_viewed_at: string | null
           model_used: string | null
           organization_id: string
           pages: Json | null
           password_hash: string | null
+          password_hint: string | null
           public_slug: string | null
           scrape_id: string | null
+          shared_via_email: boolean | null
           title: string | null
           updated_at: string
           views: number | null
@@ -1886,15 +1891,20 @@ export type Database = {
           created_at?: string
           demo_html: string
           demo_type: string
+          email_sent_at?: string | null
+          feedback?: Json | null
           id?: string
           is_multipage?: boolean | null
           is_public?: boolean | null
+          last_viewed_at?: string | null
           model_used?: string | null
           organization_id: string
           pages?: Json | null
           password_hash?: string | null
+          password_hint?: string | null
           public_slug?: string | null
           scrape_id?: string | null
+          shared_via_email?: boolean | null
           title?: string | null
           updated_at?: string
           views?: number | null
@@ -1906,15 +1916,20 @@ export type Database = {
           created_at?: string
           demo_html?: string
           demo_type?: string
+          email_sent_at?: string | null
+          feedback?: Json | null
           id?: string
           is_multipage?: boolean | null
           is_public?: boolean | null
+          last_viewed_at?: string | null
           model_used?: string | null
           organization_id?: string
           pages?: Json | null
           password_hash?: string | null
+          password_hint?: string | null
           public_slug?: string | null
           scrape_id?: string | null
+          shared_via_email?: boolean | null
           title?: string | null
           updated_at?: string
           views?: number | null
@@ -6549,6 +6564,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      increment_demo_views: { Args: { p_demo_id: string }; Returns: undefined }
       increment_email_clicks: {
         Args: { p_resend_id: string }
         Returns: undefined
