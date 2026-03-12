@@ -679,10 +679,21 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
           </div>
           <div className="text-xs text-erp-text3 mt-0.5 font-mono">{contract.contract_number}</div>
         </div>
-        {contract.status === "draft" && (
+         {contract.status === "draft" && (
           <ErpButton primary onClick={handleSend}>
             <Icons.Send className="w-4 h-4" /> Verzenden
           </ErpButton>
+        )}
+        {hasSigned && (
+          <ErpButton onClick={generatePdf} disabled={generatingPdf}>
+            {generatingPdf ? "PDF genereren..." : "📄 Download PDF"}
+          </ErpButton>
+        )}
+        {contract.signed_pdf_url && (
+          <a href={contract.signed_pdf_url} target="_blank" rel="noopener noreferrer"
+            className="text-xs text-erp-blue hover:underline font-medium">
+            Bekijk PDF ↗
+          </a>
         )}
       </div>
 
