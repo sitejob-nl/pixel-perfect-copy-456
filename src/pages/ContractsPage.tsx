@@ -712,7 +712,29 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
         </ErpCard>
       )}
 
-      {tab === "signers" && (
+      {tab === "fields" && (
+        <ErpCard className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-erp-text0">Handtekeningvelden positioneren</h3>
+              <p className="text-xs text-erp-text3">Sleep velden naar de juiste positie op het contract</p>
+            </div>
+            <ErpButton primary onClick={saveFields} disabled={updateContract.isPending}>
+              {updateContract.isPending ? "Opslaan..." : "Velden opslaan"}
+            </ErpButton>
+          </div>
+          <div className="h-[500px]">
+            <PDFFieldEditor
+              pages={[contract.rendered_html || contract.content || "<p>Geen content</p>"]}
+              fields={sigFields}
+              onChange={setSigFields}
+              signerCount={(contract.contract_signing_sessions || []).length || 1}
+              readOnly={contract.status === "signed"}
+            />
+          </div>
+        </ErpCard>
+      )}
+
         <ErpCard>
           <table className="w-full">
             <thead>
