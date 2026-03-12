@@ -442,8 +442,9 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   );
 }
 
-function Step1Templates({ templates, selected, onSelect, title, onTitleChange }: {
-  templates: any[]; selected: string | null; onSelect: (id: string | null) => void;
+function Step1Templates({ templates, selected, contractMode, onSelect, onModeChange, title, onTitleChange }: {
+  templates: any[]; selected: string | null; contractMode: "template" | "empty" | "pdf";
+  onSelect: (id: string | null) => void; onModeChange: (mode: "template" | "empty" | "pdf") => void;
   title: string; onTitleChange: (v: string) => void;
 }) {
   return (
@@ -459,44 +460,156 @@ function Step1Templates({ templates, selected, onSelect, title, onTitleChange }:
       </div>
 
       <div>
-        <label className="block text-xs font-medium text-erp-text2 mb-2">Selecteer een template</label>
-        <div className="grid grid-cols-2 gap-3">
-          {/* Empty option */}
+        <label className="block text-xs font-medium text-erp-text2 mb-2">Hoe wil je het contract aanmaken?</label>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {/* Empty contract */}
           <div
-            onClick={() => onSelect(null)}
+            onClick={() => onModeChange("empty")}
             className={cn(
               "p-4 rounded-xl border-2 cursor-pointer transition-all",
-              !selected
+              contractMode === "empty"
                 ? "border-erp-blue bg-erp-blue/5"
                 : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
             )}
           >
+            <Icons.Pen className="w-5 h-5 text-erp-text2 mb-2" />
             <div className="text-sm font-medium text-erp-text0">Leeg contract</div>
-            <div className="text-xs text-erp-text3 mt-1">Begin zonder template</div>
+            <div className="text-xs text-erp-text3 mt-1">Schrijf zelf de inhoud</div>
           </div>
 
-          {templates.map((t: any) => (
-            <div
-              key={t.id}
-              onClick={() => onSelect(t.id)}
-              className={cn(
-                "p-4 rounded-xl border-2 cursor-pointer transition-all",
-                selected === t.id
-                  ? "border-erp-blue bg-erp-blue/5"
-                  : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
-              )}
-            >
-              <div className="text-sm font-medium text-erp-text0">{t.name}</div>
-              <div className="text-xs text-erp-text3 mt-1">{t.description || t.category || "Template"}</div>
-              {t.variables?.length > 0 && (
-                <div className="text-[10px] text-erp-text3 mt-2">
-                  {t.variables.length} variabelen
-                </div>
-              )}
-            </div>
-          ))}
+          {/* PDF upload */}
+          <div
+            onClick={() => onModeChange("pdf")}
+            className={cn(
+              "p-4 rounded-xl border-2 cursor-pointer transition-all",
+              contractMode === "pdf"
+                ? "border-erp-blue bg-erp-blue/5"
+                : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
+            )}
+          >
+            <Icons.File className="w-5 h-5 text-erp-text2 mb-2" />
+            <div className="text-sm font-medium text-erp-text0">PDF uploaden</div>
+            <div className="text-xs text-erp-text3 mt-1">Upload een bestaand PDF-bestand</div>
+          </div>
+
+          {/* Template */}
+          <div
+            onClick={() => onModeChange("template")}
+            className={cn(
+              "p-4 rounded-xl border-2 cursor-pointer transition-all",
+              contractMode === "template"
+                ? "border-erp-blue bg-erp-blue/5"
+                : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
+            )}
+          >
+            <Icons.Layout className="w-5 h-5 text-erp-text2 mb-2" />
+            <div className="text-sm font-medium text-erp-text0">Template</div>
+            <div className="text-xs text-erp-text3 mt-1">Gebruik een bestaande template</div>
+          </div>
         </div>
+
+        {/* Template list (only when template mode) */}
+        {contractMode === "template" && templates.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            {templates.map((t: any) => (
+              <div
+                key={t.id}
+                onClick={() => onSelect(t.id)}
+                className={cn(
+                  "p-4 rounded-xl border-2 cursor-pointer transition-all",
+                  selected === t.id
+                    ? "border-erp-blue bg-erp-blue/5"
+                    : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
+                )}
+              >
+                <div className="text-sm font-medium text-erp-text0">{t.name}</div>
+                <div className="text-xs text-erp-text3 mt-1">{t.description || t.category || "Template"}</div>
+                {t.variables?.length > 0 && (
+                  <div className="text-[10px] text-erp-text3 mt-2">
+                    {t.variables.length} variabelen
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function Step2Empty({ content, onContentChange }: {
+  content: string; onContentChange: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold text-erp-text0">Contractinhoud schrijven</h4>
+      <p className="text-xs text-erp-text3">Schrijf de contracttekst hieronder. Je kunt HTML gebruiken voor opmaak.</p>
+      <textarea
+        value={content}
+        onChange={(e) => onContentChange(e.target.value)}
+        placeholder="Typ hier de contractinhoud..."
+        rows={16}
+        className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue font-mono resize-y"
+      />
+    </div>
+  );
+}
+
+function Step2PdfUpload({ pdfPageImages, uploading, onUpload }: {
+  pdfPageImages: string[]; uploading: boolean; onUpload: (file: File) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className="space-y-4">
+      <h4 className="text-sm font-semibold text-erp-text0">PDF uploaden</h4>
+      <p className="text-xs text-erp-text3">Upload een PDF-bestand. In de volgende stap kun je handtekeningvelden op de juiste plek slepen.</p>
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); }}
+      />
+
+      {pdfPageImages.length === 0 ? (
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="w-full border-2 border-dashed border-erp-border1 rounded-xl py-12 flex flex-col items-center gap-2 text-erp-text2 hover:bg-erp-bg3 transition-colors disabled:opacity-50"
+        >
+          {uploading ? (
+            <span className="text-sm">PDF wordt verwerkt...</span>
+          ) : (
+            <>
+              <Icons.File className="w-8 h-8 text-erp-text3" />
+              <span className="text-sm font-medium">Klik om een PDF te uploaden</span>
+              <span className="text-xs text-erp-text3">of sleep het bestand hierheen</span>
+            </>
+          )}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-erp-text2 font-medium">{pdfPageImages.length} pagina('s) geladen</span>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="text-xs text-erp-blue hover:underline font-medium"
+            >
+              Ander bestand kiezen
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-2 max-h-[350px] overflow-y-auto">
+            {pdfPageImages.map((img, i) => (
+              <div key={i} className="border border-erp-border0 rounded-lg overflow-hidden">
+                <img src={img} alt={`Pagina ${i + 1}`} className="w-full" />
+                <div className="text-[10px] text-erp-text3 text-center py-1">p{i + 1}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
