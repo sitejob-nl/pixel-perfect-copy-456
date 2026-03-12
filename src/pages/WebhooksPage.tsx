@@ -207,7 +207,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [config, setConfig] = useState({
     name: "", description: "", target_table: "contacts",
-    dedup_field: "", dedup_action: "update",
+    dedup_field: "none", dedup_action: "update",
     default_source: "", default_temperature: "warm",
   });
   const [mappings, setMappings] = useState<{ source_path: string; target_field: string; transform: string }[]>([]);
