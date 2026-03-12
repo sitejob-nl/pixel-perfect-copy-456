@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   useOrgMembers,
-  useOrgInvites,
   useMemberModuleOverrides,
   useInviteMember,
   useUpdateMemberRole,
