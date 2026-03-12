@@ -109,7 +109,6 @@ export default function CreateInvoiceDialog({ open, onOpenChange }: Props) {
         payment_status: paymentStatus,
         lines,
       } as any,
-      },
       {
         onSuccess: () => {
           toast.success("Factuur aangemaakt!");
