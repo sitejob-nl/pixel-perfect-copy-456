@@ -37,7 +37,6 @@ export default function AIAgentPage() {
   const [lastUsage, setLastUsage] = useState<{ input_tokens: number; output_tokens: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { data: org } = useOrganization();
   const { data: sessions } = useAiChatSessions();
