@@ -4,6 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useOrgModules } from "@/hooks/useOrgModules";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   useOrgMembers,
   useOrgInvites,
   useMemberModuleOverrides,
@@ -14,6 +20,7 @@ import {
   useSetModuleOverride,
 } from "@/hooks/useTeam";
 import { toast } from "sonner";
+import { Eye } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Eigenaar",
