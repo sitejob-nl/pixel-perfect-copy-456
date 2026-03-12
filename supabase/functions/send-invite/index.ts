@@ -308,12 +308,26 @@ Deno.serve(async (req: Request) => {
 
     const resendKey = decrypt(resendEncrypted as string, encryptionKey);
 
+    // For existing users already added, we can skip email or send a notification
+    if (existingUser && !actionLink) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          invite_id: invite.id,
+          email_sent: false,
+          existing_user: true,
+          message: "Bestaande gebruiker is direct toegevoegd aan je organisatie.",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Build and send email with branding
     const html = buildInviteHtml({
       orgName,
       inviterName,
       role: inviteRole,
-      actionUrl: actionLink,
+      actionUrl: actionLink!,
       logoUrl,
       primaryColor,
     });
