@@ -135,7 +135,8 @@ async function createPdfFromHtml(html: string): Promise<Uint8Array> {
 async function embedSignaturesInPdf(
   pdfBytes: Uint8Array,
   sessions: any[],
-  signatureFields: any[] | null
+  signatureFields: any[] | null,
+  contract_id: string
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -415,7 +416,8 @@ Deno.serve(async (req) => {
     const signedPdfBytes = await embedSignaturesInPdf(
       new Uint8Array(basePdfBytes),
       signedSessions,
-      signatureFields
+      signatureFields,
+      contract_id
     );
 
     // Step 3: Generate document hash
@@ -474,14 +476,13 @@ Deno.serve(async (req) => {
     try {
       const { data: apiKeyRow } = await sb
         .from("organization_api_keys")
-        .select("encrypted_key")
+        .select("resend_api_key_encrypted")
         .eq("organization_id", contract.organization_id)
-        .eq("provider", "resend")
         .single();
 
-      if (apiKeyRow?.encrypted_key) {
-        const encKey = Deno.env.get("ENCRYPTION_KEY") || "";
-        const resendKey = decryptKey(apiKeyRow.encrypted_key, encKey);
+      if (apiKeyRow?.resend_api_key_encrypted) {
+        const encKey = Deno.env.get("ENCRYPTION_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!.slice(0, 32);
+        const resendKey = decryptKey(apiKeyRow.resend_api_key_encrypted, encKey);
 
         for (const session of signedSessions) {
           await fetch("https://api.resend.com/emails", {
