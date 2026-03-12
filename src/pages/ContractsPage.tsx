@@ -639,6 +639,9 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
     setGeneratingPdf(false);
   };
 
+  if (isLoading) return <div className="text-erp-text3 text-sm py-8 text-center">Laden...</div>;
+  if (!contract) return <div className="text-erp-text3 text-sm py-8 text-center">Contract niet gevonden</div>;
+
   const signingBaseUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://fuvpmxxihmpustftzvgk.supabase.co"}/functions/v1/contract-signing`;
 
   const handleSend = async () => {
@@ -655,9 +658,12 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
   };
 
   const copyLink = (token: string) => {
-    navigator.clipboard.writeText(`${signingBaseUrl}?action=get&token=${token}`);
+    const origin = window.location.origin;
+    navigator.clipboard.writeText(`${origin}/sign?token=${token}`);
     toast.success("Signing link gekopieerd");
   };
+
+  const hasSigned = (contract.contract_signing_sessions || []).some((s: any) => s.status === "signed");
 
   return (
     <div>
