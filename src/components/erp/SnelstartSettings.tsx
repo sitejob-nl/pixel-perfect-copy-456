@@ -72,8 +72,10 @@ export default function SnelstartSettings() {
 
     const isActive = config?.is_active && config?.koppel_sleutel;
 
+    // Build clean successUrl without query params like __lovable_token
+    const cleanSuccessUrl = window.location.origin + window.location.pathname;
     const activationUrl = appShortName
-        ? `https://web.snelstart.nl/couplings/activate/${appShortName}?referenceKey=${config?.organization_id || ""}&successUrl=${encodeURIComponent(window.location.href)}`
+        ? `https://web.snelstart.nl/couplings/activate/${appShortName}?referenceKey=${config?.organization_id || ""}&successUrl=${encodeURIComponent(cleanSuccessUrl)}`
         : null;
 
     if (isLoading) {
