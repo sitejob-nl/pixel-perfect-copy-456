@@ -130,6 +130,22 @@ export default function SnelstartSettings() {
                 )}
             </div>
 
+            {/* Webhook URL Info */}
+            <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
+                <h3 className="text-[15px] font-semibold text-erp-text0 mb-2">Webhook URL</h3>
+                <p className="text-[12px] text-erp-text3 mb-3">
+                    Geef deze URL op bij Snelstart als webhook-URL voor je productiekoppeling:
+                </p>
+                <div className="flex gap-2 items-center">
+                    <code className="flex-1 bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[12px] text-erp-text1 select-all break-all">
+                        {webhookUrl}
+                    </code>
+                    <ErpButton onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("URL gekopieerd"); }}>
+                        Kopieer
+                    </ErpButton>
+                </div>
+            </div>
+
             {/* API Keys */}
             <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
                 <h3 className="text-[15px] font-semibold text-erp-text0 mb-4">API Configuratie</h3>
