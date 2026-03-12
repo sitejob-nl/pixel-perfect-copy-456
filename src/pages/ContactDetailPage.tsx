@@ -56,7 +56,10 @@ export default function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { data: org } = useOrganization();
   const [editing, setEditing] = useState(false);
+  const [noteText, setNoteText] = useState("");
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
