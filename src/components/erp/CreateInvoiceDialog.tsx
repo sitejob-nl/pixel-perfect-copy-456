@@ -104,7 +104,11 @@ export default function CreateInvoiceDialog({ open, onOpenChange }: Props) {
         vat_amount: vatAmount,
         total_amount: total,
         status: "draft",
+        payment_url: paymentUrl.trim() || null,
+        visible_in_portal: visibleInPortal,
+        payment_status: paymentStatus,
         lines,
+      } as any,
       },
       {
         onSuccess: () => {
