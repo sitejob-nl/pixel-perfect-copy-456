@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 const services = [
   { key: "anthropic" as const, label: "Anthropic (Claude)", desc: "Voor de AI Agent chat functionaliteit", placeholder: "sk-ant-..." },
   { key: "apify" as const, label: "Apify", desc: "Voor web scraping en data intelligence", placeholder: "apify_api_..." },
+  { key: "resend" as const, label: "Resend", desc: "Voor transactionele en auth e-mails", placeholder: "re_..." },
 ] as const;
 
 const tierConfig: Record<string, { label: string; className: string; emoji: string }> = {
@@ -29,7 +30,7 @@ export default function ApiKeysSettings() {
     return <div className="text-sm text-erp-text3 py-8 text-center">Laden...</div>;
   }
 
-  const handleSave = async (service: "anthropic" | "apify") => {
+  const handleSave = async (service: "anthropic" | "apify" | "resend") => {
     const value = inputs[service]?.trim();
     if (!value) { toast({ title: "Voer een API key in", variant: "destructive" }); return; }
     try {
@@ -41,7 +42,7 @@ export default function ApiKeysSettings() {
     }
   };
 
-  const handleVerify = async (service: "anthropic" | "apify") => {
+  const handleVerify = async (service: "anthropic" | "apify" | "resend") => {
     try {
       const result = await verifyKey.mutateAsync(service);
       toast({ title: (result as any)?.valid ? "✅ Key is geldig" : "❌ Key is ongeldig" });
@@ -50,7 +51,7 @@ export default function ApiKeysSettings() {
     }
   };
 
-  const handleDelete = async (service: "anthropic" | "apify") => {
+  const handleDelete = async (service: "anthropic" | "apify" | "resend") => {
     try {
       await deleteKey.mutateAsync(service);
       toast({ title: "API key verwijderd" });

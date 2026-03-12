@@ -9,6 +9,9 @@ export interface ApiKeyStatus {
   apify_key_set: boolean;
   apify_key_hint: string | null;
   apify_key_verified_at: string | null;
+  resend_key_set: boolean;
+  resend_key_hint: string | null;
+  resend_key_verified_at: string | null;
   selected_model: string | null;
 }
 
@@ -22,7 +25,7 @@ export function useApiKeyStatus() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("organization_api_keys")
-        .select("anthropic_key_set, anthropic_key_hint, anthropic_key_verified_at, apify_key_set, apify_key_hint, apify_key_verified_at, selected_model")
+        .select("anthropic_key_set, anthropic_key_hint, anthropic_key_verified_at, apify_key_set, apify_key_hint, apify_key_verified_at, resend_key_set, resend_key_hint, resend_key_verified_at, selected_model")
         .eq("organization_id", orgId!)
         .maybeSingle();
       if (error) throw error;
@@ -33,6 +36,9 @@ export function useApiKeyStatus() {
         apify_key_set: false,
         apify_key_hint: null,
         apify_key_verified_at: null,
+        resend_key_set: false,
+        resend_key_hint: null,
+        resend_key_verified_at: null,
         selected_model: null,
       };
     },
@@ -44,7 +50,7 @@ export function useSetApiKey() {
   const { data: org } = useOrganization();
 
   return useMutation({
-    mutationFn: async ({ service, apiKey }: { service: "anthropic" | "apify"; apiKey: string }) => {
+    mutationFn: async ({ service, apiKey }: { service: "anthropic" | "apify" | "resend"; apiKey: string }) => {
       const { data, error } = await supabase.functions.invoke("manage-api-keys", {
         body: { action: "set", service, api_key: apiKey, organization_id: org!.organization_id },
       });
@@ -62,7 +68,7 @@ export function useVerifyApiKey() {
   const { data: org } = useOrganization();
 
   return useMutation({
-    mutationFn: async (service: "anthropic" | "apify") => {
+    mutationFn: async (service: "anthropic" | "apify" | "resend") => {
       const { data, error } = await supabase.functions.invoke("manage-api-keys", {
         body: { action: "verify", service, organization_id: org!.organization_id },
       });
@@ -80,7 +86,7 @@ export function useDeleteApiKey() {
   const { data: org } = useOrganization();
 
   return useMutation({
-    mutationFn: async (service: "anthropic" | "apify") => {
+    mutationFn: async (service: "anthropic" | "apify" | "resend") => {
       const { data, error } = await supabase.functions.invoke("manage-api-keys", {
         body: { action: "delete", service, organization_id: org!.organization_id },
       });
