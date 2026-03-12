@@ -2,9 +2,11 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import SnelstartSettings from "@/components/erp/SnelstartSettings";
 import ApiKeysSettings from "@/components/erp/ApiKeysSettings";
+import TeamSettings from "@/components/erp/TeamSettings";
 
 const tabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️" },
+  { key: "team", label: "Team", icon: "👥" },
   { key: "api-keys", label: "API Keys", icon: "🔑" },
   { key: "snelstart", label: "Snelstart", icon: "🔗" },
   { key: "notificaties", label: "Notificaties", icon: "🔔" },
