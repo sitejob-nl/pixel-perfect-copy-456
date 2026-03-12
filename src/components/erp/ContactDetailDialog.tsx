@@ -236,11 +236,81 @@ export default function ContactDetailDialog({ contact, open, onOpenChange }: Pro
         ) : (
           <>
             {/* Detail view */}
-            <div className="space-y-2 text-sm">
-              {contact.phone && <div className="flex gap-2"><span className="text-erp-text3 w-20">Telefoon</span><span>{contact.phone}</span></div>}
-              {contact.job_title && <div className="flex gap-2"><span className="text-erp-text3 w-20">Functie</span><span>{contact.job_title}</span></div>}
-              {contact.source && <div className="flex gap-2"><span className="text-erp-text3 w-20">Bron</span><span>{contact.source}</span></div>}
-              <div className="flex gap-2"><span className="text-erp-text3 w-20">Score</span><span>{contact.lead_score ?? 0}</span></div>
+            <div className="space-y-3 text-sm">
+              {/* Basic info */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">Contactgegevens</div>
+                {contact.phone && <DetailRow label="Telefoon" value={contact.phone} />}
+                {contact.mobile && <DetailRow label="Mobiel" value={contact.mobile} />}
+                {contact.job_title && <DetailRow label="Functie" value={contact.job_title} />}
+                {contact.linkedin_url && (
+                  <div className="flex gap-2">
+                    <span className="text-erp-text3 w-28 shrink-0">LinkedIn</span>
+                    <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate">
+                      {contact.linkedin_url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, "").replace(/\/$/, "") || contact.linkedin_url}
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* Lead info */}
+              <div className="space-y-1.5 pt-2 border-t border-erp-border0">
+                <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">Lead informatie</div>
+                <DetailRow label="Score" value={String(contact.lead_score ?? 0)} />
+                {contact.score_tier && <DetailRow label="Score tier" value={contact.score_tier} />}
+                {contact.lead_status && <DetailRow label="Lead status" value={contact.lead_status} />}
+                {contact.source && <DetailRow label="Bron" value={contact.source} />}
+                {contact.enrichment_status && <DetailRow label="Verrijking" value={contact.enrichment_status} />}
+              </div>
+
+              {/* UTM data */}
+              {(contact.utm_source || contact.utm_medium || contact.utm_campaign) && (
+                <div className="space-y-1.5 pt-2 border-t border-erp-border0">
+                  <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">UTM / Campagne</div>
+                  {contact.utm_source && <DetailRow label="UTM Source" value={contact.utm_source} />}
+                  {contact.utm_medium && <DetailRow label="UTM Medium" value={contact.utm_medium} />}
+                  {contact.utm_campaign && <DetailRow label="UTM Campaign" value={contact.utm_campaign} />}
+                </div>
+              )}
+
+              {/* Tags */}
+              {contact.tags && contact.tags.length > 0 && (
+                <div className="space-y-1.5 pt-2 border-t border-erp-border0">
+                  <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">Tags</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {contact.tags.map((tag, i) => (
+                      <Chip key={i}>{tag}</Chip>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom fields */}
+              {contact.custom_fields && typeof contact.custom_fields === "object" && Object.keys(contact.custom_fields as Record<string, unknown>).length > 0 && (
+                <div className="space-y-1.5 pt-2 border-t border-erp-border0">
+                  <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">Extra velden</div>
+                  {Object.entries(contact.custom_fields as Record<string, unknown>).map(([key, val]) => (
+                    <DetailRow key={key} label={key} value={val != null ? String(val) : "—"} />
+                  ))}
+                </div>
+              )}
+
+              {/* Dates */}
+              <div className="space-y-1.5 pt-2 border-t border-erp-border0">
+                <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">Datums</div>
+                {contact.customer_since && <DetailRow label="Klant sinds" value={new Date(contact.customer_since).toLocaleDateString("nl-NL")} />}
+                {contact.last_contacted_at && <DetailRow label="Laatst gecontacteerd" value={formatDistanceToNow(new Date(contact.last_contacted_at), { addSuffix: true, locale: nl })} />}
+                {contact.last_activity_at && <DetailRow label="Laatste activiteit" value={formatDistanceToNow(new Date(contact.last_activity_at), { addSuffix: true, locale: nl })} />}
+                {contact.next_follow_up_at && <DetailRow label="Follow-up" value={new Date(contact.next_follow_up_at).toLocaleDateString("nl-NL")} />}
+                <DetailRow label="Aangemaakt" value={new Date(contact.created_at).toLocaleDateString("nl-NL")} />
+              </div>
+
+              {/* Opt-in statuses */}
+              <div className="space-y-1.5 pt-2 border-t border-erp-border0">
+                <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">Voorkeuren</div>
+                <DetailRow label="E-mail opt-out" value={contact.email_opt_out ? "Ja" : "Nee"} />
+                <DetailRow label="WhatsApp opt-in" value={contact.whatsapp_opt_in ? "Ja" : "Nee"} />
+              </div>
             </div>
 
             <div className="flex gap-2 pt-3">
