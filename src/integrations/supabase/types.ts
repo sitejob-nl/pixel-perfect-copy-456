@@ -1104,6 +1104,7 @@ export type Database = {
           organization_id: string | null
           session_token: string
           signature_data: string | null
+          signature_image_url: string | null
           signature_type: string | null
           signed_at: string | null
           signed_document_hash: string | null
@@ -1132,6 +1133,7 @@ export type Database = {
           organization_id?: string | null
           session_token?: string
           signature_data?: string | null
+          signature_image_url?: string | null
           signature_type?: string | null
           signed_at?: string | null
           signed_document_hash?: string | null
@@ -1160,6 +1162,7 @@ export type Database = {
           organization_id?: string | null
           session_token?: string
           signature_data?: string | null
+          signature_image_url?: string | null
           signature_type?: string | null
           signed_at?: string | null
           signed_document_hash?: string | null
@@ -1317,6 +1320,7 @@ export type Database = {
       }
       contracts: {
         Row: {
+          audit_trail_pdf_url: string | null
           cancelled_at: string | null
           cancelled_reason: string | null
           certificate_fingerprint: string | null
@@ -1331,6 +1335,7 @@ export type Database = {
           expires_at: string | null
           id: string
           organization_id: string
+          original_document_hash: string | null
           original_hash: string | null
           pdf_url: string | null
           project_id: string | null
@@ -1343,6 +1348,7 @@ export type Database = {
           signed_at: string | null
           signed_by: string | null
           signed_hash: string | null
+          signed_pdf_url: string | null
           signing_message: string | null
           signing_order: string | null
           status: string
@@ -1353,6 +1359,7 @@ export type Database = {
           visible_in_portal: boolean | null
         }
         Insert: {
+          audit_trail_pdf_url?: string | null
           cancelled_at?: string | null
           cancelled_reason?: string | null
           certificate_fingerprint?: string | null
@@ -1367,6 +1374,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           organization_id: string
+          original_document_hash?: string | null
           original_hash?: string | null
           pdf_url?: string | null
           project_id?: string | null
@@ -1379,6 +1387,7 @@ export type Database = {
           signed_at?: string | null
           signed_by?: string | null
           signed_hash?: string | null
+          signed_pdf_url?: string | null
           signing_message?: string | null
           signing_order?: string | null
           status?: string
@@ -1389,6 +1398,7 @@ export type Database = {
           visible_in_portal?: boolean | null
         }
         Update: {
+          audit_trail_pdf_url?: string | null
           cancelled_at?: string | null
           cancelled_reason?: string | null
           certificate_fingerprint?: string | null
@@ -1403,6 +1413,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           organization_id?: string
+          original_document_hash?: string | null
           original_hash?: string | null
           pdf_url?: string | null
           project_id?: string | null
@@ -1415,6 +1426,7 @@ export type Database = {
           signed_at?: string | null
           signed_by?: string | null
           signed_hash?: string | null
+          signed_pdf_url?: string | null
           signing_message?: string | null
           signing_order?: string | null
           status?: string
