@@ -33,6 +33,7 @@ import DemoViewPage from "./pages/DemoViewPage";
 import PortalAdminPage from "./pages/PortalAdminPage";
 import ClientPortalPage from "./pages/ClientPortalPage";
 import EmailPage from "./pages/EmailPage";
+import AcceptInvitePage from "./pages/AcceptInvitePage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -119,6 +120,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
             <Route path="/sign" element={<ContractSigningPage />} />
             <Route path="/portal" element={<ClientPortalPage />} />
             <Route path="/demo/:slug" element={<DemoViewPage />} />

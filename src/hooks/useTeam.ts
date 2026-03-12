@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "./useOrganization";
+import { toast } from "sonner";
 
 export interface OrgMember {
   id: string;
@@ -92,31 +93,30 @@ export function useMemberModuleOverrides() {
 
 export function useInviteMember() {
   const qc = useQueryClient();
-  const { data: org } = useOrganization();
 
   return useMutation({
     mutationFn: async ({ email, role }: { email: string; role: string }) => {
-      const orgId = org?.organization_id;
-      if (!orgId) throw new Error("Geen organisatie");
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Niet ingelogd");
-
-      const { data, error } = await supabase
-        .from("organization_invites")
-        .insert({
-          organization_id: orgId,
+      const { data, error } = await supabase.functions.invoke("send-invite", {
+        body: {
           email,
           role,
-          invited_by: user.id,
-        })
-        .select()
-        .single();
+          origin: window.location.origin,
+          redirect_url: window.location.origin,
+        },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["org-invites"] });
+      if (data?.email_sent) {
+        // Email was sent via Resend
+      } else if (data?.action_link) {
+        // No Resend configured — show the link
+        toast.info("Resend niet geconfigureerd. Kopieer de uitnodigingslink handmatig.");
+        navigator.clipboard.writeText(data.action_link);
+      }
     },
   });
 }
