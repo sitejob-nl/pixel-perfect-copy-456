@@ -185,7 +185,7 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
           </div>
 
           {/* Canvas */}
-          <div className="flex-1 overflow-auto p-6" onClick={() => setSelectedId(null)} style={{ backgroundColor: design.settings.backgroundColor }}>
+          <div className="flex-1 overflow-auto p-6" onClick={() => setSelectedId(null)} style={{ backgroundColor: design.settings?.backgroundColor || "#f4f4f5" }}>
             {previewMode === "html" ? (
               <div className="max-w-3xl mx-auto">
                 <div className="flex justify-end mb-2">
