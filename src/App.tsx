@@ -32,7 +32,6 @@ import PortalAdminPage from "./pages/PortalAdminPage";
 import ClientPortalPage from "./pages/ClientPortalPage";
 import EmailPage from "./pages/EmailPage";
 const queryClient = new QueryClient();
-const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
