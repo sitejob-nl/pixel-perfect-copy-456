@@ -74,12 +74,19 @@ export default function ErpSidebar() {
   const [hov, setHov] = useState<string | null>(null);
   const { data: modules } = useOrgModules();
   const { data: isSuperAdmin } = useIsSuperAdmin();
+  const { org: brandOrg } = useBranding();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Derive active page from pathname
   const pathSegment = location.pathname.split("/")[1] || "dashboard";
   const activePage = pathSegment;
+
+  const orgName = brandOrg?.name || "SiteJob";
+  const orgLogo = brandOrg?.logo_url;
+  const orgInitials = orgName.slice(0, 2).toUpperCase();
+  const primaryColor = brandOrg?.primary_color || "#2563EB";
+  const secondaryColor = brandOrg?.secondary_color || "#1E40AF";
 
   const isModuleEnabled = (pageKey: string) => {
     const moduleKey = moduleMap[pageKey];
