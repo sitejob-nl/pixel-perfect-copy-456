@@ -647,7 +647,7 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
       </div>
 
       <ErpTabs
-        items={[["content", "Contract"], ["signers", "Ondertekenaars"], ["audit", "Audit Trail"]]}
+        items={[["content", "Contract"], ["fields", "Velden"], ["signers", "Ondertekenaars"], ["audit", "Audit Trail"]]}
         active={tab}
         onChange={setTab}
       />
