@@ -433,80 +433,18 @@ export default function TeamSettings() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-[13px] text-erp-text2">
-              Zo ziet de uitnodigingsmail eruit die naar nieuwe teamleden wordt gestuurd:
+              Zo ziet de uitnodigingsmail eruit die naar nieuwe teamleden wordt gestuurd. Logo en kleuren worden overgenomen uit <strong>Instellingen → Algemeen → Huisstijl</strong>.
             </p>
-            <div 
-              className="rounded-lg overflow-hidden border border-erp-border0"
-              dangerouslySetInnerHTML={{
-                __html: `<!DOCTYPE html>
-<html lang="nl">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
-<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
-<tr><td align="center" style="padding:40px 16px;">
-  <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;">
-    <tr>
-      <td style="background:linear-gradient(135deg,#32C5FF 0%,#1E90FF 100%);padding:32px 40px;text-align:center;">
-        <div style="display:inline-flex;align-items:center;gap:8px;">
-          <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:8px;display:inline-block;text-align:center;line-height:36px;">
-            <span style="color:#fff;font-size:18px;font-weight:bold;">⚡</span>
-          </div>
-          <span style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:-0.3px;">${org?.organizations?.name || "Jouw organisatie"}</span>
-        </div>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:40px 40px 32px 40px;">
-        <h1 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#1a1a2e;line-height:1.3;">
-          Je bent uitgenodigd! 🎉
-        </h1>
-        <p style="margin:0 0 24px 0;font-size:15px;color:#6b7280;line-height:1.6;">
-          <strong style="color:#1a1a2e;">${user?.user_metadata?.full_name || "Jij"}</strong> heeft je uitgenodigd om lid te worden van
-          <strong style="color:#1a1a2e;">${org?.organizations?.name || "Jouw organisatie"}</strong> als <strong style="color:#32C5FF;">${ROLE_LABELS[inviteRole] || "Teamlid"}</strong>.
-        </p>
-        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:28px;">
-          <tr><td style="padding:16px 20px;">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="font-size:13px;color:#9ca3af;padding-bottom:6px;">Organisatie</td>
-                <td style="font-size:13px;color:#9ca3af;padding-bottom:6px;text-align:right;">Rol</td>
-              </tr>
-              <tr>
-                <td style="font-size:15px;font-weight:600;color:#1a1a2e;">${org?.organizations?.name || "Jouw organisatie"}</td>
-                <td style="font-size:15px;font-weight:600;color:#32C5FF;text-align:right;">${ROLE_LABELS[inviteRole] || "Teamlid"}</td>
-              </tr>
-            </table>
-          </td></tr>
-        </table>
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr><td align="center">
-            <a href="#" style="display:inline-block;background:#32C5FF;color:#ffffff;padding:14px 40px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;letter-spacing:0.2px;">
-              Uitnodiging accepteren
-            </a>
-          </td></tr>
-        </table>
-        <p style="margin:24px 0 0 0;font-size:13px;color:#9ca3af;line-height:1.5;text-align:center;">
-          Na het klikken kun je een wachtwoord instellen voor je account.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:20px 40px 28px 40px;border-top:1px solid #f0f0f0;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#c4c4c8;line-height:1.5;">
-          Deze uitnodiging is 7 dagen geldig.<br>
-          Als je deze uitnodiging niet verwachtte, kun je deze e-mail negeren.
-        </p>
-      </td>
-    </tr>
-  </table>
-</td></tr>
-</table>
-</body>
-</html>`
-              }}
+            <InviteEmailPreview
+              orgName={orgDetails?.name || org?.organizations?.name || "Jouw organisatie"}
+              logoUrl={orgDetails?.logo_url || null}
+              primaryColor={orgDetails?.primary_color || "#32C5FF"}
+              inviterName={user?.user_metadata?.full_name || "Jij"}
+              roleLabel={ROLE_LABELS[inviteRole] || "Teamlid"}
             />
-            <div className="bg-erp-bg2 rounded-lg p-3 text-[12px] text-erp-text2">
-              <strong>Belangrijk:</strong> De mail wordt verstuurd via Resend. Zorg dat je Resend API key is ingesteld in <strong>Instellingen → API Keys</strong>.
+            <div className="bg-erp-bg2 rounded-lg p-3 text-[12px] text-erp-text2 space-y-1">
+              <div><strong>Logo & kleuren:</strong> Instellingen → Algemeen → Huisstijl</div>
+              <div><strong>Verzending:</strong> Resend API key nodig in Instellingen → API Keys</div>
             </div>
           </div>
         </DialogContent>
