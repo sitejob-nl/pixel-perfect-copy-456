@@ -330,7 +330,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                 <Select value={config.dedup_field} onValueChange={(v) => setConfig((c) => ({ ...c, dedup_field: v }))}>
                   <SelectTrigger><SelectValue placeholder="Geen" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geen</SelectItem>
+                    <SelectItem value="none">Geen</SelectItem>
                     <SelectItem value="email">E-mail</SelectItem>
                     <SelectItem value="phone">Telefoon</SelectItem>
                     <SelectItem value="name">Naam</SelectItem>
