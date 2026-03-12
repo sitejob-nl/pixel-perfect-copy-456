@@ -117,7 +117,7 @@ const App = () => (
             <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/sign" element={<ContractSigningPage />} />
-            <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
+            <Route path="/portal" element={<ClientPortalPage />} />
 
             {/* Protected layout with sidebar */}
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
