@@ -30,7 +30,7 @@ export default function ApiKeysSettings() {
     return <div className="text-sm text-erp-text3 py-8 text-center">Laden...</div>;
   }
 
-  const handleSave = async (service: "anthropic" | "apify") => {
+  const handleSave = async (service: "anthropic" | "apify" | "resend") => {
     const value = inputs[service]?.trim();
     if (!value) { toast({ title: "Voer een API key in", variant: "destructive" }); return; }
     try {
