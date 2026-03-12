@@ -75,20 +75,44 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
       const hsl = hexToHsl(org.bg_color);
       if (hsl) {
         const str = hslString(hsl);
+        const isLight = hsl.l > 50;
         root.style.setProperty("--background", str);
         root.style.setProperty("--erp-bg-0", str);
-        // Derive slightly lighter shades for cards/panels
-        const bg1 = hslString({ ...hsl, l: Math.min(hsl.l + 2, 100) });
-        const bg2 = hslString({ ...hsl, l: Math.min(hsl.l + 5, 100) });
-        const bg3 = hslString({ ...hsl, l: Math.min(hsl.l + 7, 100) });
-        const bg4 = hslString({ ...hsl, l: Math.min(hsl.l + 10, 100) });
+        const bg1 = hslString({ ...hsl, l: isLight ? Math.max(hsl.l - 2, 0) : Math.min(hsl.l + 2, 100) });
+        const bg2 = hslString({ ...hsl, l: isLight ? Math.max(hsl.l - 5, 0) : Math.min(hsl.l + 5, 100) });
+        const bg3 = hslString({ ...hsl, l: isLight ? Math.max(hsl.l - 7, 0) : Math.min(hsl.l + 7, 100) });
+        const bg4 = hslString({ ...hsl, l: isLight ? Math.max(hsl.l - 10, 0) : Math.min(hsl.l + 10, 100) });
+        const bgHover = hslString({ ...hsl, l: isLight ? Math.max(hsl.l - 6, 0) : Math.min(hsl.l + 6, 100) });
         root.style.setProperty("--erp-bg-1", bg1);
         root.style.setProperty("--erp-bg-2", bg2);
         root.style.setProperty("--erp-bg-3", bg3);
         root.style.setProperty("--erp-bg-4", bg4);
+        root.style.setProperty("--erp-bg-hover", bgHover);
         root.style.setProperty("--card", bg1);
         root.style.setProperty("--popover", bg1);
         root.style.setProperty("--sidebar-background", bg1);
+
+        // Adaptive text colors
+        if (isLight) {
+          root.style.setProperty("--foreground", "0 0% 10%");
+          root.style.setProperty("--card-foreground", "0 0% 10%");
+          root.style.setProperty("--popover-foreground", "0 0% 10%");
+          root.style.setProperty("--sidebar-foreground", "0 0% 10%");
+          root.style.setProperty("--erp-text-0", "0 0% 10%");
+          root.style.setProperty("--erp-text-1", "0 0% 25%");
+          root.style.setProperty("--erp-text-2", "0 0% 40%");
+          root.style.setProperty("--erp-text-3", "0 0% 55%");
+          root.style.setProperty("--erp-border-0", `${hsl.h} ${Math.min(hsl.s, 15)}% ${Math.max(hsl.l - 12, 0)}%`);
+          root.style.setProperty("--erp-border-1", `${hsl.h} ${Math.min(hsl.s, 15)}% ${Math.max(hsl.l - 18, 0)}%`);
+          root.style.setProperty("--border", `${hsl.h} ${Math.min(hsl.s, 15)}% ${Math.max(hsl.l - 12, 0)}%`);
+          root.style.setProperty("--input", `${hsl.h} ${Math.min(hsl.s, 15)}% ${Math.max(hsl.l - 8, 0)}%`);
+          root.style.setProperty("--muted", `${hsl.h} ${Math.min(hsl.s, 10)}% ${Math.max(hsl.l - 6, 0)}%`);
+          root.style.setProperty("--muted-foreground", "0 0% 40%");
+          root.style.setProperty("--secondary", `${hsl.h} ${Math.min(hsl.s, 10)}% ${Math.max(hsl.l - 8, 0)}%`);
+          root.style.setProperty("--secondary-foreground", "0 0% 10%");
+          root.style.setProperty("--accent", `${hsl.h} ${Math.min(hsl.s, 10)}% ${Math.max(hsl.l - 8, 0)}%`);
+          root.style.setProperty("--accent-foreground", "0 0% 10%");
+        }
       }
     }
 
@@ -97,20 +121,17 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => {
-      root.style.removeProperty("--erp-blue");
-      root.style.removeProperty("--primary");
-      root.style.removeProperty("--ring");
-      root.style.removeProperty("--erp-purple");
-      root.style.removeProperty("--font-sans");
-      root.style.removeProperty("--background");
-      root.style.removeProperty("--erp-bg-0");
-      root.style.removeProperty("--erp-bg-1");
-      root.style.removeProperty("--erp-bg-2");
-      root.style.removeProperty("--erp-bg-3");
-      root.style.removeProperty("--erp-bg-4");
-      root.style.removeProperty("--card");
-      root.style.removeProperty("--popover");
-      root.style.removeProperty("--sidebar-background");
+      const props = [
+        "--erp-blue", "--primary", "--ring", "--erp-purple", "--font-sans",
+        "--background", "--foreground", "--card-foreground", "--popover-foreground",
+        "--sidebar-foreground", "--erp-bg-0", "--erp-bg-1", "--erp-bg-2", "--erp-bg-3",
+        "--erp-bg-4", "--erp-bg-hover", "--card", "--popover", "--sidebar-background",
+        "--erp-text-0", "--erp-text-1", "--erp-text-2", "--erp-text-3",
+        "--erp-border-0", "--erp-border-1", "--border", "--input",
+        "--muted", "--muted-foreground", "--secondary", "--secondary-foreground",
+        "--accent", "--accent-foreground",
+      ];
+      props.forEach((p) => root.style.removeProperty(p));
     };
   }, [org?.primary_color, org?.secondary_color, org?.bg_color, org?.font_family]);
 
