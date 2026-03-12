@@ -1069,10 +1069,19 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
 
       {tab === "content" && (
         <ErpCard className="p-6">
-          <div
-            className="bg-white text-gray-900 rounded-lg p-8 text-sm leading-relaxed shadow-inner"
-            dangerouslySetInnerHTML={{ __html: contract.rendered_html || contract.content || "<p>Geen content</p>" }}
-          />
+          {contract.pdf_url ? (
+            <iframe
+              src={contract.pdf_url}
+              className="w-full rounded-lg shadow-inner border border-erp-border0"
+              style={{ height: "700px" }}
+              title="Contract PDF"
+            />
+          ) : (
+            <div
+              className="bg-white text-gray-900 rounded-lg p-8 text-sm leading-relaxed shadow-inner"
+              dangerouslySetInnerHTML={{ __html: contract.rendered_html || contract.content || "<p>Geen content</p>" }}
+            />
+          )}
         </ErpCard>
       )}
 
