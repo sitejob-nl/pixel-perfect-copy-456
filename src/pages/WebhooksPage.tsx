@@ -613,7 +613,7 @@ function LogsTable({ filter, onFilterChange, onSelect }: { filter: string; onFil
         <Select value={filter} onValueChange={onFilterChange}>
           <SelectTrigger className="w-[240px]"><SelectValue placeholder="Alle endpoints" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Alle endpoints</SelectItem>
+            <SelectItem value="all">Alle endpoints</SelectItem>
             {endpoints?.map((ep: any) => (
               <SelectItem key={ep.id} value={ep.id}>{ep.name}</SelectItem>
             ))}
