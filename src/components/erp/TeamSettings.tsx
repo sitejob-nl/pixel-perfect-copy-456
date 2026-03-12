@@ -280,6 +280,8 @@ export default function TeamSettings() {
               className="bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
             >
               <option value="member">Lid</option>
+              <option value="viewer">Viewer</option>
+              <option value="intern">Stagiair</option>
               <option value="admin">Admin</option>
               {currentUserRole === "owner" && <option value="owner">Eigenaar</option>}
             </select>
