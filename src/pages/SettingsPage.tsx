@@ -21,6 +21,7 @@ type TabKey = (typeof tabs)[number]["key"];
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("algemeen");
+  const { user } = useAuth();
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
