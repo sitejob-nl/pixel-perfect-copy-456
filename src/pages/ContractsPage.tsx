@@ -502,7 +502,7 @@ function Step1Templates({ templates, selected, contractMode, onSelect, onModeCha
                 : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
             )}
           >
-            <Icons.Layout className="w-5 h-5 text-erp-text2 mb-2" />
+            <Icons.Portal className="w-5 h-5 text-erp-text2 mb-2" />
             <div className="text-sm font-medium text-erp-text0">Template</div>
             <div className="text-xs text-erp-text3 mt-1">Gebruik een bestaande template</div>
           </div>
