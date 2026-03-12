@@ -118,7 +118,6 @@ export default function ContactsPage() {
       )}
 
       <CreateContactDialog open={dialogOpen} onOpenChange={setDialogOpen} />
-      <ContactDetailDialog contact={selectedContact} open={!!selectedContact} onOpenChange={(open) => { if (!open) setSelectedContact(null); }} />
     </div>
   );
 }
