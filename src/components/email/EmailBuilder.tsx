@@ -149,7 +149,14 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
     setSelectedId(newBlock.id);
   };
 
-  const htmlPreview = generateHtml(design);
+  // Safely generate HTML with fallback settings
+  const htmlPreview = useMemo(() => {
+    const safeDesign = {
+      ...design,
+      settings: { ...getDefaultDesign().settings, ...design.settings },
+    };
+    return generateHtml(safeDesign);
+  }, [design]);
 
   const handleSave = () => {
     onSave(design, htmlPreview);
