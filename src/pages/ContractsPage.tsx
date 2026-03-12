@@ -173,6 +173,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   const { data: templates } = useContractTemplates();
   const { data: contacts } = useContacts();
   const { data: companies } = useCompanies();
+  const { data: members } = useOrgMembers();
   const { data: deals } = useDeals();
   const { data: projects } = useProjects();
   const { data: quotes } = useQuotes();
