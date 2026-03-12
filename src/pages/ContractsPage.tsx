@@ -186,10 +186,10 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   const selectedTemplate = templates?.find((t: any) => t.id === templateId);
 
   // Extract variables from template
-  const templateVars = useMemo(() => {
+  const templateVars: string[] = useMemo(() => {
     if (!selectedTemplate?.content_html) return [];
-    const matches = selectedTemplate.content_html.match(/\{\{(\w+)\}\}/g) || [];
-    return [...new Set(matches.map((m: string) => m.replace(/\{\{|\}\}/g, "")))];
+    const matches = (selectedTemplate.content_html as string).match(/\{\{(\w+)\}\}/g) || [];
+    return [...new Set(matches.map((m: string) => m.replace(/\{\{|\}\}/g, "")))] as string[];
   }, [selectedTemplate]);
 
   // Auto-fill variables from resolved data
