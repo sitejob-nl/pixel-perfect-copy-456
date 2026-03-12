@@ -24,7 +24,8 @@ import WebhooksPage from "./pages/WebhooksPage";
 import AdminPage from "./pages/AdminPage";
 import SettingsPage from "./pages/SettingsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
-
+import ContractsPage from "./pages/ContractsPage";
+import ContractSigningPage from "./pages/ContractSigningPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -111,6 +112,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/sign" element={<ContractSigningPage />} />
             <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
 
             {/* Protected layout with sidebar */}
@@ -123,7 +125,7 @@ const App = () => (
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="quotes" element={<QuotesPage />} />
-              <Route path="contracts" element={<PlaceholderPage title="Contracten" icon="Pen" />} />
+              <Route path="contracts" element={<ContractsPage />} />
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="demos" element={<PlaceholderPage title="Demo Generatie" icon="Globe" />} />

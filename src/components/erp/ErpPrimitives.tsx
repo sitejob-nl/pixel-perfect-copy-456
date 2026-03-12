@@ -76,13 +76,16 @@ export function StatCard({ label, value, prefix = "", change, up }: {
   );
 }
 
-export function ErpCard({ children, className, hover }: { children: React.ReactNode; className?: string; hover?: boolean }) {
+export function ErpCard({ children, className, hover, onClick }: { children: React.ReactNode; className?: string; hover?: boolean; onClick?: () => void }) {
   return (
-    <div className={cn(
-      "bg-erp-bg2 border border-erp-border0 rounded-xl transition-all duration-100",
-      hover && "hover:bg-erp-hover hover:border-erp-border1 cursor-pointer",
-      className
-    )}>
+    <div
+      onClick={onClick}
+      className={cn(
+        "bg-erp-bg2 border border-erp-border0 rounded-xl transition-all duration-100",
+        hover && "hover:bg-erp-hover hover:border-erp-border1 cursor-pointer",
+        className
+      )}
+    >
       {children}
     </div>
   );
