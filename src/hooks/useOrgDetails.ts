@@ -26,6 +26,7 @@ export interface OrgDetails {
   invoice_prefix: string | null;
   quote_prefix: string | null;
   project_prefix: string | null;
+  bg_color: string | null;
 }
 
 export function useOrgDetails() {

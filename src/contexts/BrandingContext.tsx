@@ -71,6 +71,27 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    if (org.bg_color) {
+      const hsl = hexToHsl(org.bg_color);
+      if (hsl) {
+        const str = hslString(hsl);
+        root.style.setProperty("--background", str);
+        root.style.setProperty("--erp-bg-0", str);
+        // Derive slightly lighter shades for cards/panels
+        const bg1 = hslString({ ...hsl, l: Math.min(hsl.l + 2, 100) });
+        const bg2 = hslString({ ...hsl, l: Math.min(hsl.l + 5, 100) });
+        const bg3 = hslString({ ...hsl, l: Math.min(hsl.l + 7, 100) });
+        const bg4 = hslString({ ...hsl, l: Math.min(hsl.l + 10, 100) });
+        root.style.setProperty("--erp-bg-1", bg1);
+        root.style.setProperty("--erp-bg-2", bg2);
+        root.style.setProperty("--erp-bg-3", bg3);
+        root.style.setProperty("--erp-bg-4", bg4);
+        root.style.setProperty("--card", bg1);
+        root.style.setProperty("--popover", bg1);
+        root.style.setProperty("--sidebar-background", bg1);
+      }
+    }
+
     if (org.font_family && org.font_family !== "Inter") {
       root.style.setProperty("--font-sans", `"${org.font_family}", sans-serif`);
     }
@@ -81,8 +102,17 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
       root.style.removeProperty("--ring");
       root.style.removeProperty("--erp-purple");
       root.style.removeProperty("--font-sans");
+      root.style.removeProperty("--background");
+      root.style.removeProperty("--erp-bg-0");
+      root.style.removeProperty("--erp-bg-1");
+      root.style.removeProperty("--erp-bg-2");
+      root.style.removeProperty("--erp-bg-3");
+      root.style.removeProperty("--erp-bg-4");
+      root.style.removeProperty("--card");
+      root.style.removeProperty("--popover");
+      root.style.removeProperty("--sidebar-background");
     };
-  }, [org?.primary_color, org?.secondary_color, org?.font_family]);
+  }, [org?.primary_color, org?.secondary_color, org?.bg_color, org?.font_family]);
 
   return (
     <BrandingContext.Provider value={{ org, isLoading }}>

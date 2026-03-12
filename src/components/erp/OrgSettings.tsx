@@ -125,6 +125,7 @@ export default function OrgSettings() {
     iban: "",
     primary_color: "#2563EB",
     secondary_color: "#1E40AF",
+    bg_color: "",
     invoice_prefix: "INV",
     quote_prefix: "OFF",
     project_prefix: "PRJ",
@@ -147,6 +148,7 @@ export default function OrgSettings() {
         iban: org.iban || "",
         primary_color: org.primary_color || "#2563EB",
         secondary_color: org.secondary_color || "#1E40AF",
+        bg_color: org.bg_color || "",
         invoice_prefix: org.invoice_prefix || "INV",
         quote_prefix: org.quote_prefix || "OFF",
         project_prefix: org.project_prefix || "PRJ",
@@ -159,7 +161,8 @@ export default function OrgSettings() {
 
   const handleSave = async () => {
     try {
-      await updateOrg.mutateAsync(form);
+      const payload = { ...form, bg_color: form.bg_color || null };
+      await updateOrg.mutateAsync(payload);
       toast.success("Organisatie bijgewerkt");
     } catch (e: any) {
       toast.error(e.message || "Kon niet opslaan");
@@ -240,6 +243,47 @@ export default function OrgSettings() {
             value={form.secondary_color}
             onChange={set("secondary_color")}
           />
+          <div>
+            <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Achtergrondkleur dashboard</label>
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1.5 flex-wrap">
+                {["#0a0a14", "#0f172a", "#1a1a2e", "#0d1117", "#1e1b2e", "#141414", "#0c1220", "#1a1625"].map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => set("bg_color")(color)}
+                    className={cn(
+                      "w-7 h-7 rounded-lg border-2 transition-all",
+                      form.bg_color === color ? "border-erp-text0 scale-110" : "border-transparent hover:border-erp-border1"
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-2 ml-2">
+                <input
+                  type="color"
+                  value={form.bg_color || "#0a0a14"}
+                  onChange={(e) => set("bg_color")(e.target.value)}
+                  className="w-8 h-8 rounded-lg cursor-pointer border border-erp-border0 bg-transparent"
+                />
+                <input
+                  type="text"
+                  value={form.bg_color}
+                  onChange={(e) => set("bg_color")(e.target.value)}
+                  placeholder="Standaard"
+                  className="w-[90px] bg-erp-bg2 border border-erp-border0 rounded-lg px-2 py-1.5 text-[12px] text-erp-text0 font-mono focus:outline-none focus:ring-1 focus:ring-erp-blue placeholder:text-erp-text3"
+                />
+                {form.bg_color && (
+                  <button
+                    onClick={() => set("bg_color")("")}
+                    className="text-[11px] text-erp-text3 hover:text-erp-text1 underline"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Preview */}
