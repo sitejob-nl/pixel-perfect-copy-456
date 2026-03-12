@@ -1,68 +1,42 @@
 
+Probleemanalyse (op basis van code + logs)
+- De API key opslag werkt nu wel (network toont `manage-api-keys` `success:true` en `organization_api_keys` met `*_key_set: true`).
+- Snelstart blijft inactief (`snelstart_config.koppel_sleutel = null`, `is_active = false`).
+- Waarschijnlijke hoofdoorzaak: callback verwerking zit nu in `SnelstartSettings.tsx`, maar die component mount alleen als je op pagina `settings` én tab `snelstart` zit. Na redirect land je op `/` (dashboard), dus callback wordt niet verwerkt.
+- Extra risico: `successUrl` gebruikt nu volledige `window.location.href` met query (`__lovable_token`), wat callback parsing kwetsbaar maakt bij providers die querys zelf toevoegen.
 
-# Fix Build Errors: Snelstart Type Mismatches
+Implementatieplan
+1) Callback-afhandeling verplaatsen naar globale plek (altijd actief)
+- Bestand: `src/pages/Index.tsx` (of aparte hook in `src/hooks/useSnelstart.ts` en aanroepen in `Index`).
+- Parse `koppelSleutel` bij app-load, onafhankelijk van actieve pagina/tab.
+- Bij gevonden sleutel: `snelstart_config` updaten met `koppel_sleutel` + `is_active=true`, query invalidaten, success toast tonen.
+- URL opschonen na succesvolle verwerking (`koppelSleutel` verwijderen).
 
-## Wat er nu is opgezet voor Snelstart
+2) Callback parsing robuust maken
+- Niet alleen `URLSearchParams.get("koppelSleutel")`, maar ook fallback parsing op de ruwe URL-string voor malformed query-cases.
+- Alleen 1x verwerken (guard/ref) om dubbele writes/toasts te voorkomen.
 
-**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
+3) Activatie-URL veiliger opbouwen
+- Bestand: `src/components/erp/SnelstartSettings.tsx`.
+- `successUrl` opbouwen als “schone” URL (geen overbodige query’s van huidige state).
+- “Koppel met Snelstart” openen in dezelfde tab (`window.location.assign`) zodat de return-flow logisch is en niet in een losse tab blijft hangen.
 
-**Frontend:**
-- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
-- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
-- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
+4) UX na callback
+- Na succesvolle callback automatisch naar settings-context sturen (minimaal toast + eventueel `activePage = settings`).
+- Status moet direct “Gekoppeld” tonen na refetch.
 
-**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
+5) Kleine stabiliteitsfix (los van redirect, maar zichtbaar in logs)
+- Bestand: `src/components/erp/ErpPrimitives.tsx`.
+- `ErpButton` omzetten naar `React.forwardRef` om de `Function components cannot be given refs` warning weg te halen.
 
-## Root Cause van de Build Errors
+Technische details
+- Geen backend schema wijziging nodig.
+- Bestaande `useSaveSnelstartConfig` support voor `koppel_sleutel` en `is_active` blijft gebruikt.
+- Query invalidatie: `["snelstart-config"]` blijft centrale refresh-trigger.
 
-De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
-
-## Fix (2 bestanden)
-
-### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
-
-Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
-
-Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
-```
-// FOUT: profiles heeft geen organization_id
-const { data: profile } = await supabase
-  .from("profiles")
-  .select("organization_id")
-  .eq("id", user.id)
-  .single();
-
-// FIX: gebruik organization_members
-const { data: membership } = await supabase
-  .from("organization_members")
-  .select("organization_id")
-  .eq("user_id", user.id)
-  .eq("is_active", true)
-  .limit(1)
-  .single();
-```
-
-Voor de tabellen die niet in types staan, cast naar `any`:
-```
-const { data, error } = await (supabase as any)
-  .from("snelstart_config")
-  ...
-```
-
-### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
-
-Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
-```
-const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
-const actorId = providerConfig?.actorId || "";
-```
-
-### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
-
-De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
-
-## Bestanden
-
-- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
-- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
-
+Validatie na implementatie
+1. Klik “Koppel met Snelstart”.
+2. Rond activatie af.
+3. Controleer dat app terugkomt, callback verwerkt, toast verschijnt.
+4. Controleer `Koppelingsstatus = Gekoppeld` en DB `koppel_sleutel != null`.
+5. Controleer dat URL geen `koppelSleutel` meer bevat en console warning over refs weg is.
