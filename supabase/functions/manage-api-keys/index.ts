@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const { action, service, api_key, organization_id } = await req.json();
 
     if (!organization_id) throw new Error("Missing organization_id");
-    if (!["anthropic", "apify"].includes(service)) throw new Error("Invalid service");
+    if (!["anthropic", "apify", "resend"].includes(service)) throw new Error("Invalid service");
 
     // Verify user is owner/admin of this org
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
