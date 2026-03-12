@@ -720,6 +720,86 @@ export type Database = {
           },
         ]
       }
+      contact_notes: {
+        Row: {
+          contact_id: string
+          content: string
+          created_at: string
+          id: string
+          organization_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_id: string
+          content: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contact_notes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           assigned_to: string | null
