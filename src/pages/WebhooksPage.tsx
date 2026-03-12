@@ -26,7 +26,7 @@ const TARGET_LABELS: Record<string, string> = {
 };
 
 const TRANSFORMS = [
-  { value: "", label: "Geen" },
+  { value: "none", label: "Geen" },
   { value: "lowercase", label: "Kleine letters" },
   { value: "uppercase", label: "Hoofdletters" },
   { value: "trim", label: "Trim" },
@@ -231,7 +231,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       setMappings(tmpl.default_field_mappings.map((m: any) => ({
         source_path: m.source_path || "",
         target_field: m.target_field || "",
-        transform: m.transform || "",
+        transform: m.transform || "none",
       })));
     }
     setStep(2);
@@ -264,7 +264,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
   const sourcePaths = selectedTemplate?.payload_example ? extractPaths(selectedTemplate.payload_example) : [];
 
-  const addMapping = () => setMappings((m) => [...m, { source_path: "", target_field: "", transform: "" }]);
+  const addMapping = () => setMappings((m) => [...m, { source_path: "", target_field: "", transform: "none" }]);
   const removeMapping = (i: number) => setMappings((m) => m.filter((_, idx) => idx !== i));
   const updateMapping = (i: number, field: string, value: string) =>
     setMappings((m) => m.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
