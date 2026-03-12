@@ -735,6 +735,7 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
         </ErpCard>
       )}
 
+      {tab === "signers" && (
         <ErpCard>
           <table className="w-full">
             <thead>
