@@ -924,6 +924,57 @@ function SendContractEmailDialog({ open, onClose, contract }: { open: boolean; o
   );
 }
 
+function PdfViewer({ url }: { url: string }) {
+  const [pages, setPages] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+        const resp = await fetch(url);
+        const arrayBuffer = await resp.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const imgs: string[] = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement("canvas");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext("2d")!;
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          imgs.push(canvas.toDataURL("image/png"));
+        }
+        if (!cancelled) setPages(imgs);
+      } catch (e) {
+        console.error("PDF render error:", e);
+      }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (loading) return (
+    <div className="text-center py-12 text-erp-text3 text-sm">
+      <div className="w-6 h-6 border-2 border-erp-blue border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+      PDF laden...
+    </div>
+  );
+
+  if (!pages.length) return <div className="text-center py-12 text-erp-text3 text-sm">PDF kon niet worden geladen</div>;
+
+  return (
+    <div className="space-y-4 max-h-[700px] overflow-y-auto">
+      {pages.map((src, i) => (
+        <img key={i} src={src} alt={`Pagina ${i + 1}`} className="w-full rounded shadow-sm border border-erp-border0" />
+      ))}
+    </div>
+  );
+}
+
 function ContractDetail({ contractId, onBack }: { contractId: string; onBack: () => void }) {
   const { data: contract, isLoading } = useContract(contractId);
   const [tab, setTab] = useState("content");
