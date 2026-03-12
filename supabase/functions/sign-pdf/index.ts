@@ -268,84 +268,81 @@ async function embedSignaturesInPdf(
   }
 
   // ─── Audit Trail Page ─────────────────────────────────────────────
-  // Fetch audit logs for this contract
   const auditSb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const { data: auditLogs } = await auditSb
     .from("contract_audit_logs")
     .select("*")
-    .eq("contract_id", sessions[0]?.contract_id || "")
+    .eq("contract_id", contract_id)
     .order("created_at", { ascending: true });
 
-  const auditPage = pdfDoc.addPage([595, 842]);
-  const auditFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const auditFontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  // Re-fetch sessions with IP/fingerprint data
+  const { data: fullSessions } = await auditSb
+    .from("contract_signing_sessions")
+    .select("*")
+    .eq("contract_id", contract_id)
+    .eq("status", "signed");
+
+  const auditFont = font;
+  const auditFontBold = fontBold;
+
+  let currentAuditPage = pdfDoc.addPage([595, 842]);
   let ay = 800;
 
-  auditPage.drawText("Audit Trail — Bewijs van Ondertekening", {
-    x: 50, y: ay, size: 14, font: auditFontBold, color: rgb(0.1, 0.1, 0.15),
-  });
-  ay -= 24;
+  const drawOnAudit = (text: string, x: number, size: number, f: any, c: any) => {
+    if (ay < 50) {
+      currentAuditPage = pdfDoc.addPage([595, 842]);
+      ay = 800;
+    }
+    currentAuditPage.drawText(text.substring(0, 120), { x, y: ay, size, font: f, color: c });
+    ay -= size + 3;
+  };
 
-  auditPage.drawLine({ start: { x: 50, y: ay }, end: { x: 545, y: ay }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
-  ay -= 16;
+  drawOnAudit("Audit Trail — Bewijs van Ondertekening", 50, 14, auditFontBold, rgb(0.1, 0.1, 0.15));
+  ay -= 4;
+  currentAuditPage.drawLine({ start: { x: 50, y: ay + 8 }, end: { x: 545, y: ay + 8 }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
+  ay -= 8;
 
   // Contract info
-  const contractForAudit = sessions[0] ? await (async () => {
-    const { data } = await auditSb.from("contracts").select("title, contract_number, organization_id").eq("id", sessions[0].contract_id).single();
-    return data;
-  })() : null;
-
-  const infoLines = [
-    ["Contracttitel", contractForAudit?.title || "—"],
-    ["Contractnummer", contractForAudit?.contract_number || "—"],
-    ["Datum PDF gegenereerd", new Date().toLocaleString("nl-NL", { dateStyle: "long", timeStyle: "medium" })],
+  const auditInfo = [
+    ["Contracttitel", contract.title || "—"],
+    ["Contractnummer", contract.contract_number || "—"],
+    ["PDF gegenereerd", new Date().toLocaleString("nl-NL", { dateStyle: "long", timeStyle: "medium" })],
   ];
-
-  for (const [label, value] of infoLines) {
-    auditPage.drawText(`${label}:`, { x: 50, y: ay, size: 8, font: auditFontBold, color: rgb(0.3, 0.3, 0.3) });
-    auditPage.drawText(value, { x: 180, y: ay, size: 8, font: auditFont, color: rgb(0.1, 0.1, 0.1) });
-    ay -= 14;
+  for (const [label, value] of auditInfo) {
+    drawOnAudit(`${label}:  ${value}`, 50, 8, auditFont, rgb(0.2, 0.2, 0.2));
   }
-  ay -= 10;
+  ay -= 6;
 
   // Signer details
-  auditPage.drawText("Ondertekenaars", { x: 50, y: ay, size: 11, font: auditFontBold, color: rgb(0.1, 0.1, 0.15) });
-  ay -= 18;
+  drawOnAudit("Ondertekenaars", 50, 11, auditFontBold, rgb(0.1, 0.1, 0.15));
+  ay -= 4;
 
-  for (const s of signedSessions) {
-    auditPage.drawText(`${s.signer_name} (${s.signer_role || "Ondertekenaar"})`, {
-      x: 50, y: ay, size: 9, font: auditFontBold, color: rgb(0.1, 0.1, 0.2),
-    });
-    ay -= 13;
+  for (const s of (fullSessions || signedSessions)) {
+    drawOnAudit(`${s.signer_name} (${s.signer_role || "Ondertekenaar"})`, 50, 9, auditFontBold, rgb(0.1, 0.1, 0.2));
 
-    const signerDetails = [
+    const details: [string, string][] = [
       ["E-mail", s.signer_email || "—"],
       ["Telefoon", s.signer_phone || "—"],
       ["Ondertekend op", s.signed_at ? new Date(s.signed_at).toLocaleString("nl-NL", { dateStyle: "long", timeStyle: "medium" }) : "—"],
-      ["Handtekening type", s.signature_type === "draw" ? "Getekend (canvas)" : "Getypt"],
+      ["Handtekening", s.signature_type === "draw" ? "Getekend (canvas)" : "Getypt"],
       ["SMS geverifieerd", s.sms_verified_at ? new Date(s.sms_verified_at).toLocaleString("nl-NL", { dateStyle: "long", timeStyle: "medium" }) : "—"],
       ["IP-adres", s.ip_address || "—"],
-      ["User agent", (s.user_agent || "—").substring(0, 80)],
+      ["User agent", (s.user_agent || s.browser_fingerprint || "—").substring(0, 90)],
       ["Document hash", s.signed_document_hash ? s.signed_document_hash.substring(0, 48) + "..." : "—"],
     ];
 
+    // Geolocation
     if (s.geolocation && typeof s.geolocation === "object") {
       const geo = s.geolocation as Record<string, any>;
       if (geo.latitude && geo.longitude) {
-        signerDetails.push(["Geolocation", `${geo.latitude}, ${geo.longitude} (±${geo.accuracy || "?"}m)`]);
+        details.push(["Locatie", `${geo.latitude}, ${geo.longitude} (±${geo.accuracy || "?"}m)`]);
       }
     }
 
-    for (const [label, value] of signerDetails) {
-      if (ay < 60) {
-        const newPage = pdfDoc.addPage([595, 842]);
-        // Copy reference for drawing
-        Object.assign(auditPage, {}); // keep auditPage reference
-        ay = 800;
-        // Actually we need to draw on the new page, let's handle differently
-      }
-      auditPage.drawText(`${label}:`, { x: 60, y: ay, size: 7, font: auditFont, color: rgb(0.4, 0.4, 0.4) });
-      auditPage.drawText(value, { x: 160, y: ay, size: 7, font: auditFont, color: rgb(0.15, 0.15, 0.15) });
+    for (const [label, value] of details) {
+      if (ay < 50) { currentAuditPage = pdfDoc.addPage([595, 842]); ay = 800; }
+      currentAuditPage.drawText(`${label}:`, { x: 60, y: ay, size: 7, font: auditFont, color: rgb(0.4, 0.4, 0.4) });
+      currentAuditPage.drawText(value, { x: 155, y: ay, size: 7, font: auditFont, color: rgb(0.15, 0.15, 0.15) });
       ay -= 11;
     }
     ay -= 8;
@@ -353,34 +350,22 @@ async function embedSignaturesInPdf(
 
   // Event log
   if (auditLogs && auditLogs.length > 0) {
-    if (ay < 100) {
-      const extraPage = pdfDoc.addPage([595, 842]);
-      ay = 800;
-      // We'll draw on extraPage below — but for simplicity draw on auditPage
-    }
-    auditPage.drawText("Gebeurtenissenlog", { x: 50, y: ay, size: 11, font: auditFontBold, color: rgb(0.1, 0.1, 0.15) });
-    ay -= 16;
+    drawOnAudit("Gebeurtenissenlog", 50, 11, auditFontBold, rgb(0.1, 0.1, 0.15));
+    ay -= 2;
 
     for (const log of auditLogs) {
-      if (ay < 40) break; // Prevent overflow
+      if (ay < 50) { currentAuditPage = pdfDoc.addPage([595, 842]); ay = 800; }
       const ts = log.created_at ? new Date(log.created_at).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "medium" }) : "";
-      const line = `${ts}  |  ${log.action}  |  ${log.signer_name || "—"}  |  IP: ${log.ip_address || (log.metadata as any)?.ip_address || "—"}`;
-      auditPage.drawText(line.substring(0, 100), { x: 50, y: ay, size: 6.5, font: auditFont, color: rgb(0.3, 0.3, 0.3) });
+      const ip = log.ip_address || (log.metadata as any)?.ip_address || "";
+      const line = `${ts}  |  ${log.action}  |  ${log.signer_name || "systeem"}${ip ? `  |  IP: ${ip}` : ""}`;
+      currentAuditPage.drawText(line.substring(0, 110), { x: 50, y: ay, size: 6.5, font: auditFont, color: rgb(0.3, 0.3, 0.3) });
       ay -= 10;
     }
   }
 
-  // Legal footer on audit page
-  ay = Math.min(ay, 35);
-  auditPage.drawText("Dit document is elektronisch ondertekend conform artikel 3:15a BW en de Europese eIDAS-verordening (EU 910/2014).", {
+  // Legal footer
+  currentAuditPage.drawText("Dit document is elektronisch ondertekend conform artikel 3:15a BW en de Europese eIDAS-verordening (EU 910/2014).", {
     x: 50, y: 20, size: 6.5, font: auditFont, color: rgb(0.5, 0.5, 0.5),
-  });
-
-  // Also add footer on last content page
-  const finalPages = pdfDoc.getPages();
-  const contentLastPage = finalPages[finalPages.length - 2] || finalPages[0];
-  contentLastPage.drawText("Dit document is elektronisch ondertekend. Zie audit trail op de laatste pagina.", {
-    x: 50, y: 30, size: 7, font: auditFont, color: rgb(0.5, 0.5, 0.5),
   });
 
   return pdfDoc.save();
