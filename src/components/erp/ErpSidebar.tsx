@@ -6,6 +6,9 @@ import { Dot } from "@/components/erp/ErpPrimitives";
 import { useOrgModules } from "@/hooks/useOrgModules";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useBranding } from "@/contexts/BrandingContext";
+import { useOrgModules } from "@/hooks/useOrgModules";
+import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
+import { useBranding } from "@/contexts/BrandingContext";
 
 interface NavItem {
   k: string;
