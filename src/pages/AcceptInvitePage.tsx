@@ -151,6 +151,7 @@ export default function AcceptInvitePage() {
 
       setDone(true);
       toast.success("Account ingesteld! Je wordt doorgestuurd...");
+      await queryClient.invalidateQueries({ queryKey: ["organization"] });
       setTimeout(() => navigate("/dashboard"), 1500);
     } catch (err: any) {
       toast.error(err.message || "Er ging iets mis");
