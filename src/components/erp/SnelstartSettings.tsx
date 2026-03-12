@@ -72,11 +72,13 @@ export default function SnelstartSettings() {
 
     const isActive = config?.is_active && config?.koppel_sleutel;
 
-    // Build clean successUrl without query params like __lovable_token
-    const cleanSuccessUrl = window.location.origin + window.location.pathname;
+    // Build clean successUrl with snelstart=activated flag (no __lovable_token etc.)
+    const cleanSuccessUrl = window.location.origin + window.location.pathname + "?snelstart=activated";
     const activationUrl = appShortName
         ? `https://web.snelstart.nl/couplings/activate/${appShortName}?referenceKey=${config?.organization_id || ""}&successUrl=${encodeURIComponent(cleanSuccessUrl)}`
         : null;
+
+    const webhookUrl = "https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/snelstart-webhook";
 
     if (isLoading) {
         return <div className="text-erp-text3 text-sm">Laden...</div>;
@@ -126,6 +128,22 @@ export default function SnelstartSettings() {
                         Sla eerst je Subscription Key en App Naam op, en klik vervolgens op "Koppel met Snelstart" om de verbinding te activeren.
                     </p>
                 )}
+            </div>
+
+            {/* Webhook URL Info */}
+            <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
+                <h3 className="text-[15px] font-semibold text-erp-text0 mb-2">Webhook URL</h3>
+                <p className="text-[12px] text-erp-text3 mb-3">
+                    Geef deze URL op bij Snelstart als webhook-URL voor je productiekoppeling:
+                </p>
+                <div className="flex gap-2 items-center">
+                    <code className="flex-1 bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[12px] text-erp-text1 select-all break-all">
+                        {webhookUrl}
+                    </code>
+                    <ErpButton onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("URL gekopieerd"); }}>
+                        Kopieer
+                    </ErpButton>
+                </div>
             </div>
 
             {/* API Keys */}
