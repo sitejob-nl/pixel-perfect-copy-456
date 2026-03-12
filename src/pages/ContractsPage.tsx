@@ -794,9 +794,9 @@ function TemplateEditor({ template, onClose }: { template: any | null; onClose: 
   const [variables, setVariables] = useState<any[]>(template?.variables || []);
 
   // Auto-detect variables from HTML
-  const detectedVars = useMemo(() => {
+  const detectedVars: string[] = useMemo(() => {
     const matches = contentHtml.match(/\{\{(\w+)\}\}/g) || [];
-    return [...new Set(matches.map((m: string) => m.replace(/\{\{|\}\}/g, "")))];
+    return [...new Set(matches.map((m: string) => m.replace(/\{\{|\}\}/g, "")))] as string[];
   }, [contentHtml]);
 
   const previewHtml = useMemo(() => {
