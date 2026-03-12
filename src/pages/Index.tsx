@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import ErpSidebar from "@/components/erp/ErpSidebar";
 import ErpHeader from "@/components/erp/ErpHeader";
+import { useSaveSnelstartConfig } from "@/hooks/useSnelstart";
+import { toast } from "sonner";
 import DashboardPage from "@/pages/DashboardPage";
 import ContactsPage from "@/pages/ContactsPage";
 import PipelinePage from "@/pages/PipelinePage";
