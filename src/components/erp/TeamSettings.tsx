@@ -154,8 +154,9 @@ function MemberContracts({ memberName, memberUserId }: { memberName: string; mem
 export default function TeamSettings() {
   const { user } = useAuth();
   const { data: org } = useOrganization();
-  const { data: members, isLoading: membersLoading } = useOrgMembers();
-  const { data: invites } = useOrgInvites();
+  const { data: membersData, isLoading: membersLoading } = useOrgMembers();
+  const members = membersData?.members;
+  const invites = membersData?.pending_invites;
   const { data: modules } = useOrgModules();
   const { data: orgDetails } = useOrgDetails();
   const { data: overrides } = useMemberModuleOverrides();
