@@ -21,14 +21,28 @@ function buildInviteHtml(params: {
   inviterName: string;
   role: string;
   actionUrl: string;
+  logoUrl: string | null;
+  primaryColor: string | null;
 }): string {
-  const { orgName, inviterName, role, actionUrl } = params;
+  const { orgName, inviterName, role, actionUrl, logoUrl, primaryColor } = params;
+  const color = primaryColor || "#32C5FF";
+  const gradientEnd = primaryColor ? adjustColor(primaryColor, -20) : "#1E90FF";
+
   const roleDutch: Record<string, string> = {
     owner: "Eigenaar",
     admin: "Beheerder",
     member: "Teamlid",
   };
   const roleLabel = roleDutch[role] || role;
+
+  const logoHtml = logoUrl
+    ? `<img src="${logoUrl}" alt="${orgName}" style="max-height:40px;max-width:180px;object-fit:contain;" />`
+    : `<div style="display:inline-flex;align-items:center;gap:8px;">
+        <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:8px;display:inline-block;text-align:center;line-height:36px;">
+          <span style="color:#fff;font-size:18px;font-weight:bold;">${orgName.charAt(0).toUpperCase()}</span>
+        </div>
+        <span style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:-0.3px;">${orgName}</span>
+      </div>`;
 
   return `<!DOCTYPE html>
 <html lang="nl">
@@ -39,13 +53,8 @@ function buildInviteHtml(params: {
   <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;">
     <!-- Header -->
     <tr>
-      <td style="background:linear-gradient(135deg,#32C5FF 0%,#1E90FF 100%);padding:32px 40px;text-align:center;">
-        <div style="display:inline-flex;align-items:center;gap:8px;">
-          <div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:8px;display:inline-block;text-align:center;line-height:36px;">
-            <span style="color:#fff;font-size:18px;font-weight:bold;">⚡</span>
-          </div>
-          <span style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:-0.3px;">SiteJob</span>
-        </div>
+      <td style="background:linear-gradient(135deg,${color} 0%,${gradientEnd} 100%);padding:32px 40px;text-align:center;">
+        ${logoHtml}
       </td>
     </tr>
     <!-- Body -->
@@ -56,7 +65,7 @@ function buildInviteHtml(params: {
         </h1>
         <p style="margin:0 0 24px 0;font-size:15px;color:#6b7280;line-height:1.6;">
           <strong style="color:#1a1a2e;">${inviterName}</strong> heeft je uitgenodigd om lid te worden van
-          <strong style="color:#1a1a2e;">${orgName}</strong> als <strong style="color:#32C5FF;">${roleLabel}</strong>.
+          <strong style="color:#1a1a2e;">${orgName}</strong> als <strong style="color:${color};">${roleLabel}</strong>.
         </p>
 
         <!-- Info card -->
@@ -69,7 +78,7 @@ function buildInviteHtml(params: {
               </tr>
               <tr>
                 <td style="font-size:15px;font-weight:600;color:#1a1a2e;">${orgName}</td>
-                <td style="font-size:15px;font-weight:600;color:#32C5FF;text-align:right;">${roleLabel}</td>
+                <td style="font-size:15px;font-weight:600;color:${color};text-align:right;">${roleLabel}</td>
               </tr>
             </table>
           </td></tr>
@@ -78,7 +87,7 @@ function buildInviteHtml(params: {
         <!-- CTA Button -->
         <table width="100%" cellpadding="0" cellspacing="0">
           <tr><td align="center">
-            <a href="${actionUrl}" target="_blank" style="display:inline-block;background:#32C5FF;color:#ffffff;padding:14px 40px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;letter-spacing:0.2px;">
+            <a href="${actionUrl}" target="_blank" style="display:inline-block;background:${color};color:#ffffff;padding:14px 40px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;letter-spacing:0.2px;">
               Uitnodiging accepteren
             </a>
           </td></tr>
@@ -105,6 +114,17 @@ function buildInviteHtml(params: {
 </html>`;
 }
 
+/** Darken/lighten a hex color */
+function adjustColor(hex: string, amount: number): string {
+  let c = hex.replace("#", "");
+  if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+  const num = parseInt(c, 16);
+  let r = Math.min(255, Math.max(0, (num >> 16) + amount));
+  let g = Math.min(255, Math.max(0, ((num >> 8) & 0xFF) + amount));
+  let b = Math.min(255, Math.max(0, (num & 0xFF) + amount));
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
@@ -115,7 +135,7 @@ Deno.serve(async (req: Request) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const encryptionKey = Deno.env.get("ENCRYPTION_KEY") || serviceKey.slice(0, 32);
 
-    // Auth check — must be logged in
+    // Auth check
     const authHeader = req.headers.get("Authorization") || "";
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
@@ -138,7 +158,6 @@ Deno.serve(async (req: Request) => {
       .single();
     if (!membership) throw new Error("Geen organisatie gevonden");
 
-    // Only admins/owners can invite
     if (!["owner", "admin"].includes(membership.role)) {
       throw new Error("Alleen admins en eigenaren kunnen uitnodigen");
     }
@@ -150,13 +169,15 @@ Deno.serve(async (req: Request) => {
     if (!email) throw new Error("E-mailadres is vereist");
     const inviteRole = role || "member";
 
-    // Get org name
+    // Get org details (name, logo, colors)
     const { data: orgData } = await adminClient
       .from("organizations")
-      .select("name")
+      .select("name, logo_url, primary_color")
       .eq("id", orgId)
       .single();
     const orgName = orgData?.name || "Organisatie";
+    const logoUrl = orgData?.logo_url || null;
+    const primaryColor = orgData?.primary_color || null;
 
     // Get inviter name
     const { data: profile } = await adminClient
@@ -166,7 +187,7 @@ Deno.serve(async (req: Request) => {
       .single();
     const inviterName = profile?.full_name || user.email || "Een teamlid";
 
-    // Create invite record in organization_invites
+    // Create invite record
     const { data: invite, error: inviteErr } = await adminClient
       .from("organization_invites")
       .insert({
@@ -179,7 +200,7 @@ Deno.serve(async (req: Request) => {
       .single();
     if (inviteErr) throw inviteErr;
 
-    // Generate Supabase invite link (creates user if not exists)
+    // Generate Supabase invite link
     const baseRedirect = redirect_url || body.origin || "https://pixel-perfect-copy-456.lovable.app";
     const redirectTo = `${baseRedirect}/accept-invite?invite_token=${invite.token}`;
 
@@ -194,12 +215,11 @@ Deno.serve(async (req: Request) => {
       });
     if (linkErr) throw linkErr;
 
-    // The action link from Supabase — user must click this
     const actionLink =
       linkData?.properties?.action_link || linkData?.properties?.hashed_token;
     if (!actionLink) throw new Error("Kon geen uitnodigingslink genereren");
 
-    // Get Resend key to send email
+    // Get Resend key
     const { data: apiKeys } = await adminClient
       .from("organization_api_keys")
       .select("resend_api_key_encrypted")
@@ -208,7 +228,6 @@ Deno.serve(async (req: Request) => {
 
     const resendEncrypted = apiKeys?.resend_api_key_encrypted;
     if (!resendEncrypted) {
-      // No Resend key configured — return link for manual sharing
       return new Response(
         JSON.stringify({
           success: true,
@@ -224,12 +243,14 @@ Deno.serve(async (req: Request) => {
 
     const resendKey = decrypt(resendEncrypted as string, encryptionKey);
 
-    // Build and send email
+    // Build and send email with branding
     const html = buildInviteHtml({
       orgName,
       inviterName,
       role: inviteRole,
       actionUrl: actionLink,
+      logoUrl,
+      primaryColor,
     });
 
     const emailRes = await fetch("https://api.resend.com/emails", {
