@@ -139,7 +139,7 @@ const App = () => (
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="scrapers" element={<ScrapersPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
-              <Route path="demos" element={<PlaceholderPage title="Demo Generatie" icon="Globe" />} />
+              <Route path="demos" element={<DemosPage />} />
               <Route path="content" element={<ContentPage />} />
               <Route path="portals" element={<PortalAdminPage />} />
               <Route path="whatsapp" element={<PlaceholderPage title="WhatsApp" icon="Msg" />} />
