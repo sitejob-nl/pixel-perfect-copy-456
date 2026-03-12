@@ -68,7 +68,10 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
   }, []);
 
   const updateSettings = useCallback((partial: Partial<DesignSettings>) => {
-    setDesign(d => ({ ...d, settings: { ...d.settings, ...partial } }));
+    setDesign(d => ({
+      ...d,
+      settings: { ...(d.settings || getDefaultDesign().settings), ...partial },
+    }));
   }, []);
 
   const updateBlockData = useCallback((data: Record<string, any>) => {
