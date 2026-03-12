@@ -219,7 +219,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   const reset = () => {
     setStep(1);
     setSelectedTemplate(null);
-    setConfig({ name: "", description: "", target_table: "contacts", dedup_field: "", dedup_action: "update", default_source: "", default_temperature: "warm" });
+    setConfig({ name: "", description: "", target_table: "contacts", dedup_field: "none", dedup_action: "update", default_source: "", default_temperature: "warm" });
     setMappings([]);
   };
 
