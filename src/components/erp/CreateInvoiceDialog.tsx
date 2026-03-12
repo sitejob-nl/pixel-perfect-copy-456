@@ -177,6 +177,30 @@ export default function CreateInvoiceDialog({ open, onOpenChange }: Props) {
             </div>
           </div>
 
+          <div className="border-t border-erp-border0 pt-3 space-y-3">
+            <Label className="text-erp-text2 text-xs block">Portaal instellingen</Label>
+            <div className="space-y-1">
+              <Label className="text-erp-text2 text-xs">Betaallink</Label>
+              <Input value={paymentUrl} onChange={e => setPaymentUrl(e.target.value)} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" placeholder="https://pay.mollie.com/..." />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-erp-text2 text-xs">Betaalstatus</Label>
+              <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                <SelectTrigger className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-erp-bg2 border-erp-border0">
+                  <SelectItem value="unpaid">Onbetaald</SelectItem>
+                  <SelectItem value="pending">In behandeling</SelectItem>
+                  <SelectItem value="paid">Betaald</SelectItem>
+                  <SelectItem value="overdue">Verlopen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={visibleInPortal} onChange={e => setVisibleInPortal(e.target.checked)} className="rounded border-erp-border1" />
+              <Label className="text-erp-text2 text-xs">Zichtbaar in klantenportaal</Label>
+            </div>
+          </div>
+
           <div className="flex justify-end gap-2 pt-2">
             <ErpButton onClick={() => onOpenChange(false)}>Annuleren</ErpButton>
             <ErpButton primary>{createInvoice.isPending ? "Opslaan..." : "Factuur aanmaken"}</ErpButton>
