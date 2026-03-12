@@ -22,15 +22,17 @@ const Index = () => {
   }, [location.search, navigate]);
 
   return (
-    <div className="flex h-screen w-full bg-erp-bg0 text-erp-text0 overflow-hidden">
-      <ErpSidebar />
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <ErpHeader />
-        <div className="flex-1 overflow-auto p-[22px]">
-          <Outlet />
-        </div>
-      </main>
-    </div>
+    <BrandingProvider>
+      <div className="flex h-screen w-full bg-erp-bg0 text-erp-text0 overflow-hidden">
+        <ErpSidebar />
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <ErpHeader />
+          <div className="flex-1 overflow-auto p-[22px]">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </BrandingProvider>
   );
 };
 
