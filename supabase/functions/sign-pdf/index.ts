@@ -135,7 +135,8 @@ async function createPdfFromHtml(html: string): Promise<Uint8Array> {
 async function embedSignaturesInPdf(
   pdfBytes: Uint8Array,
   sessions: any[],
-  signatureFields: any[] | null
+  signatureFields: any[] | null,
+  contract_id: string
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(pdfBytes);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
