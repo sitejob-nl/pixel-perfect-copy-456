@@ -1969,6 +1969,9 @@ export type Database = {
           access_token: string | null
           created_at: string
           display_name: string | null
+          domain: string | null
+          domain_records: Json | null
+          domain_verified: boolean | null
           email: string
           id: string
           is_shared: boolean | null
@@ -1976,6 +1979,7 @@ export type Database = {
           owner_user_id: string | null
           provider: string | null
           refresh_token: string | null
+          resend_domain_id: string | null
           token_expires_at: string | null
           updated_at: string
         }
@@ -1983,6 +1987,9 @@ export type Database = {
           access_token?: string | null
           created_at?: string
           display_name?: string | null
+          domain?: string | null
+          domain_records?: Json | null
+          domain_verified?: boolean | null
           email: string
           id?: string
           is_shared?: boolean | null
@@ -1990,6 +1997,7 @@ export type Database = {
           owner_user_id?: string | null
           provider?: string | null
           refresh_token?: string | null
+          resend_domain_id?: string | null
           token_expires_at?: string | null
           updated_at?: string
         }
@@ -1997,6 +2005,9 @@ export type Database = {
           access_token?: string | null
           created_at?: string
           display_name?: string | null
+          domain?: string | null
+          domain_records?: Json | null
+          domain_verified?: boolean | null
           email?: string
           id?: string
           is_shared?: boolean | null
@@ -2004,6 +2015,7 @@ export type Database = {
           owner_user_id?: string | null
           provider?: string | null
           refresh_token?: string | null
+          resend_domain_id?: string | null
           token_expires_at?: string | null
           updated_at?: string
         }
@@ -2038,47 +2050,241 @@ export type Database = {
           },
         ]
       }
+      email_link_clicks: {
+        Row: {
+          clicked_at: string
+          email_send_id: string
+          id: string
+          ip_address: string | null
+          original_url: string
+          user_agent: string | null
+        }
+        Insert: {
+          clicked_at?: string
+          email_send_id: string
+          id?: string
+          ip_address?: string | null
+          original_url: string
+          user_agent?: string | null
+        }
+        Update: {
+          clicked_at?: string
+          email_send_id?: string
+          id?: string
+          ip_address?: string | null
+          original_url?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_link_clicks_email_send_id_fkey"
+            columns: ["email_send_id"]
+            isOneToOne: false
+            referencedRelation: "email_sends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_sends: {
+        Row: {
+          bounce_type: string | null
+          bounced_at: string | null
+          clicked_at: string | null
+          clicked_count: number | null
+          contact_id: string | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          failed_at: string | null
+          from_address: string
+          html_content: string
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          opened_count: number | null
+          organization_id: string
+          reply_to: string | null
+          resend_id: string | null
+          scheduled_for: string | null
+          send_type: string | null
+          sent_at: string | null
+          sequence_id: string | null
+          status: string
+          subject: string
+          template_id: string | null
+          to_address: string
+        }
+        Insert: {
+          bounce_type?: string | null
+          bounced_at?: string | null
+          clicked_at?: string | null
+          clicked_count?: number | null
+          contact_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          from_address: string
+          html_content: string
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          opened_count?: number | null
+          organization_id: string
+          reply_to?: string | null
+          resend_id?: string | null
+          scheduled_for?: string | null
+          send_type?: string | null
+          sent_at?: string | null
+          sequence_id?: string | null
+          status?: string
+          subject: string
+          template_id?: string | null
+          to_address: string
+        }
+        Update: {
+          bounce_type?: string | null
+          bounced_at?: string | null
+          clicked_at?: string | null
+          clicked_count?: number | null
+          contact_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          failed_at?: string | null
+          from_address?: string
+          html_content?: string
+          id?: string
+          metadata?: Json | null
+          opened_at?: string | null
+          opened_count?: number | null
+          organization_id?: string
+          reply_to?: string | null
+          resend_id?: string | null
+          scheduled_for?: string | null
+          send_type?: string | null
+          sent_at?: string | null
+          sequence_id?: string | null
+          status?: string
+          subject?: string
+          template_id?: string | null
+          to_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sends_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
           available_merge_fields: string[] | null
           category: string | null
           created_at: string
+          created_by: string | null
           description: string | null
+          design_json: Json | null
+          folder: string | null
           html_content: string
           id: string
           is_active: boolean | null
+          is_starter: boolean | null
           name: string
           organization_id: string
           subject: string
+          thumbnail_url: string | null
           updated_at: string
         }
         Insert: {
           available_merge_fields?: string[] | null
           category?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          design_json?: Json | null
+          folder?: string | null
           html_content: string
           id?: string
           is_active?: boolean | null
+          is_starter?: boolean | null
           name: string
           organization_id: string
           subject: string
+          thumbnail_url?: string | null
           updated_at?: string
         }
         Update: {
           available_merge_fields?: string[] | null
           category?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
+          design_json?: Json | null
+          folder?: string | null
           html_content?: string
           id?: string
           is_active?: boolean | null
+          is_starter?: boolean | null
           name?: string
           organization_id?: string
           subject?: string
+          thumbnail_url?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "email_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_templates_organization_id_fkey"
             columns: ["organization_id"]
@@ -6010,6 +6216,37 @@ export type Database = {
         }
         Relationships: []
       }
+      email_stats_by_org: {
+        Row: {
+          bounced: number | null
+          clicked: number | null
+          delivered: number | null
+          failed: number | null
+          last_sent_at: string | null
+          opened: number | null
+          organization_id: string | null
+          sent: number | null
+          total: number | null
+          total_clicks: number | null
+          total_opens: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sends_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_deal_pipeline: {
         Row: {
           assigned_to_name: string | null
@@ -6274,6 +6511,51 @@ export type Database = {
       generate_webhook_api_key: {
         Args: { p_endpoint_id: string }
         Returns: string
+      }
+      get_due_scheduled_emails: {
+        Args: never
+        Returns: {
+          bounce_type: string | null
+          bounced_at: string | null
+          clicked_at: string | null
+          clicked_count: number | null
+          contact_id: string | null
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          failed_at: string | null
+          from_address: string
+          html_content: string
+          id: string
+          metadata: Json | null
+          opened_at: string | null
+          opened_count: number | null
+          organization_id: string
+          reply_to: string | null
+          resend_id: string | null
+          scheduled_for: string | null
+          send_type: string | null
+          sent_at: string | null
+          sequence_id: string | null
+          status: string
+          subject: string
+          template_id: string | null
+          to_address: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "email_sends"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      increment_email_clicks: {
+        Args: { p_resend_id: string }
+        Returns: undefined
+      }
+      increment_email_opens: {
+        Args: { p_resend_id: string }
+        Returns: undefined
       }
       is_super_admin: { Args: never; Returns: boolean }
       org_module_enabled: {
