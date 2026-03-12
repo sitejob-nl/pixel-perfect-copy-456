@@ -22,6 +22,9 @@ export default function CreateInvoiceDialog({ open, onOpenChange }: Props) {
   const [lineDesc, setLineDesc] = useState("");
   const [lineQty, setLineQty] = useState("1");
   const [linePrice, setLinePrice] = useState("");
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [visibleInPortal, setVisibleInPortal] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState("unpaid");
 
   const createInvoice = useCreateInvoice();
 
