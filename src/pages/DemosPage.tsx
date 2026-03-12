@@ -123,12 +123,26 @@ function GenerateTab() {
   const { data: contacts } = useContacts();
   const generateDemo = useGenerateDemo();
 
+  // Dynamic model list from ai_models table
+  const { data: aiModels } = useQuery({
+    queryKey: ["ai-models"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_models")
+        .select("id, display_name, tier, is_available")
+        .eq("is_available", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const [step, setStep] = useState(1);
   const [companyName, setCompanyName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [contactId, setContactId] = useState("");
   const [demoType, setDemoType] = useState("website");
-  const [model, setModel] = useState("claude-sonnet-4-20250514");
+  const [model, setModel] = useState("");
   const [result, setResult] = useState<any>(null);
   const [device, setDevice] = useState("desktop");
 
