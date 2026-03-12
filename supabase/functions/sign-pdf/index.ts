@@ -418,7 +418,8 @@ Deno.serve(async (req) => {
       new Uint8Array(basePdfBytes),
       signedSessions,
       signatureFields,
-      contract_id
+      contract_id,
+      contract
     );
 
     // Step 3: Generate document hash
