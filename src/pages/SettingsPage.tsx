@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import SnelstartSettings from "@/components/erp/SnelstartSettings";
 import ApiKeysSettings from "@/components/erp/ApiKeysSettings";
 import TeamSettings from "@/components/erp/TeamSettings";
+import OrgSettings from "@/components/erp/OrgSettings";
 
 const tabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️" },
