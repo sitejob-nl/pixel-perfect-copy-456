@@ -59,6 +59,18 @@ Deno.serve(async (req) => {
 
     const orgId = membership.organization_id;
 
+    // Verify user is owner or admin
+    const { data: roleCheck } = await supabase.rpc("user_has_role", {
+      p_org_id: orgId,
+      p_roles: ["owner", "admin"],
+    });
+    if (!roleCheck) {
+      return new Response(JSON.stringify({ error: "Geen toegang. Alleen admins mogen synchroniseren." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Get Snelstart config using service role
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,

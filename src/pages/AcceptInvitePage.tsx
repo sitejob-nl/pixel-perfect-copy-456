@@ -18,22 +18,17 @@ export default function AcceptInvitePage() {
   const queryClient = useQueryClient();
   const inviteToken = searchParams.get("invite_token");
 
-  // Check if the user already has a password set (existing user vs new invite)
   useEffect(() => {
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // If user has logged in before with password, they're an existing user
         const providers = user.app_metadata?.providers || [];
         const hasPassword = providers.includes("email");
         const confirmedAt = user.confirmed_at;
         const createdAt = user.created_at;
-        
-        // If confirmed well before now (>60s), they're existing
         if (hasPassword && confirmedAt && createdAt) {
           const confirmedTime = new Date(confirmedAt).getTime();
           const createdTime = new Date(createdAt).getTime();
-          // If confirmed more than 5 minutes after creation, they've set up before
           if (confirmedTime - createdTime > 5000) {
             setIsExistingUser(true);
           }
@@ -44,67 +39,23 @@ export default function AcceptInvitePage() {
     checkUser();
   }, []);
 
-  const acceptInvite = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Niet ingelogd");
+  const acceptViaEdgeFunction = async () => {
+    if (!inviteToken) throw new Error("Geen invite token gevonden");
 
-    if (!inviteToken) return;
+    const { data, error } = await supabase.functions.invoke("accept-invite", {
+      body: { invite_token: inviteToken },
+    });
 
-    // Find the invite by token
-    const { data: invite, error: invErr } = await supabase
-      .from("organization_invites")
-      .select("*")
-      .eq("token", inviteToken)
-      .is("accepted_at", null)
-      .single();
-
-    if (invErr || !invite) {
-      toast.error("Uitnodiging niet gevonden of al geaccepteerd");
-      return;
-    }
-
-    // Check if not expired
-    if (new Date(invite.expires_at) < new Date()) {
-      toast.error("Deze uitnodiging is verlopen");
-      return;
-    }
-
-    // Add user to organization
-    const { error: memberErr } = await supabase
-      .from("organization_members")
-      .insert({
-        organization_id: invite.organization_id,
-        user_id: user.id,
-        role: invite.role,
-        is_active: true,
-        joined_at: new Date().toISOString(),
-      });
-
-    if (memberErr) {
-      if (memberErr.message?.includes("duplicate") || memberErr.message?.includes("unique")) {
-        // Already a member, try reactivating
-        await supabase
-          .from("organization_members")
-          .update({ is_active: true, role: invite.role, joined_at: new Date().toISOString() })
-          .eq("organization_id", invite.organization_id)
-          .eq("user_id", user.id);
-      } else {
-        throw memberErr;
-      }
-    }
-
-    // Mark invite as accepted
-    await supabase
-      .from("organization_invites")
-      .update({ accepted_at: new Date().toISOString() })
-      .eq("id", invite.id);
+    if (error) throw new Error(error.message || "Accepteren mislukt");
+    if (data?.error) throw new Error(data.error);
+    return data;
   };
 
   const handleExistingUserAccept = async () => {
     setLoading(true);
     try {
       setAccepting(true);
-      await acceptInvite();
+      await acceptViaEdgeFunction();
       setDone(true);
       toast.success("Uitnodiging geaccepteerd! Je wordt doorgestuurd...");
       await queryClient.invalidateQueries({ queryKey: ["organization"] });
@@ -125,30 +76,22 @@ export default function AcceptInvitePage() {
     }
 
     setLoading(true);
-
     try {
-      // 1. Set password
       const { error: pwErr } = await supabase.auth.updateUser({
         password,
         data: fullName ? { full_name: fullName } : undefined,
       });
       if (pwErr) throw pwErr;
 
-      // Update profile name if provided
       if (fullName) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          await supabase
-            .from("profiles")
-            .update({ full_name: fullName })
-            .eq("id", user.id);
+          await supabase.from("profiles").update({ full_name: fullName }).eq("id", user.id);
         }
       }
 
-      // 2. Accept the organization invite
       setAccepting(true);
-      await acceptInvite();
-
+      await acceptViaEdgeFunction();
       setDone(true);
       toast.success("Account ingesteld! Je wordt doorgestuurd...");
       await queryClient.invalidateQueries({ queryKey: ["organization"] });
@@ -186,7 +129,6 @@ export default function AcceptInvitePage() {
   return (
     <div className="min-h-screen bg-erp-bg0 flex items-center justify-center p-4">
       <div className="w-full max-w-[400px]">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
             <div className="w-9 h-9 rounded-lg bg-erp-blue flex items-center justify-center">
@@ -201,10 +143,8 @@ export default function AcceptInvitePage() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="bg-erp-bg2 border border-erp-border0 rounded-xl p-6">
           {isExistingUser ? (
-            // Existing user — just accept, no password needed
             <div className="space-y-4">
               <p className="text-sm text-erp-text2">
                 Je hebt al een account. Klik hieronder om de uitnodiging te accepteren en toegang te krijgen tot de organisatie.
@@ -218,7 +158,6 @@ export default function AcceptInvitePage() {
               </button>
             </div>
           ) : (
-            // New user — set name + password
             <form onSubmit={handleNewUserSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-erp-text2 text-xs font-medium">Volledige naam</label>
