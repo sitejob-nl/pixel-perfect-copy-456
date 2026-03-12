@@ -512,6 +512,65 @@ export default function ContactDetailPage() {
               ))}
             </div>
           </ErpCard>
+
+          {/* Internal Notes */}
+          <ErpCard className="p-5">
+            <SectionTitle>Interne notities</SectionTitle>
+            <div className="mb-3">
+              <Textarea
+                value={noteText}
+                onChange={e => setNoteText(e.target.value)}
+                placeholder="Schrijf een interne notitie..."
+                className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm min-h-[60px] resize-none"
+                rows={2}
+              />
+              <div className="flex justify-end mt-2">
+                <ErpButton
+                  primary
+                  onClick={() => {
+                    if (noteText.trim()) addNoteMutation.mutate(noteText.trim());
+                  }}
+                  disabled={!noteText.trim() || addNoteMutation.isPending}
+                >
+                  {addNoteMutation.isPending ? "Toevoegen..." : "Notitie toevoegen"}
+                </ErpButton>
+              </div>
+            </div>
+            {notes.length === 0 && (
+              <div className="text-xs text-erp-text3">Nog geen notities.</div>
+            )}
+            <div className="space-y-0">
+              {notes.map((n, i) => {
+                const authorName = n.profiles?.full_name || n.profiles?.email || "Onbekend";
+                const isOwn = n.user_id === user?.id;
+                return (
+                  <div key={n.id} className={`py-2.5 ${i < notes.length - 1 ? "border-b border-erp-border0" : ""}`}>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <Avatar name={authorName} id={n.user_id.charCodeAt(0)} size={20} />
+                        <span className="text-xs font-medium text-erp-text0">{authorName}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[11px] text-erp-text3">
+                          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: nl })}
+                        </span>
+                        {isOwn && (
+                          <button
+                            onClick={() => deleteNoteMutation.mutate(n.id)}
+                            className="text-erp-text3 hover:text-erp-red transition-colors ml-1"
+                            title="Verwijderen"
+                          >
+                            <Icons.Trash className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-sm text-erp-text1 whitespace-pre-wrap">{n.content}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </ErpCard>
         </div>
       </div>
     </div>
