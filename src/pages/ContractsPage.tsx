@@ -715,11 +715,15 @@ function Step2Variables({ contacts, companies, deals, projects, quotes, linkedRe
   );
 }
 
-function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
+function Step3Preview({ renderHtml, signers, onSignersChange, members, contractMode, pdfPageImages, signatureFields, onSignatureFieldsChange }: {
   renderHtml: string;
   signers: Array<{ name: string; email: string; phone: string; role: string }>;
   onSignersChange: (s: Array<{ name: string; email: string; phone: string; role: string }>) => void;
   members: import("@/hooks/useTeam").OrgMember[];
+  contractMode: "template" | "empty" | "pdf";
+  pdfPageImages: string[];
+  signatureFields: SignatureField[];
+  onSignatureFieldsChange: (fields: SignatureField[]) => void;
 }) {
   const updateSigner = (i: number, field: string, value: string) => {
     const next = [...signers];
@@ -743,21 +747,40 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
 
   const activeMembers = members.filter((m) => m.is_active);
 
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {/* Left: Preview */}
-      <div>
-        <h4 className="text-sm font-semibold text-erp-text0 mb-2">Preview</h4>
-        <div
-          className="bg-white text-gray-900 rounded-lg p-6 max-h-[400px] overflow-y-auto text-sm shadow-inner border border-erp-border0"
-          dangerouslySetInnerHTML={{ __html: renderHtml || "<p>Geen content</p>" }}
-        />
-      </div>
+  const showFieldEditor = contractMode === "pdf" && pdfPageImages.length > 0;
 
-      {/* Right: Signers */}
+  return (
+    <div className="space-y-4">
+      {/* PDF field editor */}
+      {showFieldEditor && (
+        <div>
+          <h4 className="text-sm font-semibold text-erp-text0 mb-2">Velden positioneren op de PDF</h4>
+          <div className="h-[400px]">
+            <PDFFieldEditor
+              pages={pdfPageImages}
+              fields={signatureFields}
+              onChange={onSignatureFieldsChange}
+              signerCount={signers.length}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* HTML preview for non-PDF modes */}
+      {!showFieldEditor && (
+        <div>
+          <h4 className="text-sm font-semibold text-erp-text0 mb-2">Preview</h4>
+          <div
+            className="bg-white text-gray-900 rounded-lg p-6 max-h-[300px] overflow-y-auto text-sm shadow-inner border border-erp-border0"
+            dangerouslySetInnerHTML={{ __html: renderHtml || "<p>Geen content</p>" }}
+          />
+        </div>
+      )}
+
+      {/* Signers */}
       <div>
         <h4 className="text-sm font-semibold text-erp-text0 mb-2">Ondertekenaars</h4>
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {signers.map((s, i) => (
             <div key={i} className="bg-erp-bg3 rounded-xl p-3 border border-erp-border0 space-y-2">
               <div className="flex items-center justify-between">
@@ -771,13 +794,10 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
                   </button>
                 )}
               </div>
-              {/* Team member picker */}
               {activeMembers.length > 0 && (
                 <select
                   defaultValue=""
-                  onChange={(e) => {
-                    if (e.target.value) fillFromMember(i, e.target.value);
-                  }}
+                  onChange={(e) => { if (e.target.value) fillFromMember(i, e.target.value); }}
                   className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
                 >
                   <option value="">— Selecteer teamlid —</option>
@@ -788,45 +808,23 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members }: {
                   ))}
                 </select>
               )}
-              <input
-                value={s.role}
-                onChange={(e) => updateSigner(i, "role", e.target.value)}
-                placeholder="Rol (bijv. Klant)"
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
-              <input
-                value={s.name}
-                onChange={(e) => updateSigner(i, "name", e.target.value)}
-                placeholder="Naam"
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
-              <input
-                value={s.email}
-                onChange={(e) => updateSigner(i, "email", e.target.value)}
-                placeholder="E-mail"
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
-              <input
-                value={s.phone}
-                onChange={(e) => updateSigner(i, "phone", e.target.value)}
-                placeholder="Telefoon (voor SMS)"
-                className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-              />
+              <input value={s.role} onChange={(e) => updateSigner(i, "role", e.target.value)} placeholder="Rol (bijv. Klant)" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+              <input value={s.name} onChange={(e) => updateSigner(i, "name", e.target.value)} placeholder="Naam" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+              <input value={s.email} onChange={(e) => updateSigner(i, "email", e.target.value)} placeholder="E-mail" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+              <input value={s.phone} onChange={(e) => updateSigner(i, "phone", e.target.value)} placeholder="Telefoon (voor SMS)" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
             </div>
           ))}
-          <button
-            onClick={() => onSignersChange([...signers, { name: "", email: "", phone: "", role: "Ondertekenaar" }])}
-            className="text-xs text-erp-blue hover:underline font-medium"
-          >
-            + Ondertekenaar toevoegen
-          </button>
         </div>
+        <button
+          onClick={() => onSignersChange([...signers, { name: "", email: "", phone: "", role: "Ondertekenaar" }])}
+          className="text-xs text-erp-blue hover:underline font-medium mt-2"
+        >
+          + Ondertekenaar toevoegen
+        </button>
       </div>
     </div>
   );
 }
-
-// ─── Contract Detail Panel ─────────────────────────────────────
 
 function SendContractEmailDialog({ open, onClose, contract }: { open: boolean; onClose: () => void; contract: any }) {
   const sessions = contract.contract_signing_sessions || [];
