@@ -50,6 +50,47 @@ const MODULE_LABELS: Record<string, string> = {
   mod_portal: "Portaal",
 };
 
+function InviteEmailPreview({ orgName, logoUrl, primaryColor, inviterName, roleLabel }: {
+  orgName: string; logoUrl: string | null; primaryColor: string; inviterName: string; roleLabel: string;
+}) {
+  const color = primaryColor || "#32C5FF";
+  const logoHtml = logoUrl
+    ? `<img src="${logoUrl}" alt="${orgName}" style="max-height:40px;max-width:180px;object-fit:contain;" />`
+    : `<div style="display:inline-flex;align-items:center;gap:8px;"><div style="width:36px;height:36px;background:rgba(255,255,255,0.2);border-radius:8px;display:inline-block;text-align:center;line-height:36px;"><span style="color:#fff;font-size:18px;font-weight:bold;">${orgName.charAt(0)}</span></div><span style="color:#ffffff;font-size:20px;font-weight:bold;">${orgName}</span></div>`;
+
+  const html = `<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;">
+<tr><td align="center" style="padding:40px 16px;">
+  <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background-color:#ffffff;border-radius:12px;overflow:hidden;">
+    <tr><td style="background:${color};padding:32px 40px;text-align:center;">${logoHtml}</td></tr>
+    <tr><td style="padding:40px 40px 32px 40px;">
+      <h1 style="margin:0 0 8px 0;font-size:22px;font-weight:700;color:#1a1a2e;">Je bent uitgenodigd! 🎉</h1>
+      <p style="margin:0 0 24px 0;font-size:15px;color:#6b7280;line-height:1.6;">
+        <strong style="color:#1a1a2e;">${inviterName}</strong> heeft je uitgenodigd om lid te worden van
+        <strong style="color:#1a1a2e;">${orgName}</strong> als <strong style="color:${color};">${roleLabel}</strong>.
+      </p>
+      <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:28px;">
+        <tr><td style="padding:16px 20px;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="font-size:13px;color:#9ca3af;padding-bottom:6px;">Organisatie</td><td style="font-size:13px;color:#9ca3af;padding-bottom:6px;text-align:right;">Rol</td></tr>
+            <tr><td style="font-size:15px;font-weight:600;color:#1a1a2e;">${orgName}</td><td style="font-size:15px;font-weight:600;color:${color};text-align:right;">${roleLabel}</td></tr>
+          </table>
+        </td></tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+        <a href="#" style="display:inline-block;background:${color};color:#ffffff;padding:14px 40px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;">Uitnodiging accepteren</a>
+      </td></tr></table>
+      <p style="margin:24px 0 0 0;font-size:13px;color:#9ca3af;text-align:center;">Na het klikken kun je een wachtwoord instellen voor je account.</p>
+    </td></tr>
+    <tr><td style="padding:20px 40px 28px 40px;border-top:1px solid #f0f0f0;text-align:center;">
+      <p style="margin:0;font-size:12px;color:#c4c4c8;">Deze uitnodiging is 7 dagen geldig.<br>Als je deze uitnodiging niet verwachtte, kun je deze e-mail negeren.</p>
+    </td></tr>
+  </table>
+</td></tr></table></body>`;
+
+  return <div className="rounded-lg overflow-hidden border border-erp-border0" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
 export default function TeamSettings() {
   const { user } = useAuth();
   const { data: org } = useOrganization();
