@@ -237,6 +237,162 @@ export type Database = {
         }
         Relationships: []
       }
+      apify_actor_configs: {
+        Row: {
+          avg_duration_seconds: number | null
+          category: string
+          created_at: string
+          default_input: Json | null
+          description: string | null
+          display_name: string
+          estimated_cost_per_1k: string | null
+          icon: string | null
+          id: string
+          input_fields: Json
+          is_active: boolean
+          max_results_limit: number | null
+          output_fields: Json
+          sort_order: number | null
+        }
+        Insert: {
+          avg_duration_seconds?: number | null
+          category?: string
+          created_at?: string
+          default_input?: Json | null
+          description?: string | null
+          display_name: string
+          estimated_cost_per_1k?: string | null
+          icon?: string | null
+          id: string
+          input_fields?: Json
+          is_active?: boolean
+          max_results_limit?: number | null
+          output_fields?: Json
+          sort_order?: number | null
+        }
+        Update: {
+          avg_duration_seconds?: number | null
+          category?: string
+          created_at?: string
+          default_input?: Json | null
+          description?: string | null
+          display_name?: string
+          estimated_cost_per_1k?: string | null
+          icon?: string | null
+          id?: string
+          input_fields?: Json
+          is_active?: boolean
+          max_results_limit?: number | null
+          output_fields?: Json
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
+      apify_direct_runs: {
+        Row: {
+          actor_id: string
+          apify_dataset_id: string | null
+          apify_input: Json
+          apify_run_id: string | null
+          completed_at: string | null
+          cost_usd: number | null
+          created_at: string
+          duration_seconds: number | null
+          error_message: string | null
+          id: string
+          organization_id: string
+          results_count: number | null
+          results_preview: Json | null
+          saved_companies_count: number | null
+          saved_contacts_count: number | null
+          saved_to_crm: boolean | null
+          started_at: string
+          status: string
+          triggered_by: string | null
+          user_input: Json
+        }
+        Insert: {
+          actor_id: string
+          apify_dataset_id?: string | null
+          apify_input?: Json
+          apify_run_id?: string | null
+          completed_at?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          organization_id: string
+          results_count?: number | null
+          results_preview?: Json | null
+          saved_companies_count?: number | null
+          saved_contacts_count?: number | null
+          saved_to_crm?: boolean | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+          user_input?: Json
+        }
+        Update: {
+          actor_id?: string
+          apify_dataset_id?: string | null
+          apify_input?: Json
+          apify_run_id?: string | null
+          completed_at?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          organization_id?: string
+          results_count?: number | null
+          results_preview?: Json | null
+          saved_companies_count?: number | null
+          saved_contacts_count?: number | null
+          saved_to_crm?: boolean | null
+          started_at?: string
+          status?: string
+          triggered_by?: string | null
+          user_input?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apify_direct_runs_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "apify_actor_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apify_direct_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apify_direct_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apify_direct_runs_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apify_direct_runs_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
