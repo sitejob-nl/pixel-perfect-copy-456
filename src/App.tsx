@@ -137,7 +137,7 @@ const App = () => (
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="demos" element={<PlaceholderPage title="Demo Generatie" icon="Globe" />} />
               <Route path="content" element={<ContentPage />} />
-              <Route path="portal" element={<PortalAdminPage />} />
+              <Route path="portals" element={<PortalAdminPage />} />
               <Route path="whatsapp" element={<PlaceholderPage title="WhatsApp" icon="Msg" />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="settings" element={<SettingsPage />} />
