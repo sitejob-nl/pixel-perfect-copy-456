@@ -22,6 +22,9 @@ export default function CreateInvoiceDialog({ open, onOpenChange }: Props) {
   const [lineDesc, setLineDesc] = useState("");
   const [lineQty, setLineQty] = useState("1");
   const [linePrice, setLinePrice] = useState("");
+  const [paymentUrl, setPaymentUrl] = useState("");
+  const [visibleInPortal, setVisibleInPortal] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState("unpaid");
 
   const createInvoice = useCreateInvoice();
 
@@ -101,8 +104,11 @@ export default function CreateInvoiceDialog({ open, onOpenChange }: Props) {
         vat_amount: vatAmount,
         total_amount: total,
         status: "draft",
+        payment_url: paymentUrl.trim() || null,
+        visible_in_portal: visibleInPortal,
+        payment_status: paymentStatus,
         lines,
-      },
+      } as any,
       {
         onSuccess: () => {
           toast.success("Factuur aangemaakt!");
@@ -167,6 +173,30 @@ export default function CreateInvoiceDialog({ open, onOpenChange }: Props) {
                 <Input type="number" value={lineQty} onChange={e => setLineQty(e.target.value)} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" placeholder="Aantal" />
                 <Input type="number" value={linePrice} onChange={e => setLinePrice(e.target.value)} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" placeholder="Prijs (€)" />
               </div>
+            </div>
+          </div>
+
+          <div className="border-t border-erp-border0 pt-3 space-y-3">
+            <Label className="text-erp-text2 text-xs block">Portaal instellingen</Label>
+            <div className="space-y-1">
+              <Label className="text-erp-text2 text-xs">Betaallink</Label>
+              <Input value={paymentUrl} onChange={e => setPaymentUrl(e.target.value)} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" placeholder="https://pay.mollie.com/..." />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-erp-text2 text-xs">Betaalstatus</Label>
+              <Select value={paymentStatus} onValueChange={setPaymentStatus}>
+                <SelectTrigger className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-erp-bg2 border-erp-border0">
+                  <SelectItem value="unpaid">Onbetaald</SelectItem>
+                  <SelectItem value="pending">In behandeling</SelectItem>
+                  <SelectItem value="paid">Betaald</SelectItem>
+                  <SelectItem value="overdue">Verlopen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={visibleInPortal} onChange={e => setVisibleInPortal(e.target.checked)} className="rounded border-erp-border1" />
+              <Label className="text-erp-text2 text-xs">Zichtbaar in klantenportaal</Label>
             </div>
           </div>
 

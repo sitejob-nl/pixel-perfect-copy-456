@@ -98,25 +98,41 @@ export function InvoicesPage() {
       ) : (
         <ErpCard className="overflow-hidden">
           <table className="w-full border-collapse">
-            <thead><tr><TH>Factuur</TH><TH>Klant</TH><TH>Bedrag</TH><TH>Status</TH><TH>Datum</TH><TH></TH></tr></thead>
+            <thead><tr><TH>Factuur</TH><TH>Klant</TH><TH>Bedrag</TH><TH>Status</TH><TH>Betaal</TH><TH>Portaal</TH><TH>Datum</TH><TH></TH></tr></thead>
             <tbody>
               {invoices.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 border-b border-erp-border0 text-center text-erp-text3 text-sm">Geen facturen gevonden</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 border-b border-erp-border0 text-center text-erp-text3 text-sm">Geen facturen gevonden</td></tr>
               )}
               {invoices.map(inv => {
                 const [sl, sc] = invStatus[inv.status] || ["?", "#6b7280"];
                 const nextStatus = statusFlow[inv.status];
+                const payStatus = (inv as any).payment_status || "unpaid";
+                const payColors: Record<string, string> = { unpaid: "#ef4444", pending: "#f59e0b", paid: "#22c55e", overdue: "#ef4444" };
+                const payLabels: Record<string, string> = { unpaid: "Onbetaald", pending: "In behandeling", paid: "Betaald", overdue: "Verlopen" };
                 return (
                   <TR key={inv.id}>
                     <TD className="font-semibold text-erp-text0 text-xs font-mono">{inv.invoice_number}</TD>
                     <TD className="text-erp-text1">{inv.customer_name ?? "—"}</TD>
                     <TD className="font-semibold">€{fmt(inv.total_amount ?? 0)}</TD>
                     <TD><Badge color={sc}><Dot color={sc} size={5} />{sl}</Badge></TD>
+                    <TD>
+                      <Badge color={payColors[payStatus] || "#6b7280"}>
+                        <Dot color={payColors[payStatus] || "#6b7280"} size={5} />
+                        {payLabels[payStatus] || payStatus}
+                      </Badge>
+                    </TD>
+                    <TD>
+                      {(inv as any).visible_in_portal ? (
+                        <span className="text-erp-green text-xs">Zichtbaar</span>
+                      ) : (
+                        <span className="text-erp-text3 text-xs">Verborgen</span>
+                      )}
+                    </TD>
                     <TD className="text-erp-text2 text-xs">
                       {inv.created_at ? format(new Date(inv.created_at), "d MMM yyyy") : "—"}
                     </TD>
                     <TD>
-                      <div className="flex gap-1">
+                      <div className="flex gap-1 items-center">
                         {nextStatus && (
                           <button
                             onClick={() => updateInvoice.mutate(

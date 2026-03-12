@@ -28,6 +28,7 @@ import ContractsPage from "./pages/ContractsPage";
 import ContractSigningPage from "./pages/ContractSigningPage";
 import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import PortalAdminPage from "./pages/PortalAdminPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -134,6 +135,7 @@ const App = () => (
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="demos" element={<PlaceholderPage title="Demo Generatie" icon="Globe" />} />
               <Route path="content" element={<ContentPage />} />
+              <Route path="portal" element={<PortalAdminPage />} />
               <Route path="whatsapp" element={<PlaceholderPage title="WhatsApp" icon="Msg" />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="settings" element={<SettingsPage />} />
