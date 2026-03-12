@@ -2,6 +2,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useOrgDetails } from "@/hooks/useOrgDetails";
 import { useOrgModules } from "@/hooks/useOrgModules";
 import {
   Dialog,
