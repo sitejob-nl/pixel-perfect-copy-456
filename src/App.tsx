@@ -30,6 +30,10 @@ import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import PortalAdminPage from "./pages/PortalAdminPage";
 import ClientPortalPage from "./pages/ClientPortalPage";
+import EmailPage from "./pages/EmailPage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import PortalAdminPage from "./pages/PortalAdminPage";
+import ClientPortalPage from "./pages/ClientPortalPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
