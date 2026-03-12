@@ -10,6 +10,18 @@ const PRESET_COLORS = [
   "#6366F1", "#16A34A", "#9333EA", "#E11D48", "#CA8A04",
 ];
 
+function isColorTooExtreme(hex: string): boolean {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return false;
+  const r = parseInt(result[1], 16) / 255;
+  const g = parseInt(result[2], 16) / 255;
+  const b = parseInt(result[3], 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const s = max === min ? 0 : l > 0.5 ? (max - min) / (2 - max - min) : (max - min) / (max + min);
+  return l > 0.85 || l < 0.15 || s < 0.1;
+}
+
 function ColorPicker({
   label,
   value,
@@ -19,6 +31,7 @@ function ColorPicker({
   value: string;
   onChange: (color: string) => void;
 }) {
+  const tooExtreme = isColorTooExtreme(value);
   return (
     <div>
       <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">{label}</label>
@@ -51,6 +64,9 @@ function ColorPicker({
           />
         </div>
       </div>
+      {tooExtreme && (
+        <p className="text-[11px] text-erp-orange mt-1">⚠ Deze kleur is te licht, donker of onverzadigd en wordt niet toegepast als accentkleur.</p>
+      )}
     </div>
   );
 }
