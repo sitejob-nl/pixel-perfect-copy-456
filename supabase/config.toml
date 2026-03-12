@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.contract-signing]
 verify_jwt = false
+
+[functions.sign-pdf]
+verify_jwt = false

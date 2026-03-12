@@ -312,6 +312,18 @@ async function handleSign(req: Request) {
 
   if (allSigned) {
     contractUpdate.completed_at = now;
+    
+    // Trigger PDF generation asynchronously
+    try {
+      const signPdfUrl = Deno.env.get("SUPABASE_URL") + "/functions/v1/sign-pdf";
+      fetch(signPdfUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contract_id: contract.id }),
+      }).catch((e) => console.error("sign-pdf trigger error:", e));
+    } catch (e) {
+      console.error("Failed to trigger sign-pdf:", e);
+    }
   }
 
   await sb

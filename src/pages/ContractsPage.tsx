@@ -7,6 +7,7 @@ import {
   useCreateContract, useUpdateContract, useCreateSigningSession, useResolveVariables,
   useCreateTemplate, useUpdateTemplate,
 } from "@/hooks/useContracts";
+import PDFFieldEditor, { type SignatureField } from "@/components/contracts/PDFFieldEditor";
 import { useContacts } from "@/hooks/useContacts";
 import { useCompanies } from "@/hooks/useCompanies";
 import { useDeals } from "@/hooks/useDeals";
@@ -599,7 +600,44 @@ function Step3Preview({ renderHtml, signers, onSignersChange }: {
 function ContractDetail({ contractId, onBack }: { contractId: string; onBack: () => void }) {
   const { data: contract, isLoading } = useContract(contractId);
   const [tab, setTab] = useState("content");
+  const [sigFields, setSigFields] = useState<SignatureField[]>([]);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const updateContract = useUpdateContract();
+
+  // Load existing signature fields from contract
+  useEffect(() => {
+    if (contract?.signature_fields && Array.isArray(contract.signature_fields)) {
+      setSigFields(contract.signature_fields as SignatureField[]);
+    }
+  }, [contract?.signature_fields]);
+
+  const saveFields = async () => {
+    try {
+      await updateContract.mutateAsync({ id: contractId, signature_fields: sigFields });
+      toast.success("Velden opgeslagen");
+    } catch (e: any) {
+      toast.error(e.message || "Opslaan mislukt");
+    }
+  };
+
+  const generatePdf = async () => {
+    setGeneratingPdf(true);
+    try {
+      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://fuvpmxxihmpustftzvgk.supabase.co"}/functions/v1/sign-pdf`;
+      const res = await fetch(baseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contract_id: contractId }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      toast.success("PDF gegenereerd");
+      if (data.pdf_url) window.open(data.pdf_url, "_blank");
+    } catch (e: any) {
+      toast.error(e.message || "PDF generatie mislukt");
+    }
+    setGeneratingPdf(false);
+  };
 
   if (isLoading) return <div className="text-erp-text3 text-sm py-8 text-center">Laden...</div>;
   if (!contract) return <div className="text-erp-text3 text-sm py-8 text-center">Contract niet gevonden</div>;
@@ -620,9 +658,12 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
   };
 
   const copyLink = (token: string) => {
-    navigator.clipboard.writeText(`${signingBaseUrl}?action=get&token=${token}`);
+    const origin = window.location.origin;
+    navigator.clipboard.writeText(`${origin}/sign?token=${token}`);
     toast.success("Signing link gekopieerd");
   };
+
+  const hasSigned = (contract.contract_signing_sessions || []).some((s: any) => s.status === "signed");
 
   return (
     <div>
@@ -638,15 +679,26 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
           </div>
           <div className="text-xs text-erp-text3 mt-0.5 font-mono">{contract.contract_number}</div>
         </div>
-        {contract.status === "draft" && (
+         {contract.status === "draft" && (
           <ErpButton primary onClick={handleSend}>
             <Icons.Send className="w-4 h-4" /> Verzenden
           </ErpButton>
         )}
+        {hasSigned && (
+          <ErpButton onClick={generatePdf} disabled={generatingPdf}>
+            {generatingPdf ? "PDF genereren..." : "📄 Download PDF"}
+          </ErpButton>
+        )}
+        {contract.signed_pdf_url && (
+          <a href={contract.signed_pdf_url} target="_blank" rel="noopener noreferrer"
+            className="text-xs text-erp-blue hover:underline font-medium">
+            Bekijk PDF ↗
+          </a>
+        )}
       </div>
 
       <ErpTabs
-        items={[["content", "Contract"], ["signers", "Ondertekenaars"], ["audit", "Audit Trail"]]}
+        items={[["content", "Contract"], ["fields", "Velden"], ["signers", "Ondertekenaars"], ["audit", "Audit Trail"]]}
         active={tab}
         onChange={setTab}
       />
@@ -657,6 +709,29 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
             className="bg-white text-gray-900 rounded-lg p-8 text-sm leading-relaxed shadow-inner"
             dangerouslySetInnerHTML={{ __html: contract.rendered_html || contract.content || "<p>Geen content</p>" }}
           />
+        </ErpCard>
+      )}
+
+      {tab === "fields" && (
+        <ErpCard className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-erp-text0">Handtekeningvelden positioneren</h3>
+              <p className="text-xs text-erp-text3">Sleep velden naar de juiste positie op het contract</p>
+            </div>
+            <ErpButton primary onClick={saveFields} disabled={updateContract.isPending}>
+              {updateContract.isPending ? "Opslaan..." : "Velden opslaan"}
+            </ErpButton>
+          </div>
+          <div className="h-[500px]">
+            <PDFFieldEditor
+              pages={[contract.rendered_html || contract.content || "<p>Geen content</p>"]}
+              fields={sigFields}
+              onChange={setSigFields}
+              signerCount={(contract.contract_signing_sessions || []).length || 1}
+              readOnly={contract.status === "signed"}
+            />
+          </div>
         </ErpCard>
       )}
 
