@@ -2895,6 +2895,10 @@ export type Database = {
           created_at: string
           id: string
           organization_id: string
+          resend_api_key_encrypted: string | null
+          resend_key_hint: string | null
+          resend_key_set: boolean | null
+          resend_key_verified_at: string | null
           selected_model: string
           updated_at: string
         }
@@ -2910,6 +2914,10 @@ export type Database = {
           created_at?: string
           id?: string
           organization_id: string
+          resend_api_key_encrypted?: string | null
+          resend_key_hint?: string | null
+          resend_key_set?: boolean | null
+          resend_key_verified_at?: string | null
           selected_model?: string
           updated_at?: string
         }
@@ -2925,6 +2933,10 @@ export type Database = {
           created_at?: string
           id?: string
           organization_id?: string
+          resend_api_key_encrypted?: string | null
+          resend_key_hint?: string | null
+          resend_key_set?: boolean | null
+          resend_key_verified_at?: string | null
           selected_model?: string
           updated_at?: string
         }
