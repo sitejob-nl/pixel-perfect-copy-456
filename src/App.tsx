@@ -26,6 +26,7 @@ import SettingsPage from "./pages/SettingsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import ContractsPage from "./pages/ContractsPage";
 import ContractSigningPage from "./pages/ContractSigningPage";
+import ScrapersPage from "./pages/ScrapersPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
