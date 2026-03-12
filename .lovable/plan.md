@@ -1,68 +1,41 @@
 
 
-# Fix Build Errors: Snelstart Type Mismatches
+## Probleem
 
-## Wat er nu is opgezet voor Snelstart
+1. **PDF pagina's zijn afgesneden** — De `PDFFieldEditor` zit in een container van `h-[400px]`, maar PDF-pagina's (gerenderd als rasterafbeeldingen op `scale: 1.5`) zijn veel hoger. De pagina scrolt niet mee, waardoor je de onderkant niet kunt zien.
+2. **Rasterafbeeldingen i.p.v. PDF** — Elke PDF-pagina wordt nu als PNG gerenderd via canvas (`toDataURL("image/png")`). Dit is onnodig zwaar en geeft een waziger resultaat. We kunnen in plaats daarvan `<canvas>` elementen direct renderen met pdfjs-dist, of beter: een embedded PDF viewer gebruiken.
 
-**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
+## Plan
 
-**Frontend:**
-- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
-- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
-- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
+### 1. PDF viewer i.p.v. rasterafbeeldingen
 
-**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
+**Aanpak**: Gebruik een `<iframe>` of `<object>` met de PDF URL direct, zodat de browser's ingebouwde PDF viewer wordt gebruikt. Echter, dit maakt het onmogelijk om velden eroverheen te draggen.
 
-## Root Cause van de Build Errors
+**Betere aanpak**: Behoud pdfjs-dist rendering maar render op een `<canvas>` element in de DOM i.p.v. `toDataURL()`. Dit geeft scherpe rendering en betere performance.
 
-De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
+- In `handlePdfUpload`: sla het `ArrayBuffer` op in state i.p.v. base64 images
+- In `PDFFieldEditor`: accepteer een `pdfData: ArrayBuffer` prop naast `pages`
+- Render elke pagina live op een `<canvas>` in de component met pdfjs-dist
+- Hierdoor hoeven we geen grote base64 strings in memory te houden
 
-## Fix (2 bestanden)
+**Pragmatischer alternatief** (minder werk, groot effect): Behoud de huidige image-aanpak maar render op hogere scale (2.0) en maak de container scrollbaar. Dit lost het directe probleem op met minimale wijzigingen.
 
-### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
+### 2. Scrollbare PDF container
 
-Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
+- `PDFFieldEditor`: verander de container van `overflow-hidden` naar `overflow-y-auto` met een `max-h` zodat je kunt scrollen
+- De parent `h-[400px]` in `ContractsPage.tsx` verhogen naar `h-[600px]` of `max-h-[60vh]`
+- Elk page-image moet zijn volledige hoogte kunnen tonen
 
-Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
-```
-// FOUT: profiles heeft geen organization_id
-const { data: profile } = await supabase
-  .from("profiles")
-  .select("organization_id")
-  .eq("id", user.id)
-  .single();
+### 3. Concrete wijzigingen
 
-// FIX: gebruik organization_members
-const { data: membership } = await supabase
-  .from("organization_members")
-  .select("organization_id")
-  .eq("user_id", user.id)
-  .eq("is_active", true)
-  .limit(1)
-  .single();
-```
+**`src/components/contracts/PDFFieldEditor.tsx`**:
+- Container div: `overflow-hidden` → `overflow-y-auto`
+- Image: voeg `w-full h-auto` toe zodat de hele pagina zichtbaar is
+- Velden overlay moet relatief t.o.v. de image wrapper blijven (inner wrapper nodig)
 
-Voor de tabellen die niet in types staan, cast naar `any`:
-```
-const { data, error } = await (supabase as any)
-  .from("snelstart_config")
-  ...
-```
+**`src/pages/ContractsPage.tsx`**:
+- `h-[400px]` → `h-[60vh]` voor de field editor container
+- Optioneel: verhoog render scale van 1.5 naar 2.0 voor scherpere weergave
 
-### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
-
-Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
-```
-const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
-const actorId = providerConfig?.actorId || "";
-```
-
-### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
-
-De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
-
-## Bestanden
-
-- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
-- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
+De overlay-velden moeten correct gepositioneerd blijven bij scrollen — dit vereist dat de `relative` container om de image + fields heen zit, niet om de scroll-container.
 
