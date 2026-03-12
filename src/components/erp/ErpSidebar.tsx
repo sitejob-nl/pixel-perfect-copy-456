@@ -49,6 +49,7 @@ const nav: NavSection[] = [
   },
   {
     l: "Communicatie", items: [
+      { k: "portal", l: "Klantenportaal", i: "Portal" },
       { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
     ]
   },
