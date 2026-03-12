@@ -117,60 +117,85 @@ async function handleSendSms(token: string) {
     })
     .eq("id", session.id);
 
-  // Try to send SMS via Resend (as email-to-sms fallback) or log the code
-  // In production, integrate with an SMS provider (MessageBird, Twilio, etc.)
-  // For now, we'll try to send via the org's Resend config as an email notification
+  // Send SMS via Twilio connector gateway
+  let smsSent = false;
   try {
-    // Get org's Resend API key
-    const { data: apiKeyRow } = await sb
-      .from("organization_api_keys")
-      .select("encrypted_key")
-      .eq("organization_id", session.organization_id)
-      .eq("provider", "resend")
-      .single();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    const TWILIO_API_KEY = Deno.env.get("TWILIO_API_KEY");
+    const TWILIO_FROM_NUMBER = Deno.env.get("TWILIO_FROM_NUMBER") || "+31XXXXXXXXX";
+    const GATEWAY_URL = "https://connector-gateway.lovable.dev/twilio";
 
-    if (apiKeyRow?.encrypted_key) {
-      // Decrypt key (XOR with ENCRYPTION_KEY)
-      const encKey = Deno.env.get("ENCRYPTION_KEY") || "";
-      const encrypted = atob(apiKeyRow.encrypted_key);
-      let decrypted = "";
-      for (let i = 0; i < encrypted.length; i++) {
-        decrypted += String.fromCharCode(
-          encrypted.charCodeAt(i) ^ encKey.charCodeAt(i % encKey.length)
-        );
-      }
-
-      // Send verification code via email as fallback
-      const emailRes = await fetch("https://api.resend.com/emails", {
+    if (LOVABLE_API_KEY && TWILIO_API_KEY) {
+      const smsRes = await fetch(`${GATEWAY_URL}/Messages.json`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${decrypted}`,
-          "Content-Type": "application/json",
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "X-Connection-Api-Key": TWILIO_API_KEY,
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: JSON.stringify({
-          from: "noreply@sitejob.nl",
-          to: [session.signer_email],
-          subject: `Uw verificatiecode: ${code}`,
-          html: `
-            <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:24px;">
-              <h2 style="color:#1e40af;">Verificatiecode</h2>
-              <p>Beste ${session.signer_name},</p>
-              <p>Uw verificatiecode voor het ondertekenen van het contract is:</p>
-              <div style="background:#f0f4ff;border-radius:12px;padding:20px;text-align:center;margin:16px 0;">
-                <span style="font-size:32px;font-weight:bold;letter-spacing:0.3em;color:#1e40af;">${code}</span>
-              </div>
-              <p style="color:#6b7280;font-size:14px;">Deze code is 10 minuten geldig.</p>
-            </div>
-          `,
+        body: new URLSearchParams({
+          To: session.signer_phone,
+          From: TWILIO_FROM_NUMBER,
+          Body: `Uw verificatiecode voor contractondertekening: ${code}. Geldig voor 10 minuten.`,
         }),
       });
 
-      if (!emailRes.ok) {
-        console.error("Resend send failed:", await emailRes.text());
+      if (smsRes.ok) {
+        smsSent = true;
+        console.log("SMS sent via Twilio successfully");
+      } else {
+        const errBody = await smsRes.text();
+        console.error(`Twilio SMS failed [${smsRes.status}]:`, errBody);
       }
     } else {
-      // No Resend key configured — log the code for development
-      console.log(`[DEV] Verification code for ${session.signer_email}: ${code}`);
+      console.warn("Twilio not configured (missing LOVABLE_API_KEY or TWILIO_API_KEY)");
+    }
+
+    // Fallback: send via email if SMS failed
+    if (!smsSent) {
+      const { data: apiKeyRow } = await sb
+        .from("organization_api_keys")
+        .select("encrypted_key")
+        .eq("organization_id", session.organization_id)
+        .eq("provider", "resend")
+        .single();
+
+      if (apiKeyRow?.encrypted_key) {
+        const encKey = Deno.env.get("ENCRYPTION_KEY") || "";
+        const encrypted = atob(apiKeyRow.encrypted_key);
+        let decrypted = "";
+        for (let i = 0; i < encrypted.length; i++) {
+          decrypted += String.fromCharCode(
+            encrypted.charCodeAt(i) ^ encKey.charCodeAt(i % encKey.length)
+          );
+        }
+
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${decrypted}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "noreply@sitejob.nl",
+            to: [session.signer_email],
+            subject: `Uw verificatiecode: ${code}`,
+            html: `
+              <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:24px;">
+                <h2 style="color:#1e40af;">Verificatiecode</h2>
+                <p>Beste ${session.signer_name},</p>
+                <p>Uw verificatiecode voor het ondertekenen van het contract is:</p>
+                <div style="background:#f0f4ff;border-radius:12px;padding:20px;text-align:center;margin:16px 0;">
+                  <span style="font-size:32px;font-weight:bold;letter-spacing:0.3em;color:#1e40af;">${code}</span>
+                </div>
+                <p style="color:#6b7280;font-size:14px;">Deze code is 10 minuten geldig.</p>
+              </div>
+            `,
+          }),
+        });
+      } else {
+        console.log(`[DEV] Verification code for ${session.signer_email}: ${code}`);
+      }
     }
   } catch (e) {
     console.error("SMS/email send error:", e);
