@@ -1800,6 +1800,51 @@ export type Database = {
           },
         ]
       }
+      demo_dashboard_modules: {
+        Row: {
+          acties: string[] | null
+          beschrijving: string
+          id: string
+          integraties: string[] | null
+          kpis: string[] | null
+          naam: string
+        }
+        Insert: {
+          acties?: string[] | null
+          beschrijving: string
+          id: string
+          integraties?: string[] | null
+          kpis?: string[] | null
+          naam: string
+        }
+        Update: {
+          acties?: string[] | null
+          beschrijving?: string
+          id?: string
+          integraties?: string[] | null
+          kpis?: string[] | null
+          naam?: string
+        }
+        Relationships: []
+      }
+      demo_industry_modules: {
+        Row: {
+          demo_type: string
+          industry: string
+          module_ids: string[]
+        }
+        Insert: {
+          demo_type: string
+          industry: string
+          module_ids?: string[]
+        }
+        Update: {
+          demo_type?: string
+          industry?: string
+          module_ids?: string[]
+        }
+        Relationships: []
+      }
       demo_versions: {
         Row: {
           change_description: string | null
@@ -1858,10 +1903,44 @@ export type Database = {
           },
         ]
       }
+      demo_website_types: {
+        Row: {
+          beschrijving: string | null
+          conversion_elements: string[]
+          id: string
+          must_have: string[]
+          naam: string
+          secties: string[]
+          sort_order: number | null
+          ui_patterns: string[]
+        }
+        Insert: {
+          beschrijving?: string | null
+          conversion_elements?: string[]
+          id: string
+          must_have?: string[]
+          naam: string
+          secties?: string[]
+          sort_order?: number | null
+          ui_patterns?: string[]
+        }
+        Update: {
+          beschrijving?: string | null
+          conversion_elements?: string[]
+          id?: string
+          must_have?: string[]
+          naam?: string
+          secties?: string[]
+          sort_order?: number | null
+          ui_patterns?: string[]
+        }
+        Relationships: []
+      }
       demos: {
         Row: {
           active_page: string | null
           company_name: string | null
+          company_research: Json | null
           contact_id: string | null
           created_at: string
           demo_html: string
@@ -1887,6 +1966,7 @@ export type Database = {
         Insert: {
           active_page?: string | null
           company_name?: string | null
+          company_research?: Json | null
           contact_id?: string | null
           created_at?: string
           demo_html: string
@@ -1912,6 +1992,7 @@ export type Database = {
         Update: {
           active_page?: string | null
           company_name?: string | null
+          company_research?: Json | null
           contact_id?: string | null
           created_at?: string
           demo_html?: string
@@ -5780,6 +5861,7 @@ export type Database = {
           ai_analysis: Json | null
           branding: Json | null
           company_id: string | null
+          company_research: Json | null
           contact_id: string | null
           created_at: string
           discovered_urls: string[] | null
@@ -5792,6 +5874,7 @@ export type Database = {
           markdown: string | null
           metadata: Json | null
           organization_id: string
+          research_status: string | null
           scan_mode: string | null
           scraped_pages_count: number | null
           screenshot_url: string | null
@@ -5804,6 +5887,7 @@ export type Database = {
           ai_analysis?: Json | null
           branding?: Json | null
           company_id?: string | null
+          company_research?: Json | null
           contact_id?: string | null
           created_at?: string
           discovered_urls?: string[] | null
@@ -5816,6 +5900,7 @@ export type Database = {
           markdown?: string | null
           metadata?: Json | null
           organization_id: string
+          research_status?: string | null
           scan_mode?: string | null
           scraped_pages_count?: number | null
           screenshot_url?: string | null
@@ -5828,6 +5913,7 @@ export type Database = {
           ai_analysis?: Json | null
           branding?: Json | null
           company_id?: string | null
+          company_research?: Json | null
           contact_id?: string | null
           created_at?: string
           discovered_urls?: string[] | null
@@ -5840,6 +5926,7 @@ export type Database = {
           markdown?: string | null
           metadata?: Json | null
           organization_id?: string
+          research_status?: string | null
           scan_mode?: string | null
           scraped_pages_count?: number | null
           screenshot_url?: string | null
