@@ -264,7 +264,7 @@ function CreateEndpointDialog({ open, onOpenChange }: { open: boolean; onOpenCha
 
   const sourcePaths = selectedTemplate?.payload_example ? extractPaths(selectedTemplate.payload_example) : [];
 
-  const addMapping = () => setMappings((m) => [...m, { source_path: "", target_field: "", transform: "" }]);
+  const addMapping = () => setMappings((m) => [...m, { source_path: "", target_field: "", transform: "none" }]);
   const removeMapping = (i: number) => setMappings((m) => m.filter((_, idx) => idx !== i));
   const updateMapping = (i: number, field: string, value: string) =>
     setMappings((m) => m.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
