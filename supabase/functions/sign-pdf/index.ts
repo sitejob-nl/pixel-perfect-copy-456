@@ -319,7 +319,7 @@ async function embedSignaturesInPdf(
   drawOnAudit("Ondertekenaars", 50, 11, auditFontBold, rgb(0.1, 0.1, 0.15));
   ay -= 4;
 
-  for (const s of (fullSessions || signedSessions)) {
+  for (const s of (fullSessions || sessions)) {
     drawOnAudit(`${s.signer_name} (${s.signer_role || "Ondertekenaar"})`, 50, 9, auditFontBold, rgb(0.1, 0.1, 0.2));
 
     const details: [string, string][] = [
