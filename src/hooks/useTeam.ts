@@ -10,7 +10,7 @@ export interface OrgMember {
   is_active: boolean;
   joined_at: string | null;
   invited_at: string | null;
-  profiles: { full_name: string | null; avatar_url: string | null } | null;
+  profiles: { full_name: string | null; avatar_url: string | null; email: string | null; phone: string | null } | null;
 }
 
 export interface OrgInvite {
