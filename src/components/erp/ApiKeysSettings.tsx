@@ -42,7 +42,7 @@ export default function ApiKeysSettings() {
     }
   };
 
-  const handleVerify = async (service: "anthropic" | "apify") => {
+  const handleVerify = async (service: "anthropic" | "apify" | "resend") => {
     try {
       const result = await verifyKey.mutateAsync(service);
       toast({ title: (result as any)?.valid ? "✅ Key is geldig" : "❌ Key is ongeldig" });
