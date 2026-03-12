@@ -340,6 +340,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
             renderHtml={renderHtml}
             signers={signers}
             onSignersChange={setSigners}
+            members={members || []}
           />
         )}
 
