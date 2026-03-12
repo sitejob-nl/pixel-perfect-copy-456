@@ -1,3 +1,4 @@
+import React from "react";
 import { cn } from "@/lib/utils";
 
 export function Dot({ color, size = 6 }: { color: string; size?: number }) {
