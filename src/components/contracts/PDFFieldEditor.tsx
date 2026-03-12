@@ -172,62 +172,64 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
         )}
 
         {/* Document with overlay fields */}
-        <div className="relative border border-erp-border0 rounded-xl bg-white overflow-hidden flex-1" ref={containerRef}>
-          {pages[activePage]?.startsWith("data:image") || pages[activePage]?.startsWith("blob:") ? (
-            <img
-              src={pages[activePage]}
-              alt={`Pagina ${activePage + 1}`}
-              className="w-full select-none"
-              draggable={false}
-              onClick={() => setSelectedField(null)}
-            />
-          ) : (
-            <div
-              className="p-8 text-sm text-gray-900 leading-relaxed min-h-[500px] select-none"
-              dangerouslySetInnerHTML={{ __html: pages[activePage] || "<p>Geen content</p>" }}
-              onClick={() => setSelectedField(null)}
-            />
-          )}
-
-          {/* Draggable fields overlay */}
-          {pageFields.map((field) => {
-            const colorClass = SIGNER_COLORS[field.signerIndex % SIGNER_COLORS.length];
-            const isSelected = selectedField === field.id;
-            return (
+        <div className="border border-erp-border0 rounded-xl bg-slate-100 overflow-y-auto flex-1">
+          <div className="relative mx-auto bg-white" ref={containerRef} style={{ width: 'fit-content' }}>
+            {pages[activePage]?.startsWith("data:image") || pages[activePage]?.startsWith("blob:") ? (
+              <img
+                src={pages[activePage]}
+                alt={`Pagina ${activePage + 1}`}
+                className="block max-w-full h-auto select-none"
+                draggable={false}
+                onClick={() => setSelectedField(null)}
+              />
+            ) : (
               <div
-                key={field.id}
-                onMouseDown={(e) => handleMouseDown(e, field.id)}
-                className={cn(
-                  "absolute border-2 border-dashed rounded-lg flex items-center justify-center gap-1.5 cursor-move transition-shadow text-xs font-medium select-none",
-                  colorClass,
-                  isSelected && "ring-2 ring-erp-blue shadow-lg",
-                  dragging === field.id && "opacity-70",
-                  readOnly && "cursor-default"
-                )}
-                style={{
-                  left: `${field.x}%`,
-                  top: `${field.y}%`,
-                  width: `${field.width}%`,
-                  height: `${field.height}%`,
-                  minHeight: 24,
-                }}
-              >
-                <span className="text-[10px]">
-                  {FIELD_TYPES.find((t) => t.type === field.type)?.icon}
-                </span>
-                <span className="truncate text-[11px] text-gray-600">{field.label}</span>
-                {!readOnly && isSelected && (
-                  <button
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => removeField(field.id)}
-                    className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center hover:bg-red-600"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            );
-          })}
+                className="p-8 text-sm text-gray-900 leading-relaxed min-h-[500px] select-none"
+                dangerouslySetInnerHTML={{ __html: pages[activePage] || "<p>Geen content</p>" }}
+                onClick={() => setSelectedField(null)}
+              />
+            )}
+
+            {/* Draggable fields overlay */}
+            {pageFields.map((field) => {
+              const colorClass = SIGNER_COLORS[field.signerIndex % SIGNER_COLORS.length];
+              const isSelected = selectedField === field.id;
+              return (
+                <div
+                  key={field.id}
+                  onMouseDown={(e) => handleMouseDown(e, field.id)}
+                  className={cn(
+                    "absolute border-2 border-dashed rounded-lg flex items-center justify-center gap-1.5 cursor-move transition-shadow text-xs font-medium select-none",
+                    colorClass,
+                    isSelected && "ring-2 ring-erp-blue shadow-lg",
+                    dragging === field.id && "opacity-70",
+                    readOnly && "cursor-default"
+                  )}
+                  style={{
+                    left: `${field.x}%`,
+                    top: `${field.y}%`,
+                    width: `${field.width}%`,
+                    height: `${field.height}%`,
+                    minHeight: 24,
+                  }}
+                >
+                  <span className="text-[10px]">
+                    {FIELD_TYPES.find((t) => t.type === field.type)?.icon}
+                  </span>
+                  <span className="truncate text-[11px] text-gray-600">{field.label}</span>
+                  {!readOnly && isSelected && (
+                    <button
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => removeField(field.id)}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center hover:bg-red-600"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

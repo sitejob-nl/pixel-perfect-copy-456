@@ -272,7 +272,7 @@ function CreateContractDialog({ open, onClose, onCreated }: {
       const images: string[] = [];
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 1.5 });
+        const viewport = page.getViewport({ scale: 2.0 });
         const canvas = document.createElement("canvas");
         canvas.width = viewport.width;
         canvas.height = viewport.height;
@@ -756,7 +756,7 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members, contractM
       {showFieldEditor && (
         <div>
           <h4 className="text-sm font-semibold text-erp-text0 mb-2">Velden positioneren op de PDF</h4>
-          <div className="h-[400px]">
+          <div className="h-[70vh]">
             <PDFFieldEditor
               pages={pdfPageImages}
               fields={signatureFields}
