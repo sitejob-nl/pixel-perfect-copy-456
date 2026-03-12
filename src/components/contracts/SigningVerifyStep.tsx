@@ -45,7 +45,7 @@ export default function SigningVerifyStep({ baseUrl, token, onVerified, onError 
         inputRefs.current[0]?.focus();
       }
     } catch {
-      setError("Kon code niet verzenden");
+      setError("Kon verificatiecode niet verzenden");
     }
     setSending(false);
   }, [baseUrl, token, resendCount]);
