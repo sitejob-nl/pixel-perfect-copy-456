@@ -482,7 +482,7 @@ Deno.serve(async (req) => {
 
       if (apiKeyRow?.resend_api_key_encrypted) {
         const encKey = Deno.env.get("ENCRYPTION_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!.slice(0, 32);
-        const resendKey = decryptKey(apiKeyRow.encrypted_key, encKey);
+        const resendKey = decryptKey(apiKeyRow.resend_api_key_encrypted, encKey);
 
         for (const session of signedSessions) {
           await fetch("https://api.resend.com/emails", {
