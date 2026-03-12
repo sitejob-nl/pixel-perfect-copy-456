@@ -19,6 +19,8 @@ import { nl } from "date-fns/locale";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { supabase } from "@/integrations/supabase/client";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "hsl(var(--erp-text-2))",
