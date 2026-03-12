@@ -36,6 +36,9 @@ export function useApiKeyStatus() {
         apify_key_set: false,
         apify_key_hint: null,
         apify_key_verified_at: null,
+        resend_key_set: false,
+        resend_key_hint: null,
+        resend_key_verified_at: null,
         selected_model: null,
       };
     },

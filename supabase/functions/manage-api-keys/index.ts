@@ -128,6 +128,11 @@ Deno.serve(async (req) => {
           headers: { Authorization: `Bearer ${decrypted}` },
         });
         valid = resp.ok;
+      } else if (service === "resend") {
+        const resp = await fetch("https://api.resend.com/api-keys", {
+          headers: { Authorization: `Bearer ${decrypted}` },
+        });
+        valid = resp.ok;
       }
 
       if (valid) {
