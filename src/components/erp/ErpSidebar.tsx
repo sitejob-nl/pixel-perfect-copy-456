@@ -76,6 +76,7 @@ const moduleMap: Record<string, string> = {
   aiagent: "mod_ai_agent",
   demos: "mod_demos",
   webhooks: "mod_webhooks",
+  email: "mod_email_accounts",
 };
 
 export default function ErpSidebar() {
