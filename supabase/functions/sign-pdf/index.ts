@@ -408,9 +408,22 @@ Deno.serve(async (req) => {
       return json({ error: "Geen ondertekende sessies gevonden" }, 400);
     }
 
-    // Step 1: Generate base PDF from contract HTML
-    const htmlContent = contract.rendered_html || contract.content || "";
-    const basePdfBytes = await createPdfFromHtml(htmlContent);
+    // Step 1: Get base PDF — either from uploaded PDF or generate from HTML
+    let basePdfBytes: Uint8Array;
+    if (contract.pdf_url) {
+      // Download the original uploaded PDF
+      console.log("Downloading original PDF from:", contract.pdf_url);
+      const pdfResp = await fetch(contract.pdf_url);
+      if (!pdfResp.ok) {
+        console.error("Failed to download original PDF:", pdfResp.status, pdfResp.statusText);
+        return json({ error: "Originele PDF kon niet worden gedownload" }, 500);
+      }
+      basePdfBytes = new Uint8Array(await pdfResp.arrayBuffer());
+      console.log("Original PDF downloaded, size:", basePdfBytes.length);
+    } else {
+      const htmlContent = contract.rendered_html || contract.content || "";
+      basePdfBytes = await createPdfFromHtml(htmlContent);
+    }
 
     // Step 2: Embed signatures
     const signatureFields = contract.signature_fields || null;
