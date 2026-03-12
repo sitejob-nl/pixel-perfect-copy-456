@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import ErpSidebar from "@/components/erp/ErpSidebar";
 import ErpHeader from "@/components/erp/ErpHeader";
+import { BrandingProvider } from "@/contexts/BrandingContext";
 import { toast } from "sonner";
 
 const Index = () => {
