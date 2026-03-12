@@ -52,6 +52,8 @@ export default function SettingsPage() {
 
       {activeTab === "api-keys" && <ApiKeysSettings />}
 
+      {activeTab === "email" && <ResendSettings />}
+
       {activeTab === "snelstart" && <SnelstartSettings />}
 
       {activeTab === "algemeen" && <OrgSettings />}
