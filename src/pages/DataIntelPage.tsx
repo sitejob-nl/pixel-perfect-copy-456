@@ -181,7 +181,7 @@ export default function DataIntelPage() {
                   </TD>
                   <TD className="text-erp-text2 text-[12px]">{lead.email || "—"}</TD>
                   <TD><Chip>{lead.source || "—"}</Chip></TD>
-                  <TD className="text-erp-text3 text-[11px] max-w-[200px] truncate" title={lead.ai_summary || ""}>
+                  <TD className="text-erp-text3 text-[11px] max-w-[200px] truncate">
                     {lead.ai_summary || "—"}
                   </TD>
                 </TR>
