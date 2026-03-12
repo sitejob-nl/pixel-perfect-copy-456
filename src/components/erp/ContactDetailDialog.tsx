@@ -255,7 +255,7 @@ export default function ContactDetailDialog({ contact, open, onOpenChange }: Pro
                 {contact.linkedin_url && (
                   <div className="flex gap-2">
                     <span className="text-erp-text3 w-28 shrink-0">LinkedIn</span>
-                    <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline truncate">
+                    <a href={contact.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
                       {contact.linkedin_url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, "").replace(/\/$/, "") || contact.linkedin_url}
                     </a>
                   </div>
