@@ -2062,6 +2062,51 @@ export type Database = {
           },
         ]
       }
+      member_module_overrides: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          module_key: string
+          organization_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          module_key: string
+          organization_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          module_key?: string
+          organization_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_module_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_module_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_preferences: {
         Row: {
           contract_signed: string | null
