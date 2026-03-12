@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Icons, type IconName } from "@/components/erp/ErpIcons";
 import { Dot } from "@/components/erp/ErpPrimitives";
@@ -55,7 +56,6 @@ const nav: NavSection[] = [
   },
 ];
 
-// Map sidebar keys to module column names
 const moduleMap: Record<string, string> = {
   projects: "mod_projects",
   quotes: "mod_quotes",
@@ -69,16 +69,26 @@ const moduleMap: Record<string, string> = {
   webhooks: "mod_webhooks",
 };
 
-export default function ErpSidebar({ activePage, onNavigate }: { activePage: string; onNavigate: (page: string) => void }) {
+export default function ErpSidebar() {
   const [hov, setHov] = useState<string | null>(null);
   const { data: modules } = useOrgModules();
   const { data: isSuperAdmin } = useIsSuperAdmin();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Derive active page from pathname
+  const pathSegment = location.pathname.split("/")[1] || "dashboard";
+  const activePage = pathSegment;
 
   const isModuleEnabled = (pageKey: string) => {
     const moduleKey = moduleMap[pageKey];
-    if (!moduleKey) return true; // core module
-    if (!modules) return true; // loading
+    if (!moduleKey) return true;
+    if (!modules) return true;
     return (modules as any)[moduleKey] === true;
+  };
+
+  const handleNavigate = (key: string) => {
+    navigate(`/${key}`);
   };
 
   return (
@@ -108,13 +118,13 @@ export default function ErpSidebar({ activePage, onNavigate }: { activePage: str
             <div key={sec.l} className="mb-[18px]">
               <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">{sec.l}</div>
               {visibleItems.map(it => {
-                const Icon = Icons[it.i];
                 const active = activePage === it.k;
                 const hover = hov === it.k && !active;
+                const Icon = Icons[it.i];
                 return (
                   <div
                     key={it.k}
-                    onClick={() => onNavigate(it.k)}
+                    onClick={() => handleNavigate(it.k)}
                     onMouseEnter={() => setHov(it.k)}
                     onMouseLeave={() => setHov(null)}
                     className={cn(
@@ -143,7 +153,7 @@ export default function ErpSidebar({ activePage, onNavigate }: { activePage: str
           <div className="mb-[18px]">
             <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">Admin</div>
             <div
-              onClick={() => onNavigate("admin")}
+              onClick={() => handleNavigate("admin")}
               onMouseEnter={() => setHov("admin")}
               onMouseLeave={() => setHov(null)}
               className={cn(
@@ -166,7 +176,7 @@ export default function ErpSidebar({ activePage, onNavigate }: { activePage: str
           <div className="text-[13px] font-semibold">SiteJob B.V.</div>
           <div className="text-[10.5px] text-erp-text3">Professional</div>
         </div>
-        <span className="text-erp-text3 cursor-pointer flex" onClick={() => onNavigate("settings")}><Icons.Settings className="w-[17px] h-[17px]" /></span>
+        <span className="text-erp-text3 cursor-pointer flex" onClick={() => handleNavigate("settings")}><Icons.Settings className="w-[17px] h-[17px]" /></span>
       </div>
     </aside>
   );

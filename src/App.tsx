@@ -5,11 +5,25 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import NotFound from "./pages/NotFound";
+import DashboardPage from "./pages/DashboardPage";
+import ContactsPage from "./pages/ContactsPage";
+import CompaniesPage from "./pages/CompaniesPage";
+import PipelinePage from "./pages/PipelinePage";
+import { ProjectsPage, InvoicesPage } from "./pages/ProjectsInvoicesPage";
+import QuotesPage from "./pages/QuotesPage";
+import DataIntelPage from "./pages/DataIntelPage";
+import AIAgentPage from "./pages/AIAgentPage";
+import ContentPage from "./pages/ContentPage";
+import WebhooksPage from "./pages/WebhooksPage";
+import AdminPage from "./pages/AdminPage";
+import SettingsPage from "./pages/SettingsPage";
+import PlaceholderPage from "./pages/PlaceholderPage";
 
 const queryClient = new QueryClient();
 
@@ -29,7 +43,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // No organization yet → onboarding
   if (!orgData) {
     return <Navigate to="/onboarding" replace />;
   }
@@ -53,9 +66,8 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Already has org → go to dashboard
   if (orgData) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
@@ -73,10 +85,20 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (session) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;
+}
+
+function AdminRoute() {
+  const { data: isSuperAdmin, isLoading } = useIsSuperAdmin();
+
+  if (isLoading) return null;
+
+  return isSuperAdmin
+    ? <AdminPage />
+    : <PlaceholderPage title="Geen toegang" icon="Home" />;
 }
 
 const App = () => (
@@ -90,7 +112,28 @@ const App = () => (
             <Route path="/auth" element={<AuthRoute><AuthPage /></AuthRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
-            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+
+            {/* Protected layout with sidebar */}
+            <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="contacts" element={<ContactsPage />} />
+              <Route path="companies" element={<CompaniesPage />} />
+              <Route path="pipeline" element={<PipelinePage />} />
+              <Route path="projects" element={<ProjectsPage />} />
+              <Route path="invoices" element={<InvoicesPage />} />
+              <Route path="quotes" element={<QuotesPage />} />
+              <Route path="contracts" element={<PlaceholderPage title="Contracten" icon="Pen" />} />
+              <Route path="dataintel" element={<DataIntelPage />} />
+              <Route path="aiagent" element={<AIAgentPage />} />
+              <Route path="demos" element={<PlaceholderPage title="Demo Generatie" icon="Globe" />} />
+              <Route path="content" element={<ContentPage />} />
+              <Route path="whatsapp" element={<PlaceholderPage title="WhatsApp" icon="Msg" />} />
+              <Route path="webhooks" element={<WebhooksPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="admin" element={<AdminRoute />} />
+            </Route>
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
