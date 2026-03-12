@@ -234,7 +234,7 @@ export default function EmailBuilder({ initialDesign, onSave, saving }: Props) {
       </DndContext>
 
       {/* Right: Settings */}
-      <BlockSettings block={selectedBlock} settings={design.settings} onUpdateBlock={updateBlockData} onUpdateSettings={updateSettings} />
+      <BlockSettings block={selectedBlock} settings={design.settings || getDefaultDesign().settings} onUpdateBlock={updateBlockData} onUpdateSettings={updateSettings} />
     </div>
   );
 }
