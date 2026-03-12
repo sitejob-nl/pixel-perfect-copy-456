@@ -600,10 +600,44 @@ function Step3Preview({ renderHtml, signers, onSignersChange }: {
 function ContractDetail({ contractId, onBack }: { contractId: string; onBack: () => void }) {
   const { data: contract, isLoading } = useContract(contractId);
   const [tab, setTab] = useState("content");
+  const [sigFields, setSigFields] = useState<SignatureField[]>([]);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const updateContract = useUpdateContract();
 
-  if (isLoading) return <div className="text-erp-text3 text-sm py-8 text-center">Laden...</div>;
-  if (!contract) return <div className="text-erp-text3 text-sm py-8 text-center">Contract niet gevonden</div>;
+  // Load existing signature fields from contract
+  useEffect(() => {
+    if (contract?.signature_fields && Array.isArray(contract.signature_fields)) {
+      setSigFields(contract.signature_fields as SignatureField[]);
+    }
+  }, [contract?.signature_fields]);
+
+  const saveFields = async () => {
+    try {
+      await updateContract.mutateAsync({ id: contractId, signature_fields: sigFields });
+      toast.success("Velden opgeslagen");
+    } catch (e: any) {
+      toast.error(e.message || "Opslaan mislukt");
+    }
+  };
+
+  const generatePdf = async () => {
+    setGeneratingPdf(true);
+    try {
+      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://fuvpmxxihmpustftzvgk.supabase.co"}/functions/v1/sign-pdf`;
+      const res = await fetch(baseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contract_id: contractId }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      toast.success("PDF gegenereerd");
+      if (data.pdf_url) window.open(data.pdf_url, "_blank");
+    } catch (e: any) {
+      toast.error(e.message || "PDF generatie mislukt");
+    }
+    setGeneratingPdf(false);
+  };
 
   const signingBaseUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://fuvpmxxihmpustftzvgk.supabase.co"}/functions/v1/contract-signing`;
 
