@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,12 +125,26 @@ function GenerateTab() {
   const { data: contacts } = useContacts();
   const generateDemo = useGenerateDemo();
 
+  // Dynamic model list from ai_models table
+  const { data: aiModels } = useQuery({
+    queryKey: ["ai-models"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ai_models")
+        .select("id, display_name, tier, is_available")
+        .eq("is_available", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const [step, setStep] = useState(1);
   const [companyName, setCompanyName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [contactId, setContactId] = useState("");
   const [demoType, setDemoType] = useState("website");
-  const [model, setModel] = useState("claude-sonnet-4-20250514");
+  const [model, setModel] = useState("");
   const [result, setResult] = useState<any>(null);
   const [device, setDevice] = useState("desktop");
 
@@ -226,11 +242,16 @@ function GenerateTab() {
       <div className="space-y-2">
         <Label>Model</Label>
         <Select value={model} onValueChange={setModel}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder="Selecteer model" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4</SelectItem>
-            <SelectItem value="claude-3-5-haiku-20241022">Claude 3.5 Haiku</SelectItem>
-            <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+            {(aiModels || []).map((m: any) => (
+              <SelectItem key={m.id} value={m.id}>
+                <span className="flex items-center gap-2">
+                  {m.display_name}
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground uppercase">{m.tier}</span>
+                </span>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
