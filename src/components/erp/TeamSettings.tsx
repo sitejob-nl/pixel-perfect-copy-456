@@ -151,6 +151,7 @@ function MemberContracts({ memberName, memberUserId }: { memberName: string; mem
   );
 }
 
+export default function TeamSettings() {
   const { user } = useAuth();
   const { data: org } = useOrganization();
   const { data: members, isLoading: membersLoading } = useOrgMembers();
