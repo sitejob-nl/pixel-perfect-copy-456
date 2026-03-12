@@ -56,6 +56,8 @@ export default function TeamSettings() {
   const { data: members, isLoading: membersLoading } = useOrgMembers();
   const { data: invites } = useOrgInvites();
   const { data: modules } = useOrgModules();
+  const { data: orgDetails } = useOrgDetails();
+  const { data: overrides } = useMemberModuleOverrides();
   const { data: overrides } = useMemberModuleOverrides();
 
   const inviteMember = useInviteMember();
