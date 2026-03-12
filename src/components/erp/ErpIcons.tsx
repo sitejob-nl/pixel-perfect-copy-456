@@ -9,7 +9,7 @@ export const Icons = {
   Folder: FolderOpen, Calendar, Globe, Msg: MessageCircle, Pen: PenLine,
   Search, Plus, Bell, Settings, ChevDown: ChevronDown, LogOut,
   Edit: Pencil, Trash: Trash2, Bot, Menu, Shield: ShieldCheck, Send,
-  Book: BookOpen, Portal: LayoutDashboard,
+  Book: BookOpen, Portal: LayoutDashboard, Mail,
 };
 
 export type IconName = keyof typeof Icons;
