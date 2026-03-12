@@ -309,7 +309,12 @@ async function handleSign(req: Request) {
     .update(contractUpdate)
     .eq("id", contract.id);
 
-  // Audit log
+  // Audit log — include IP address directly
+  const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || req.headers.get("cf-connecting-ip")
+    || req.headers.get("x-real-ip")
+    || null;
+
   await sb.from("contract_audit_logs").insert({
     contract_id: contract.id,
     organization_id: contract.organization_id,
@@ -319,14 +324,23 @@ async function handleSign(req: Request) {
     signer_name: session.signer_name,
     signer_email: session.signer_email,
     document_hash: documentHash,
+    ip_address: ipAddress,
     geolocation: geolocation || null,
     user_agent: userAgent,
     metadata: {
       signature_type: signature_type || "draw",
       all_signed: allSigned,
-      ip_address: req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || null,
     },
   });
+
+  // Also store IP and user agent on the signing session for PDF audit trail
+  await sb
+    .from("contract_signing_sessions")
+    .update({
+      ip_address: ipAddress,
+      browser_fingerprint: userAgent?.substring(0, 255) || null,
+    })
+    .eq("id", session.id);
 
   return json({
     success: true,

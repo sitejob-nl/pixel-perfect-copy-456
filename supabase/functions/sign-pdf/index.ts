@@ -267,11 +267,105 @@ async function embedSignaturesInPdf(
     }
   }
 
-  // Add document hash footer on last page
-  const finalPages = pdfDoc.getPages();
-  const finalLast = finalPages[finalPages.length - 1];
-  finalLast.drawText("Dit document is elektronisch ondertekend conform artikel 3:15a BW en eIDAS.", {
-    x: 50, y: 30, size: 7, font, color: rgb(0.5, 0.5, 0.5),
+  // ─── Audit Trail Page ─────────────────────────────────────────────
+  const auditSb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: auditLogs } = await auditSb
+    .from("contract_audit_logs")
+    .select("*")
+    .eq("contract_id", contract_id)
+    .order("created_at", { ascending: true });
+
+  // Re-fetch sessions with IP/fingerprint data
+  const { data: fullSessions } = await auditSb
+    .from("contract_signing_sessions")
+    .select("*")
+    .eq("contract_id", contract_id)
+    .eq("status", "signed");
+
+  const auditFont = font;
+  const auditFontBold = fontBold;
+
+  let currentAuditPage = pdfDoc.addPage([595, 842]);
+  let ay = 800;
+
+  const drawOnAudit = (text: string, x: number, size: number, f: any, c: any) => {
+    if (ay < 50) {
+      currentAuditPage = pdfDoc.addPage([595, 842]);
+      ay = 800;
+    }
+    currentAuditPage.drawText(text.substring(0, 120), { x, y: ay, size, font: f, color: c });
+    ay -= size + 3;
+  };
+
+  drawOnAudit("Audit Trail — Bewijs van Ondertekening", 50, 14, auditFontBold, rgb(0.1, 0.1, 0.15));
+  ay -= 4;
+  currentAuditPage.drawLine({ start: { x: 50, y: ay + 8 }, end: { x: 545, y: ay + 8 }, thickness: 0.5, color: rgb(0.7, 0.7, 0.7) });
+  ay -= 8;
+
+  // Contract info
+  const auditInfo = [
+    ["Contracttitel", contract.title || "—"],
+    ["Contractnummer", contract.contract_number || "—"],
+    ["PDF gegenereerd", new Date().toLocaleString("nl-NL", { dateStyle: "long", timeStyle: "medium" })],
+  ];
+  for (const [label, value] of auditInfo) {
+    drawOnAudit(`${label}:  ${value}`, 50, 8, auditFont, rgb(0.2, 0.2, 0.2));
+  }
+  ay -= 6;
+
+  // Signer details
+  drawOnAudit("Ondertekenaars", 50, 11, auditFontBold, rgb(0.1, 0.1, 0.15));
+  ay -= 4;
+
+  for (const s of (fullSessions || signedSessions)) {
+    drawOnAudit(`${s.signer_name} (${s.signer_role || "Ondertekenaar"})`, 50, 9, auditFontBold, rgb(0.1, 0.1, 0.2));
+
+    const details: [string, string][] = [
+      ["E-mail", s.signer_email || "—"],
+      ["Telefoon", s.signer_phone || "—"],
+      ["Ondertekend op", s.signed_at ? new Date(s.signed_at).toLocaleString("nl-NL", { dateStyle: "long", timeStyle: "medium" }) : "—"],
+      ["Handtekening", s.signature_type === "draw" ? "Getekend (canvas)" : "Getypt"],
+      ["SMS geverifieerd", s.sms_verified_at ? new Date(s.sms_verified_at).toLocaleString("nl-NL", { dateStyle: "long", timeStyle: "medium" }) : "—"],
+      ["IP-adres", s.ip_address || "—"],
+      ["User agent", (s.user_agent || s.browser_fingerprint || "—").substring(0, 90)],
+      ["Document hash", s.signed_document_hash ? s.signed_document_hash.substring(0, 48) + "..." : "—"],
+    ];
+
+    // Geolocation
+    if (s.geolocation && typeof s.geolocation === "object") {
+      const geo = s.geolocation as Record<string, any>;
+      if (geo.latitude && geo.longitude) {
+        details.push(["Locatie", `${geo.latitude}, ${geo.longitude} (±${geo.accuracy || "?"}m)`]);
+      }
+    }
+
+    for (const [label, value] of details) {
+      if (ay < 50) { currentAuditPage = pdfDoc.addPage([595, 842]); ay = 800; }
+      currentAuditPage.drawText(`${label}:`, { x: 60, y: ay, size: 7, font: auditFont, color: rgb(0.4, 0.4, 0.4) });
+      currentAuditPage.drawText(value, { x: 155, y: ay, size: 7, font: auditFont, color: rgb(0.15, 0.15, 0.15) });
+      ay -= 11;
+    }
+    ay -= 8;
+  }
+
+  // Event log
+  if (auditLogs && auditLogs.length > 0) {
+    drawOnAudit("Gebeurtenissenlog", 50, 11, auditFontBold, rgb(0.1, 0.1, 0.15));
+    ay -= 2;
+
+    for (const log of auditLogs) {
+      if (ay < 50) { currentAuditPage = pdfDoc.addPage([595, 842]); ay = 800; }
+      const ts = log.created_at ? new Date(log.created_at).toLocaleString("nl-NL", { dateStyle: "short", timeStyle: "medium" }) : "";
+      const ip = log.ip_address || (log.metadata as any)?.ip_address || "";
+      const line = `${ts}  |  ${log.action}  |  ${log.signer_name || "systeem"}${ip ? `  |  IP: ${ip}` : ""}`;
+      currentAuditPage.drawText(line.substring(0, 110), { x: 50, y: ay, size: 6.5, font: auditFont, color: rgb(0.3, 0.3, 0.3) });
+      ay -= 10;
+    }
+  }
+
+  // Legal footer
+  currentAuditPage.drawText("Dit document is elektronisch ondertekend conform artikel 3:15a BW en de Europese eIDAS-verordening (EU 910/2014).", {
+    x: 50, y: 20, size: 6.5, font: auditFont, color: rgb(0.5, 0.5, 0.5),
   });
 
   return pdfDoc.save();

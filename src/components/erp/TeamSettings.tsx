@@ -20,8 +20,9 @@ import {
   useDeleteInvite,
   useSetModuleOverride,
 } from "@/hooks/useTeam";
+import { useContracts } from "@/hooks/useContracts";
 import { toast } from "sonner";
-import { Eye } from "lucide-react";
+import { Eye, FileText, ExternalLink } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Eigenaar",
@@ -89,6 +90,65 @@ function InviteEmailPreview({ orgName, logoUrl, primaryColor, inviterName, roleL
 </td></tr></table></body>`;
 
   return <div className="rounded-lg overflow-hidden border border-erp-border0" dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+function MemberContracts({ memberName, memberUserId }: { memberName: string; memberEmail?: string; memberUserId: string }) {
+  const { data: contracts } = useContracts();
+
+  // Find contracts where this member is a signer (by matching signer_name or checking signing sessions)
+  const memberContracts = (contracts || []).filter((c: any) => {
+    const sessions = c.contract_signing_sessions || [];
+    return sessions.some((s: any) =>
+      s.signer_name?.toLowerCase().includes(memberName.toLowerCase().split(" ")[0]) ||
+      s.status === "signed"
+    );
+  });
+
+  // Also include contracts explicitly linked via contact matching
+  const signedContracts = memberContracts.filter((c: any) =>
+    (c.contract_signing_sessions || []).some((s: any) => s.status === "signed")
+  );
+
+  if (signedContracts.length === 0) return null;
+
+  return (
+    <div className="px-4 pb-4 pt-1 border-t border-erp-border0 bg-erp-bg2">
+      <div className="text-[11px] font-medium text-erp-text2 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+        <FileText className="w-3 h-3" />
+        Ondertekende contracten
+      </div>
+      <div className="space-y-1.5">
+        {signedContracts.map((c: any) => {
+          const sessions = c.contract_signing_sessions || [];
+          const signerSession = sessions.find((s: any) => s.status === "signed");
+          return (
+            <div key={c.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-erp-bg3 border border-erp-border0">
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-4 h-4 text-erp-green" />
+                <div>
+                  <div className="text-[12px] font-medium text-erp-text0">{c.title}</div>
+                  <div className="text-[10px] text-erp-text3">
+                    {c.contract_number} · Getekend op {signerSession?.signed_at ? new Date(signerSession.signed_at).toLocaleDateString("nl-NL") : "—"}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {c.signed_pdf_url && (
+                  <a href={c.signed_pdf_url} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[11px] text-erp-blue hover:underline font-medium">
+                    PDF <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-erp-green/15 text-erp-green">
+                  ✓ Getekend
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export default function TeamSettings() {
@@ -405,6 +465,11 @@ export default function TeamSettings() {
                         </button>
                       )}
                     </div>
+                  )}
+
+                  {/* Expanded: Signed contracts for this member */}
+                  {isExpanded && (
+                    <MemberContracts memberName={displayName} memberEmail={member.profiles?.full_name ? undefined : undefined} memberUserId={member.user_id} />
                   )}
 
                   {/* Expanded but not admin: just show modules read-only */}
