@@ -27,12 +27,16 @@ const ROLE_LABELS: Record<string, string> = {
   owner: "Eigenaar",
   admin: "Admin",
   member: "Lid",
+  viewer: "Viewer",
+  intern: "Stagiair",
 };
 
 const ROLE_COLORS: Record<string, string> = {
   owner: "bg-erp-orange/15 text-erp-orange",
   admin: "bg-erp-blue/15 text-erp-blue",
   member: "bg-erp-bg4 text-erp-text2",
+  viewer: "bg-erp-bg4 text-erp-text3",
+  intern: "bg-erp-bg4 text-erp-text3",
 };
 
 const MODULE_LABELS: Record<string, string> = {
