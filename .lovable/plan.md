@@ -1,43 +1,68 @@
 
 
-## Diagnose: "Edge Function returned a non-2xx status code" bij send-invite
+# Fix Build Errors: Snelstart Type Mismatches
 
-### Bevindingen
+## Wat er nu is opgezet voor Snelstart
 
-1. **Deployment**: De functie is opnieuw gedeployed en draait nu. Er waren geen recente logs, wat erop wijst dat de vorige versie mogelijk niet correct was gedeployed.
+**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
 
-2. **Kritiek probleem in de `from` afzender**: De edge function stuurt emails met `from: noreply@{orgId}.resend.dev` -- dit gebruikt het organisatie-UUID als subdomain (bijv. `noreply@24021e4d-66d5-40b3-9968-c945bd8755c2.resend.dev`). Dit is geen geldig Resend-domein en zal door Resend worden geweigerd met een 403/422 error.
+**Frontend:**
+- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
+- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
+- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
 
-3. **Resend vereist een geverifieerd domein**: De `from` moet een domein gebruiken dat in Resend is geverifieerd, of het standaard `onboarding@resend.dev` adres voor testen.
+**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
 
-### Plan
+## Root Cause van de Build Errors
 
-1. **Fix de `from` afzender in `send-invite/index.ts`**:
-   - Haal de geverifieerde domeinen op uit Resend via de API, OF
-   - Eenvoudiger: gebruik een generiek Resend test-adres voor nu, of laat de admin een "from" adres configureren bij de org-instellingen
-   - Meest pragmatische oplossing: probeer eerst het domein op te halen via de Resend domains API, en val terug op `onboarding@resend.dev`
+De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
 
-2. **Verbeter error handling in de frontend** (`useTeam.ts`):
-   - Toon een duidelijke toast bij fouten zodat de gebruiker weet wat er mis ging (bijv. "Resend domein niet geverifieerd")
+## Fix (2 bestanden)
 
-3. **Redeploy de edge function** na de fix
+### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
 
-### Technische details
+Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
 
-In `send-invite/index.ts` rond regel 263, wijzig de `from` logica:
+Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
+```
+// FOUT: profiles heeft geen organization_id
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("organization_id")
+  .eq("id", user.id)
+  .single();
 
-```typescript
-// Haal geverifieerd domein op via Resend API
-const domainsRes = await fetch("https://api.resend.com/domains", {
-  headers: { Authorization: `Bearer ${resendKey}` },
-});
-const domainsData = await domainsRes.json();
-const verifiedDomain = domainsData?.data?.find((d: any) => d.status === "verified");
-
-const fromAddress = verifiedDomain
-  ? `${orgName} <noreply@${verifiedDomain.name}>`
-  : `${orgName} <onboarding@resend.dev>`;
+// FIX: gebruik organization_members
+const { data: membership } = await supabase
+  .from("organization_members")
+  .select("organization_id")
+  .eq("user_id", user.id)
+  .eq("is_active", true)
+  .limit(1)
+  .single();
 ```
 
-Gebruik dit `fromAddress` in de `fetch` call naar Resend.
+Voor de tabellen die niet in types staan, cast naar `any`:
+```
+const { data, error } = await (supabase as any)
+  .from("snelstart_config")
+  ...
+```
+
+### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
+
+Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
+```
+const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
+const actorId = providerConfig?.actorId || "";
+```
+
+### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
+
+De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
+
+## Bestanden
+
+- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
+- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
 
