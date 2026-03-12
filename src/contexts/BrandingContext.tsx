@@ -12,7 +12,7 @@ export function useBranding() {
   return useContext(BrandingContext);
 }
 
-function hexToHsl(hex: string): string | null {
+function hexToHsl(hex: string): { h: number; s: number; l: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return null;
 
@@ -34,7 +34,16 @@ function hexToHsl(hex: string): string | null {
     }
   }
 
-  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslString(hsl: { h: number; s: number; l: number }): string {
+  return `${hsl.h} ${hsl.s}% ${hsl.l}%`;
+}
+
+/** Skip colors that are too light (>85% lightness) or too dark (<15%) for accent use on dark bg */
+function isSafeAccentColor(hsl: { h: number; s: number; l: number }): boolean {
+  return hsl.l >= 15 && hsl.l <= 85 && hsl.s >= 10;
 }
 
 export function BrandingProvider({ children }: { children: React.ReactNode }) {
@@ -47,17 +56,18 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
 
     if (org.primary_color) {
       const hsl = hexToHsl(org.primary_color);
-      if (hsl) {
-        root.style.setProperty("--erp-blue", hsl);
-        root.style.setProperty("--primary", hsl);
-        root.style.setProperty("--ring", hsl);
+      if (hsl && isSafeAccentColor(hsl)) {
+        const str = hslString(hsl);
+        root.style.setProperty("--erp-blue", str);
+        root.style.setProperty("--primary", str);
+        root.style.setProperty("--ring", str);
       }
     }
 
     if (org.secondary_color) {
       const hsl = hexToHsl(org.secondary_color);
-      if (hsl) {
-        root.style.setProperty("--erp-purple", hsl);
+      if (hsl && isSafeAccentColor(hsl)) {
+        root.style.setProperty("--erp-purple", hslString(hsl));
       }
     }
 
@@ -66,7 +76,6 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
     }
 
     return () => {
-      // Reset on unmount (org switch)
       root.style.removeProperty("--erp-blue");
       root.style.removeProperty("--primary");
       root.style.removeProperty("--ring");
