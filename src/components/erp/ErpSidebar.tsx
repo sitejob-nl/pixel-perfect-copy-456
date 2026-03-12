@@ -66,6 +66,7 @@ const moduleMap: Record<string, string> = {
   content: "mod_content_calendar",
   whatsapp: "mod_whatsapp",
   dataintel: "mod_data_sources",
+  scrapers: "mod_data_sources",
   aiagent: "mod_ai_agent",
   demos: "mod_demos",
   webhooks: "mod_webhooks",
