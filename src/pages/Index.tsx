@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import ErpSidebar from "@/components/erp/ErpSidebar";
 import ErpHeader from "@/components/erp/ErpHeader";
-import { useSaveSnelstartConfig } from "@/hooks/useSnelstart";
 import { toast } from "sonner";
 import DashboardPage from "@/pages/DashboardPage";
 import ContactsPage from "@/pages/ContactsPage";
@@ -40,27 +39,18 @@ const pages: Record<string, React.ReactNode> = {
 const Index = () => {
   const [activePage, setActivePage] = useState("dashboard");
   const { data: isSuperAdmin } = useIsSuperAdmin();
-  const saveSnelstart = useSaveSnelstartConfig();
 
-  // Global Snelstart callback handler — runs on any page load
+  // Handle Snelstart successUrl redirect — show toast when user returns
   const callbackHandled = useRef(false);
   useEffect(() => {
     if (callbackHandled.current) return;
     const params = new URLSearchParams(window.location.search);
-    const koppelSleutel = params.get("koppelSleutel");
-    if (koppelSleutel) {
+    if (params.get("snelstart") === "activated") {
       callbackHandled.current = true;
-      saveSnelstart.mutateAsync({
-        koppel_sleutel: koppelSleutel,
-        is_active: true,
-      }).then(() => {
-        toast.success("Snelstart koppeling geactiveerd!");
-        setActivePage("settings");
-      }).catch((e: any) => {
-        toast.error("Fout bij activeren koppeling: " + e.message);
-      });
+      toast.success("Snelstart koppeling wordt geactiveerd. Dit kan even duren.");
+      setActivePage("settings");
       // Clean URL
-      params.delete("koppelSleutel");
+      params.delete("snelstart");
       const clean = params.toString();
       const newUrl = window.location.pathname + (clean ? "?" + clean : "");
       window.history.replaceState({}, "", newUrl);

@@ -72,11 +72,13 @@ export default function SnelstartSettings() {
 
     const isActive = config?.is_active && config?.koppel_sleutel;
 
-    // Build clean successUrl without query params like __lovable_token
-    const cleanSuccessUrl = window.location.origin + window.location.pathname;
+    // Build clean successUrl with snelstart=activated flag (no __lovable_token etc.)
+    const cleanSuccessUrl = window.location.origin + window.location.pathname + "?snelstart=activated";
     const activationUrl = appShortName
         ? `https://web.snelstart.nl/couplings/activate/${appShortName}?referenceKey=${config?.organization_id || ""}&successUrl=${encodeURIComponent(cleanSuccessUrl)}`
         : null;
+
+    const webhookUrl = "https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/snelstart-webhook";
 
     if (isLoading) {
         return <div className="text-erp-text3 text-sm">Laden...</div>;
