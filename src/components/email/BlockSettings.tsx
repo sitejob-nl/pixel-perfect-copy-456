@@ -1,6 +1,8 @@
 import type { Block, DesignSettings } from "./generateHtml";
 import MergeFieldInserter from "./MergeFieldInserter";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   block: Block | null;
