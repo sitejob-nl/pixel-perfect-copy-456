@@ -146,6 +146,60 @@ export default function ContactDetailPage() {
     enabled: !!id,
   });
 
+  // Internal notes with author info
+  const { data: notes = [] } = useQuery({
+    queryKey: ["contact-notes", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contact_notes")
+        .select("id, content, created_at, updated_at, user_id, profiles:user_id(full_name, email)")
+        .eq("contact_id", id!)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        content: string;
+        created_at: string;
+        updated_at: string;
+        user_id: string;
+        profiles: { full_name: string | null; email: string | null } | null;
+      }>;
+    },
+    enabled: !!id,
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!user || !org) throw new Error("Niet ingelogd");
+      const { error } = await supabase.from("contact_notes").insert({
+        contact_id: id!,
+        organization_id: org.organization_id,
+        user_id: user.id,
+        content,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-notes", id] });
+      setNoteText("");
+      toast.success("Notitie toegevoegd");
+    },
+    onError: (err) => toast.error(`Fout: ${err.message}`),
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      const { error } = await supabase.from("contact_notes").delete().eq("id", noteId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["contact-notes", id] });
+      toast.success("Notitie verwijderd");
+    },
+    onError: (err) => toast.error(`Fout: ${err.message}`),
+  });
+
   const updateMutation = useMutation({
     mutationFn: async () => {
       if (!contact) return;
