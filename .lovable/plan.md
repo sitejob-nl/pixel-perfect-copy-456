@@ -1,68 +1,50 @@
 
 
-# Fix Build Errors: Snelstart Type Mismatches
+# Snelstart Koppeling — Webhook Ontvanger
 
-## Wat er nu is opgezet voor Snelstart
+## Probleem
 
-**Database:** De tabellen `snelstart_config`, `snelstart_sync_log`, en `snelstart_entity_map` bestaan in Supabase met RLS policies.
+Uit de Snelstart documentatie blijkt dat de `KoppelSleutel` **niet** als URL-parameter op de `successUrl` wordt meegegeven. In plaats daarvan stuurt Snelstart een **POST webhook** naar een vooraf geconfigureerde webhook-URL met de body:
 
-**Frontend:**
-- `useSnelstart.ts` — hooks voor config ophalen/opslaan, sync triggeren, sync logs ophalen
-- `SnelstartSettings.tsx` — volledige settings UI met API key configuratie, sync knoppen per entity (klanten/facturen/offertes), sync log weergave
-- `SettingsPage.tsx` — tabbed settings pagina met Snelstart als apart tabblad
-
-**Edge Function:** Er wordt verwezen naar een `snelstart-sync` edge function (nog niet aanwezig in de codebase).
-
-## Root Cause van de Build Errors
-
-De Supabase types (`src/integrations/supabase/types.ts`) bevatten **geen** definities voor `snelstart_config`, `snelstart_sync_log`, of `snelstart_entity_map`. Daarnaast verwijst `useSnelstart.ts` naar `profiles.organization_id` dat niet bestaat — de org wordt via `organization_members` opgehaald.
-
-## Fix (2 bestanden)
-
-### 1. `src/hooks/useSnelstart.ts` — Fix org lookup + type casts
-
-Vervang de `profiles.organization_id` lookups door de `organization_members` tabel (zoals `useOrganization.ts` al doet). Gebruik `as any` type casts voor de Snelstart tabellen die niet in de gegenereerde types staan, totdat de types worden geregenereerd.
-
-Alle 3 functies (`useSnelstartConfig`, `useSaveSnelstartConfig`, `useSnelstartSyncLog`) gebruiken dezelfde foutieve pattern:
-```
-// FOUT: profiles heeft geen organization_id
-const { data: profile } = await supabase
-  .from("profiles")
-  .select("organization_id")
-  .eq("id", user.id)
-  .single();
-
-// FIX: gebruik organization_members
-const { data: membership } = await supabase
-  .from("organization_members")
-  .select("organization_id")
-  .eq("user_id", user.id)
-  .eq("is_active", true)
-  .limit(1)
-  .single();
+```json
+{ "KoppelSleutel": "string", "ActionType": "Create"|"Regenerate"|"Delete", "ReferenceKey": "string" }
 ```
 
-Voor de tabellen die niet in types staan, cast naar `any`:
+De `ReferenceKey` is wat wij meesturen in de activatie-URL (= `organization_id`). De huidige code die `koppelSleutel` uit de URL probeert te parsen werkt dus nooit.
+
+## Oplossing
+
+### 1. Nieuwe Edge Function: `supabase/functions/snelstart-webhook/index.ts`
+
+Ontvangt de POST van Snelstart:
+- Geen JWT verificatie (externe call)
+- Parst `KoppelSleutel`, `ActionType`, `ReferenceKey` uit de body
+- Bij `ActionType = "Create"` of `"Regenerate"`: upsert `snelstart_config` met `koppel_sleutel` + `is_active = true` waar `organization_id = ReferenceKey`
+- Bij `ActionType = "Delete"`: set `koppel_sleutel = null`, `is_active = false`
+- Retourneert 200 (vereist door Snelstart, geen retry bij falen)
+
+### 2. `supabase/config.toml` — Registreer de functie
+
+```toml
+[functions.snelstart-webhook]
+verify_jwt = false
 ```
-const { data, error } = await (supabase as any)
-  .from("snelstart_config")
-  ...
-```
 
-### 2. `src/components/erp/RunScraperDialog.tsx` — Fix Json type access
+### 3. `src/pages/Index.tsx` — Verwijder foutieve callback handler
 
-Regel 26: `selectedSource?.provider_config?.actorId` faalt omdat `provider_config` type `Json` is. Fix met een cast:
-```
-const providerConfig = selectedSource?.provider_config as Record<string, any> | undefined;
-const actorId = providerConfig?.actorId || "";
-```
+Verwijder de `useEffect` die `koppelSleutel` uit URL probeert te parsen (regels 43-68), plus de `useSaveSnelstartConfig` import en `useRef` als die niet meer nodig zijn.
 
-### 3. `src/components/erp/SnelstartSettings.tsx` — Fix config type
+Bij terugkomst op `successUrl` tonen we een toast als `?snelstart=activated` in de URL staat (optioneel, simpele UX-bevestiging).
 
-De `useSnelstartConfig` hook retourneert nu `any` door de cast, dus de properties (`subscription_key`, `app_short_name`, `is_active`, etc.) worden automatisch geaccepteerd. Geen wijzigingen nodig.
+### 4. `src/components/erp/SnelstartSettings.tsx` — Activatie-URL aanpassen
 
-## Bestanden
+`successUrl` voorzien van `?snelstart=activated` zodat Index.tsx een bevestigingstoast kan tonen na redirect.
 
-- `src/hooks/useSnelstart.ts` — organization_members lookup + `as any` casts
-- `src/components/erp/RunScraperDialog.tsx` — provider_config type cast
+De webhook-URL (`https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/snelstart-webhook`) moet door de partner bij Snelstart worden opgegeven. Toon dit URL in de settings UI zodat de gebruiker weet wat bij Snelstart geconfigureerd moet worden.
+
+## Technische details
+
+- De edge function gebruikt `SUPABASE_SERVICE_ROLE_KEY` om direct in `snelstart_config` te schrijven (geen user context)
+- `ReferenceKey` = `organization_id` (UUID), wordt gebruikt als lookup
+- Geen extra DB-migratie nodig — `snelstart_config` tabel heeft alle benodigde kolommen
 
