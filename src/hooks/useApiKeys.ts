@@ -92,3 +92,49 @@ export function useDeleteApiKey() {
     },
   });
 }
+
+// Get available AI models
+export function useAiModels() {
+  return useQuery({
+    queryKey: ["ai-models"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("ai_models")
+        .select("*")
+        .eq("is_available", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        display_name: string;
+        description: string | null;
+        tier: string;
+        input_price_per_mtok: number;
+        output_price_per_mtok: number;
+        context_window: number;
+        max_output_tokens: number;
+        supports_tools: boolean;
+        sort_order: number;
+      }>;
+    },
+  });
+}
+
+// Update selected model
+export function useUpdateSelectedModel() {
+  const qc = useQueryClient();
+  const { data: org } = useOrganization();
+
+  return useMutation({
+    mutationFn: async (modelId: string) => {
+      const { error } = await (supabase as any)
+        .from("organization_api_keys")
+        .update({ selected_model: modelId })
+        .eq("organization_id", org!.organization_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["api-key-status"] });
+    },
+  });
+}
