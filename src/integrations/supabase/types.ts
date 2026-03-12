@@ -860,11 +860,15 @@ export type Database = {
           contract_id: string
           created_at: string
           document_hash: string | null
+          event_type: string | null
+          geolocation: Json | null
           id: string
           ip_address: string | null
           metadata: Json | null
           organization_id: string | null
           session_id: string | null
+          signer_email: string | null
+          signer_name: string | null
           user_agent: string | null
         }
         Insert: {
@@ -872,11 +876,15 @@ export type Database = {
           contract_id: string
           created_at?: string
           document_hash?: string | null
+          event_type?: string | null
+          geolocation?: Json | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
           organization_id?: string | null
           session_id?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
           user_agent?: string | null
         }
         Update: {
@@ -884,11 +892,15 @@ export type Database = {
           contract_id?: string
           created_at?: string
           document_hash?: string | null
+          event_type?: string | null
+          geolocation?: Json | null
           id?: string
           ip_address?: string | null
           metadata?: Json | null
           organization_id?: string | null
           session_id?: string | null
+          signer_email?: string | null
+          signer_name?: string | null
           user_agent?: string | null
         }
         Relationships: [
@@ -924,16 +936,26 @@ export type Database = {
       }
       contract_signing_sessions: {
         Row: {
+          browser_fingerprint: string | null
+          consent_accepted_at: string | null
+          consent_text: string | null
           contract_id: string
           created_at: string
           expires_at: string
+          geolocation: Json | null
           id: string
           ip_address: string | null
           organization_id: string | null
           session_token: string
+          signature_data: string | null
+          signature_type: string | null
+          signed_at: string | null
+          signed_document_hash: string | null
           signer_email: string
           signer_name: string
           signer_phone: string
+          signer_role: string | null
+          signing_order: number | null
           sms_code_hash: string
           sms_sent_at: string | null
           sms_verified_at: string | null
@@ -942,16 +964,26 @@ export type Database = {
           verification_attempts: number | null
         }
         Insert: {
+          browser_fingerprint?: string | null
+          consent_accepted_at?: string | null
+          consent_text?: string | null
           contract_id: string
           created_at?: string
           expires_at?: string
+          geolocation?: Json | null
           id?: string
           ip_address?: string | null
           organization_id?: string | null
           session_token?: string
+          signature_data?: string | null
+          signature_type?: string | null
+          signed_at?: string | null
+          signed_document_hash?: string | null
           signer_email: string
           signer_name: string
           signer_phone: string
+          signer_role?: string | null
+          signing_order?: number | null
           sms_code_hash: string
           sms_sent_at?: string | null
           sms_verified_at?: string | null
@@ -960,16 +992,26 @@ export type Database = {
           verification_attempts?: number | null
         }
         Update: {
+          browser_fingerprint?: string | null
+          consent_accepted_at?: string | null
+          consent_text?: string | null
           contract_id?: string
           created_at?: string
           expires_at?: string
+          geolocation?: Json | null
           id?: string
           ip_address?: string | null
           organization_id?: string | null
           session_token?: string
+          signature_data?: string | null
+          signature_type?: string | null
+          signed_at?: string | null
+          signed_document_hash?: string | null
           signer_email?: string
           signer_name?: string
           signer_phone?: string
+          signer_role?: string | null
+          signing_order?: number | null
           sms_code_hash?: string
           sms_sent_at?: string | null
           sms_verified_at?: string | null
@@ -1001,74 +1043,274 @@ export type Database = {
           },
         ]
       }
+      contract_templates: {
+        Row: {
+          category: string | null
+          content_html: string
+          created_at: string
+          created_by: string | null
+          custom_css: string | null
+          default_expiry_days: number | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean | null
+          name: string
+          organization_id: string
+          require_id_upload: boolean | null
+          require_sms_verification: boolean | null
+          signers: Json
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          category?: string | null
+          content_html: string
+          created_at?: string
+          created_by?: string | null
+          custom_css?: string | null
+          default_expiry_days?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean | null
+          name: string
+          organization_id: string
+          require_id_upload?: boolean | null
+          require_sms_verification?: boolean | null
+          signers?: Json
+          updated_at?: string
+          variables?: Json
+        }
+        Update: {
+          category?: string | null
+          content_html?: string
+          created_at?: string
+          created_by?: string | null
+          custom_css?: string | null
+          default_expiry_days?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean | null
+          name?: string
+          organization_id?: string
+          require_id_upload?: boolean | null
+          require_sms_verification?: boolean | null
+          signers?: Json
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_variable_sources: {
+        Row: {
+          category: string
+          data_type: string
+          display_label: string
+          field_path: string
+          id: string
+          source_table: string
+        }
+        Insert: {
+          category?: string
+          data_type?: string
+          display_label: string
+          field_path: string
+          id?: string
+          source_table: string
+        }
+        Update: {
+          category?: string
+          data_type?: string
+          display_label?: string
+          field_path?: string
+          id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
+          cancelled_at: string | null
+          cancelled_reason: string | null
           certificate_fingerprint: string | null
+          company_id: string | null
+          completed_at: string | null
+          contact_id: string | null
           content: string | null
+          contract_number: string | null
           contract_type: string
           created_at: string
+          deal_id: string | null
           expires_at: string | null
           id: string
           organization_id: string
           original_hash: string | null
           pdf_url: string | null
-          project_id: string
+          project_id: string | null
+          quote_id: string | null
+          reminder_sent_at: string | null
+          rendered_html: string | null
           sent_at: string | null
           signature_fields: Json | null
           signature_url: string | null
           signed_at: string | null
           signed_by: string | null
           signed_hash: string | null
+          signing_message: string | null
+          signing_order: string | null
           status: string
+          template_id: string | null
           title: string
           updated_at: string
+          variable_values: Json | null
           visible_in_portal: boolean | null
         }
         Insert: {
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
           certificate_fingerprint?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
           content?: string | null
+          contract_number?: string | null
           contract_type?: string
           created_at?: string
+          deal_id?: string | null
           expires_at?: string | null
           id?: string
           organization_id: string
           original_hash?: string | null
           pdf_url?: string | null
-          project_id: string
+          project_id?: string | null
+          quote_id?: string | null
+          reminder_sent_at?: string | null
+          rendered_html?: string | null
           sent_at?: string | null
           signature_fields?: Json | null
           signature_url?: string | null
           signed_at?: string | null
           signed_by?: string | null
           signed_hash?: string | null
+          signing_message?: string | null
+          signing_order?: string | null
           status?: string
+          template_id?: string | null
           title: string
           updated_at?: string
+          variable_values?: Json | null
           visible_in_portal?: boolean | null
         }
         Update: {
+          cancelled_at?: string | null
+          cancelled_reason?: string | null
           certificate_fingerprint?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          contact_id?: string | null
           content?: string | null
+          contract_number?: string | null
           contract_type?: string
           created_at?: string
+          deal_id?: string | null
           expires_at?: string | null
           id?: string
           organization_id?: string
           original_hash?: string | null
           pdf_url?: string | null
-          project_id?: string
+          project_id?: string | null
+          quote_id?: string | null
+          reminder_sent_at?: string | null
+          rendered_html?: string | null
           sent_at?: string | null
           signature_fields?: Json | null
           signature_url?: string | null
           signed_at?: string | null
           signed_by?: string | null
           signed_hash?: string | null
+          signing_message?: string | null
+          signing_order?: string | null
           status?: string
+          template_id?: string | null
           title?: string
           updated_at?: string
+          variable_values?: Json | null
           visible_in_portal?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "contracts_organization_id_fkey"
             columns: ["organization_id"]
@@ -1095,6 +1337,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "v_project_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -5436,6 +5692,18 @@ export type Database = {
       org_module_enabled: {
         Args: { p_module: string; p_org_id: string }
         Returns: boolean
+      }
+      resolve_contract_variables: {
+        Args: {
+          p_company_id?: string
+          p_contact_id?: string
+          p_contract_number?: string
+          p_deal_id?: string
+          p_org_id: string
+          p_project_id?: string
+          p_quote_id?: string
+        }
+        Returns: Json
       }
       user_has_role: {
         Args: { p_org_id: string; p_roles: string[] }
