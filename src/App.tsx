@@ -29,6 +29,7 @@ import ContractSigningPage from "./pages/ContractSigningPage";
 import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import PortalAdminPage from "./pages/PortalAdminPage";
+import ClientPortalPage from "./pages/ClientPortalPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
