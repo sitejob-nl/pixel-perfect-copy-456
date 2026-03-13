@@ -43,11 +43,6 @@ export function useLinkedInDisconnect() {
 
   return useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("linkedin-oauth", {
-        body: { organization_id: org?.id },
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
       // The edge function uses action=disconnect via query param, but functions.invoke
       // doesn't support query params easily. Let's use a different approach:
       // We'll call disconnect via the function URL directly.
