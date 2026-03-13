@@ -82,6 +82,34 @@ export default function LinkedInSettings() {
         </button>
       )}
 
+      {/* Webhook URL section */}
+      <div className="border-t border-erp-border0 pt-4 space-y-2">
+        <h4 className="text-[13px] font-semibold text-erp-text0">Webhook URL</h4>
+        <p className="text-[11px] text-erp-text3">
+          Registreer deze URL in je LinkedIn Developer Portal onder "Webhooks" om real-time notificaties te ontvangen (likes, comments, leads).
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            readOnly
+            value="https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook"
+            className="flex-1 bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[12px] text-erp-text1 font-mono"
+          />
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText("https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook");
+              toast.success("Webhook URL gekopieerd!");
+            }}
+            className="px-3 py-2 text-[12px] font-medium text-erp-text1 bg-erp-bg2 border border-erp-border0 rounded-lg hover:bg-erp-bg4 transition-colors"
+          >
+            📋 Kopieer
+          </button>
+        </div>
+        <p className="text-[10px] text-erp-text3">
+          ⚠️ Webhooks vereisen een goedgekeurd use case in de LinkedIn Developer Portal.
+        </p>
+      </div>
+
       <div className="text-[11px] text-erp-text3 border-t border-erp-border0 pt-3">
         <strong>Let op:</strong> Je LinkedIn moet de scope{" "}
         <code className="bg-erp-bg2 px-1 rounded text-[10px]">w_member_social</code> hebben

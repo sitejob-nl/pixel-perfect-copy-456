@@ -3022,6 +3022,81 @@ export type Database = {
           },
         ]
       }
+      linkedin_webhook_events: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          linkedin_user_id: string | null
+          notification_id: string
+          organization_id: string | null
+          payload: Json
+          processed: boolean
+          resource_type: string | null
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          linkedin_user_id?: string | null
+          notification_id: string
+          organization_id?: string | null
+          payload?: Json
+          processed?: boolean
+          resource_type?: string | null
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          linkedin_user_id?: string | null
+          notification_id?: string
+          organization_id?: string | null
+          payload?: Json
+          processed?: boolean
+          resource_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_webhook_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_webhook_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_webhook_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_webhook_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_webhook_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_module_overrides: {
         Row: {
           created_at: string
