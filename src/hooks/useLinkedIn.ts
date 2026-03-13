@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 export function useLinkedInConnection() {
   const { data: org } = useOrganization();
-  const orgId = org?.id;
+  const orgId = org?.organization_id;
 
   return useQuery({
     queryKey: ["linkedin-connection", orgId],
