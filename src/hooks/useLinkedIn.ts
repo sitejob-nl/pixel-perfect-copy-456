@@ -83,7 +83,7 @@ export function useLinkedInPost() {
   return useMutation({
     mutationFn: async (text: string) => {
       const { data, error } = await supabase.functions.invoke("linkedin-post", {
-        body: { organization_id: org?.id, text },
+        body: { organization_id: org?.organization_id, text },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
