@@ -79,6 +79,8 @@ export default function SettingsPage() {
       {isAdmin && safeTab === "email" && <ResendSettings />}
       {isAdmin && safeTab === "snelstart" && <SnelstartSettings />}
 
+      {safeTab === "linkedin" && <LinkedInSettings />}
+
       {safeTab === "notificaties" && (
         <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
           <h3 className="text-[15px] font-semibold text-erp-text0 mb-4">Notificatie voorkeuren</h3>
