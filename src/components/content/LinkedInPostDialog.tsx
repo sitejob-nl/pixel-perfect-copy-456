@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useLinkedInPost, useLinkedInConnection } from "@/hooks/useLinkedIn";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useLinkedInPost, useLinkedInConnection, type LinkedInPostPayload } from "@/hooks/useLinkedIn";
 
 interface Props {
   open: boolean;
@@ -9,18 +10,64 @@ interface Props {
 
 export default function LinkedInPostDialog({ open, onOpenChange }: Props) {
   const [text, setText] = useState("");
+  const [postType, setPostType] = useState<"text" | "url" | "image">("text");
+  const [url, setUrl] = useState("");
+  const [urlTitle, setUrlTitle] = useState("");
+  const [urlDescription, setUrlDescription] = useState("");
+  const [visibility, setVisibility] = useState<"PUBLIC" | "CONNECTIONS">("PUBLIC");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imageContentType, setImageContentType] = useState<string>("image/png");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const post = useLinkedInPost();
   const { data: connection } = useLinkedInConnection();
 
   const charCount = text.length;
   const maxChars = 3000;
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageContentType(file.type || "image/png");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setImagePreview(result);
+      // Strip the data:...;base64, prefix
+      setImageBase64(result.split(",")[1]);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handlePost = async () => {
     if (!text.trim()) return;
-    await post.mutateAsync(text);
+    const payload: LinkedInPostPayload = { text, visibility };
+    if (postType === "url" && url.trim()) {
+      payload.url = url.trim();
+      if (urlTitle.trim()) payload.url_title = urlTitle.trim();
+      if (urlDescription.trim()) payload.url_description = urlDescription.trim();
+    }
+    if (postType === "image" && imageBase64) {
+      payload.image_base64 = imageBase64;
+      payload.image_content_type = imageContentType;
+    }
+    await post.mutateAsync(payload);
     setText("");
+    setUrl("");
+    setUrlTitle("");
+    setUrlDescription("");
+    setImagePreview(null);
+    setImageBase64(null);
+    setPostType("text");
     onOpenChange(false);
   };
+
+  const isDisabled = !text.trim() || !connection || post.isPending ||
+    (postType === "url" && !url.trim()) ||
+    (postType === "image" && !imageBase64);
+
+  const inputClass = "w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-[hsl(225,93%,64%)]";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,18 +96,99 @@ export default function LinkedInPostDialog({ open, onOpenChange }: Props) {
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, maxChars))}
           placeholder="Wat wil je delen op LinkedIn?"
-          rows={6}
-          className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2.5 text-[13px] text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-[hsl(225,93%,64%)] resize-none"
+          rows={5}
+          className={`${inputClass} resize-none`}
         />
 
-        <div className="flex items-center justify-between text-[11px] text-erp-text3">
-          <span>{charCount}/{maxChars} tekens</span>
-          {!connection && (
-            <span className="text-destructive">
-              ⚠ LinkedIn niet gekoppeld — ga naar Instellingen
-            </span>
-          )}
+        <Tabs value={postType} onValueChange={(v) => setPostType(v as any)} className="w-full">
+          <TabsList className="w-full bg-erp-bg2 border border-erp-border0">
+            <TabsTrigger value="text" className="flex-1 text-[12px] data-[state=active]:bg-erp-bg3 data-[state=active]:text-erp-text0 text-erp-text3">
+              Tekst
+            </TabsTrigger>
+            <TabsTrigger value="url" className="flex-1 text-[12px] data-[state=active]:bg-erp-bg3 data-[state=active]:text-erp-text0 text-erp-text3">
+              URL / Artikel
+            </TabsTrigger>
+            <TabsTrigger value="image" className="flex-1 text-[12px] data-[state=active]:bg-erp-bg3 data-[state=active]:text-erp-text0 text-erp-text3">
+              Afbeelding
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="text">
+            <p className="text-[11px] text-erp-text3">Alleen tekst, geen bijlage.</p>
+          </TabsContent>
+
+          <TabsContent value="url" className="space-y-2">
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/artikel"
+              className={inputClass}
+            />
+            <input
+              type="text"
+              value={urlTitle}
+              onChange={(e) => setUrlTitle(e.target.value)}
+              placeholder="Titel (optioneel)"
+              className={inputClass}
+            />
+            <input
+              type="text"
+              value={urlDescription}
+              onChange={(e) => setUrlDescription(e.target.value)}
+              placeholder="Beschrijving (optioneel)"
+              className={inputClass}
+            />
+          </TabsContent>
+
+          <TabsContent value="image" className="space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            {imagePreview ? (
+              <div className="relative">
+                <img src={imagePreview} alt="Preview" className="w-full max-h-48 object-contain rounded-lg border border-erp-border0" />
+                <button
+                  onClick={() => { setImagePreview(null); setImageBase64(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  className="absolute top-1 right-1 w-6 h-6 bg-erp-bg1 border border-erp-border0 rounded-full flex items-center justify-center text-erp-text3 hover:text-erp-text0 text-[12px]"
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-6 border-2 border-dashed border-erp-border0 rounded-lg text-erp-text3 hover:border-[hsl(225,93%,64%)] hover:text-erp-text0 transition-colors text-[13px]"
+              >
+                Klik om een afbeelding te selecteren
+              </button>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <select
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value as "PUBLIC" | "CONNECTIONS")}
+              className="bg-erp-bg2 border border-erp-border0 rounded-lg px-2 py-1.5 text-[12px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-[hsl(225,93%,64%)]"
+            >
+              <option value="PUBLIC">🌐 Publiek</option>
+              <option value="CONNECTIONS">👥 Alleen connecties</option>
+            </select>
+          </div>
+          <span className="text-[11px] text-erp-text3">{charCount}/{maxChars} tekens</span>
         </div>
+
+        {!connection && (
+          <div className="text-[11px] text-destructive">
+            ⚠ LinkedIn niet gekoppeld — ga naar Instellingen
+          </div>
+        )}
 
         <DialogFooter>
           <button
@@ -71,7 +199,7 @@ export default function LinkedInPostDialog({ open, onOpenChange }: Props) {
           </button>
           <button
             onClick={handlePost}
-            disabled={!text.trim() || !connection || post.isPending}
+            disabled={isDisabled}
             className="px-4 py-2 bg-[hsl(225,93%,64%)] text-white rounded-lg text-[13px] font-medium hover:bg-[hsl(225,93%,54%)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {post.isPending ? "Publiceren..." : "Publiceer op LinkedIn"}
