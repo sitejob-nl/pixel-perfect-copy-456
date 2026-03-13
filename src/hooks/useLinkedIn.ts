@@ -63,7 +63,7 @@ export function useLinkedInDisconnect() {
             "Content-Type": "application/json",
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ organization_id: org?.id }),
+          body: JSON.stringify({ organization_id: org?.organization_id }),
         }
       );
       if (!res.ok) throw new Error("Disconnect failed");
