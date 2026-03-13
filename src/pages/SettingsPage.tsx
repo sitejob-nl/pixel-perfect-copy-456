@@ -7,6 +7,7 @@ import ApiKeysSettings from "@/components/erp/ApiKeysSettings";
 import TeamSettings from "@/components/erp/TeamSettings";
 import OrgSettings from "@/components/erp/OrgSettings";
 import ResendSettings from "@/components/erp/ResendSettings";
+import LinkedInSettings from "@/components/erp/LinkedInSettings";
 
 const allTabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
@@ -14,6 +15,7 @@ const allTabs = [
   { key: "api-keys", label: "API Keys", icon: "🔑", adminOnly: true },
   { key: "email", label: "E-mail", icon: "✉️", adminOnly: true },
   { key: "snelstart", label: "Snelstart", icon: "🔗", adminOnly: true },
+  { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
   { key: "notificaties", label: "Notificaties", icon: "🔔", adminOnly: false },
   { key: "account", label: "Account", icon: "👤", adminOnly: false },
 ] as const;
@@ -76,6 +78,8 @@ export default function SettingsPage() {
       {isAdmin && safeTab === "api-keys" && <ApiKeysSettings />}
       {isAdmin && safeTab === "email" && <ResendSettings />}
       {isAdmin && safeTab === "snelstart" && <SnelstartSettings />}
+
+      {safeTab === "linkedin" && <LinkedInSettings />}
 
       {safeTab === "notificaties" && (
         <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">

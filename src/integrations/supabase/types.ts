@@ -2965,6 +2965,63 @@ export type Database = {
           },
         ]
       }
+      linkedin_connections: {
+        Row: {
+          access_token_encrypted: string
+          created_at: string | null
+          id: string
+          linkedin_avatar_url: string | null
+          linkedin_name: string | null
+          linkedin_user_id: string
+          organization_id: string
+          refresh_token_encrypted: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token_encrypted: string
+          created_at?: string | null
+          id?: string
+          linkedin_avatar_url?: string | null
+          linkedin_name?: string | null
+          linkedin_user_id: string
+          organization_id: string
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token_encrypted?: string
+          created_at?: string | null
+          id?: string
+          linkedin_avatar_url?: string | null
+          linkedin_name?: string | null
+          linkedin_user_id?: string
+          organization_id?: string
+          refresh_token_encrypted?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_module_overrides: {
         Row: {
           created_at: string
