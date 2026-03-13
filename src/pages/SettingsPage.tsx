@@ -15,6 +15,7 @@ const allTabs = [
   { key: "api-keys", label: "API Keys", icon: "🔑", adminOnly: true },
   { key: "email", label: "E-mail", icon: "✉️", adminOnly: true },
   { key: "snelstart", label: "Snelstart", icon: "🔗", adminOnly: true },
+  { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
   { key: "notificaties", label: "Notificaties", icon: "🔔", adminOnly: false },
   { key: "account", label: "Account", icon: "👤", adminOnly: false },
 ] as const;
