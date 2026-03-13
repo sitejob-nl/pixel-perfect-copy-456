@@ -25,3 +25,29 @@ Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
 ```
 https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
 ```
+
+---
+
+# ✅ LinkedIn Webhooks: Real-time Notificaties
+
+## Wat is gebouwd
+
+### Database
+- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
+
+### Edge Function
+- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
+
+### Frontend
+- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
+
+### Webhook URL
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
+```
+
+## ⚠️ Actie vereist
+
+1. Vraag een webhook use case aan in je LinkedIn Developer Portal
+2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
+3. LinkedIn valideert automatisch via de challenge-response flow
