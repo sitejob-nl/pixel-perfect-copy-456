@@ -72,13 +72,23 @@ export function useLinkedInDisconnect() {
   });
 }
 
+export interface LinkedInPostPayload {
+  text: string;
+  url?: string;
+  url_title?: string;
+  url_description?: string;
+  image_base64?: string;
+  image_content_type?: string;
+  visibility?: "PUBLIC" | "CONNECTIONS";
+}
+
 export function useLinkedInPost() {
   const { data: org } = useOrganization();
 
   return useMutation({
-    mutationFn: async (text: string) => {
+    mutationFn: async (payload: LinkedInPostPayload) => {
       const { data, error } = await supabase.functions.invoke("linkedin-post", {
-        body: { organization_id: org?.organization_id, text },
+        body: { organization_id: org?.organization_id, ...payload },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
