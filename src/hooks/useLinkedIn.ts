@@ -30,7 +30,7 @@ export function useLinkedInConnect() {
   return () => {
     if (!user || !org) return;
     const returnUrl = `${window.location.origin}/settings`;
-    const state = `${user.id}|${org.id}|${returnUrl}`;
+    const state = `${user.id}|${org.organization_id}|${returnUrl}`;
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID || "fuvpmxxihmpustftzvgk";
     const startUrl = `https://${projectId}.supabase.co/functions/v1/linkedin-oauth?action=start&state=${encodeURIComponent(state)}`;
     window.location.href = startUrl;
