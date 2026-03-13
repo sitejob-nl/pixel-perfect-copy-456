@@ -1,27 +1,44 @@
 
 
-# ✅ LinkedIn Integratie: Posts Plaatsen
+## Wat kun je doen met LinkedIn Webhooks?
 
-## Wat is gebouwd
+LinkedIn Webhooks sturen real-time notificaties naar jouw app wanneer bepaalde events plaatsvinden. Voor jouw CRM zijn de meest waardevolle toepassingen:
 
-### Database
-- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
+### 1. **Post-engagement tracking**
+Ontvang notificaties wanneer iemand je LinkedIn post liket, deelt of erop reageert. Dit kun je koppelen aan je CRM-contacten zodat je ziet welke leads interactie hebben met je content.
 
-### Edge Functions
-- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
-- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
+### 2. **Lead Syncing (Lead Gen Forms)**
+Als je LinkedIn Lead Gen Forms gebruikt (advertenties), kun je leads automatisch laten binnenkomen in je CRM via de Lead Notification Subscriptions API — zonder handmatig exporteren.
 
-### Frontend
-- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
-- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
+### 3. **Mention/comment alerts**
+Krijg een melding in je CRM wanneer iemand je tagt of reageert op je posts, zodat je snel kunt reageren.
 
-### Secrets
-- `LINKEDIN_CLIENT_ID` — opgeslagen
-- `LINKEDIN_CLIENT_SECRET` — opgeslagen
+---
 
-## ⚠️ Actie vereist
+### Technisch wat nodig is
 
-Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
-```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
-```
+Om dit te bouwen zou ik een **nieuwe Edge Function** maken (`linkedin-webhook`) die:
+
+1. **Challenge-validatie** afhandelt — LinkedIn stuurt een GET met een `challengeCode`, de functie berekent een HMACSHA256 met je `LINKEDIN_CLIENT_SECRET` en stuurt het terug
+2. **POST-notificaties** ontvangt — verifieert de `X-LI-Signature` header, dedupliceerd op Notification ID, en slaat events op
+3. **Events opslaat** in een `linkedin_webhook_events` tabel, gekoppeld aan je organisatie
+
+De webhook URL wordt: `https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook`
+
+### Wat ik zou bouwen
+
+| Component | Beschrijving |
+|-----------|-------------|
+| Edge Function `linkedin-webhook` | Challenge-response + event ontvangst met signature verificatie |
+| DB tabel `linkedin_webhook_events` | Opslag van events (type, payload, notification_id voor dedup) |
+| UI in Settings | Webhook URL tonen + status |
+| Engagement feed | Events koppelen aan contacten en tonen in het CRM |
+
+### Belangrijk
+
+LinkedIn Webhooks zijn **alleen beschikbaar voor apps met een goedgekeurd use case**. Je moet in je LinkedIn Developer Portal eerst een webhook use case aanvragen en goedgekeurd krijgen voordat je webhooks kunt registreren.
+
+---
+
+**Wil je dat ik de webhook-ontvanger bouw zodat je klaar bent zodra LinkedIn je webhook use case goedkeurt?**
+
