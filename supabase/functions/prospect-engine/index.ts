@@ -319,6 +319,99 @@ async function handleStatus(orgId: string, body: any): Promise<Response> {
 }
 
 // ── Batch actions ────────────────────────────────────────────────────
+async function analyzeLeadWithAI(lead: any): Promise<{
+  score: number;
+  score_breakdown: Record<string, number>;
+  fit_summary: string;
+  analysis: Record<string, any>;
+}> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY niet geconfigureerd");
+
+  const sourceData = lead.source_data || {};
+  const prompt = `Je bent een sales-analist. Analyseer het volgende bedrijf en geef een score (0-100) voor hoe geschikt dit bedrijf is als prospect voor een webdesign/webdevelopment bureau.
+
+Bedrijfsinformatie:
+- Naam: ${lead.company_name}
+- Website: ${lead.website_url || "onbekend"}
+- Telefoon: ${lead.phone || "onbekend"}
+- Adres: ${lead.address || "onbekend"}, ${lead.city || "onbekend"}
+- Google Rating: ${lead.google_rating || "onbekend"} (${lead.google_review_count || 0} reviews)
+- Categorie: ${sourceData.categoryName || sourceData.categories?.join(", ") || "onbekend"}
+- Openingstijden: ${sourceData.openingHours ? JSON.stringify(sourceData.openingHours).slice(0, 200) : "onbekend"}
+
+Geef je analyse terug via de functie.`;
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: "Je bent een Nederlandse sales-analist die bedrijven analyseert voor een webdesign bureau. Gebruik altijd de functie om je analyse terug te geven." },
+        { role: "user", content: prompt },
+      ],
+      tools: [{
+        type: "function",
+        function: {
+          name: "prospect_analysis",
+          description: "Geef de prospect analyse terug met score en breakdown",
+          parameters: {
+            type: "object",
+            properties: {
+              total_score: { type: "number", description: "Totaalscore 0-100" },
+              website_quality: { type: "number", description: "Score 0-25 voor huidige website kwaliteit (lager = meer kans op verbetering)" },
+              company_size: { type: "number", description: "Score 0-20 voor bedrijfsgrootte/potentie" },
+              industry_fit: { type: "number", description: "Score 0-20 voor branche geschiktheid" },
+              online_presence: { type: "number", description: "Score 0-20 voor online aanwezigheid" },
+              location: { type: "number", description: "Score 0-15 voor locatie/bereikbaarheid" },
+              fit_summary: { type: "string", description: "Korte Nederlandse samenvatting (2-3 zinnen) waarom dit bedrijf wel of niet geschikt is" },
+              strengths: { type: "array", items: { type: "string" }, description: "2-3 sterke punten" },
+              weaknesses: { type: "array", items: { type: "string" }, description: "2-3 zwakke punten/kansen" },
+              recommendation: { type: "string", description: "Korte aanbeveling voor benadering" },
+            },
+            required: ["total_score", "website_quality", "company_size", "industry_fit", "online_presence", "location", "fit_summary", "strengths", "weaknesses", "recommendation"],
+            additionalProperties: false,
+          },
+        },
+      }],
+      tool_choice: { type: "function", function: { name: "prospect_analysis" } },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("AI analysis failed:", response.status, errText);
+    throw new Error(`AI analyse mislukt: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) throw new Error("Geen analyse resultaat van AI");
+
+  const result = JSON.parse(toolCall.function.arguments);
+
+  return {
+    score: Math.min(100, Math.max(0, Math.round(result.total_score))),
+    score_breakdown: {
+      website: result.website_quality,
+      bedrijf: result.company_size,
+      branche: result.industry_fit,
+      online: result.online_presence,
+      locatie: result.location,
+    },
+    fit_summary: result.fit_summary,
+    analysis: {
+      strengths: result.strengths,
+      weaknesses: result.weaknesses,
+      recommendation: result.recommendation,
+    },
+  };
+}
+
 async function handleAnalyze(orgId: string, body: any): Promise<Response> {
   const { lead_ids } = body;
   if (!lead_ids?.length) return jsonResponse({ error: "Geen leads geselecteerd" }, 400);
@@ -330,44 +423,69 @@ async function handleAnalyze(orgId: string, body: any): Promise<Response> {
     .in("id", lead_ids)
     .eq("organization_id", orgId);
 
-  // TODO: Trigger actual website analysis (Firecrawl/AI) in background
-  // For now, mark as scored with placeholder
-  setTimeout(async () => {
+  // Run AI analysis in background
+  (async () => {
     try {
       for (const id of lead_ids) {
-        await adminClient
-          .from("prospect_leads")
-          .update({
-            status: "scored",
-            score: Math.floor(Math.random() * 40) + 50,
-            score_breakdown: { website: 15, bedrijf: 20, branche: 20, tech: 15, mobile: 8, locatie: 10 },
-            fit_summary: "Website geanalyseerd — potentiële fit voor SiteJob diensten.",
-            analyzed_at: new Date().toISOString(),
-          })
-          .eq("id", id);
+        try {
+          const { data: lead } = await adminClient
+            .from("prospect_leads")
+            .select("*")
+            .eq("id", id)
+            .single();
+
+          if (!lead) continue;
+
+          const result = await analyzeLeadWithAI(lead);
+
+          await adminClient
+            .from("prospect_leads")
+            .update({
+              status: "scored",
+              score: result.score,
+              score_breakdown: result.score_breakdown,
+              fit_summary: result.fit_summary,
+              analysis: result.analysis,
+              analyzed_at: new Date().toISOString(),
+            })
+            .eq("id", id);
+
+          console.log(`Lead ${id} analyzed: score ${result.score}`);
+        } catch (e) {
+          console.error(`Analysis failed for lead ${id}:`, e);
+          await adminClient
+            .from("prospect_leads")
+            .update({
+              status: "scored",
+              score: 0,
+              fit_summary: `Analyse mislukt: ${e instanceof Error ? e.message : "onbekende fout"}`,
+              analyzed_at: new Date().toISOString(),
+            })
+            .eq("id", id);
+        }
       }
 
       // Update pool stats
-      const { data: lead } = await adminClient
+      const { data: firstLead } = await adminClient
         .from("prospect_leads")
         .select("pool_id")
         .eq("id", lead_ids[0])
         .single();
-      if (lead?.pool_id) {
+      if (firstLead?.pool_id) {
         const { count } = await adminClient
           .from("prospect_leads")
           .select("id", { count: "exact", head: true })
-          .eq("pool_id", lead.pool_id)
+          .eq("pool_id", firstLead.pool_id)
           .not("analyzed_at", "is", null);
         await adminClient
           .from("prospect_pools")
           .update({ analyzed_leads: count ?? 0, status: "analyzed" })
-          .eq("id", lead.pool_id);
+          .eq("id", firstLead.pool_id);
       }
     } catch (e) {
-      console.error("Analyze error:", e);
+      console.error("Analyze batch error:", e);
     }
-  }, 3000);
+  })();
 
   return jsonResponse({ ok: true, message: `${lead_ids.length} leads worden geanalyseerd` });
 }
