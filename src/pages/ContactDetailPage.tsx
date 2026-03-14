@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +16,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
+import ContactWhatsAppTab from "@/components/whatsapp/ContactWhatsAppTab";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
@@ -60,6 +62,7 @@ export default function ContactDetailPage() {
   const { data: org } = useOrganization();
   const [editing, setEditing] = useState(false);
   const [noteText, setNoteText] = useState("");
+  const [activeTab, setActiveTab] = useState<"details" | "whatsapp">("details");
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
@@ -300,6 +303,37 @@ export default function ContactDetailPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4">
+        {[
+          { key: "details" as const, label: "Details" },
+          { key: "whatsapp" as const, label: "💬 WhatsApp" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "px-4 py-2 rounded-lg text-[13px] font-medium transition-colors",
+              activeTab === tab.key
+                ? "bg-erp-bg3 text-erp-text0 border border-erp-border0"
+                : "text-erp-text3 hover:text-erp-text1"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "whatsapp" ? (
+        <ErpCard className="p-0 overflow-hidden">
+          <ContactWhatsAppTab
+            contactId={contact.id}
+            contactPhone={contact.phone}
+            contactMobile={contact.mobile}
+            whatsappOptIn={contact.whatsapp_opt_in ?? false}
+          />
+        </ErpCard>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left column: Details + Edit */}
         <div className="lg:col-span-2 space-y-4">
@@ -573,6 +607,7 @@ export default function ContactDetailPage() {
           </ErpCard>
         </div>
       </div>
+      )}
     </div>
   );
 }

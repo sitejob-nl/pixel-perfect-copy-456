@@ -1,4 +1,5 @@
-import { Check, CheckCheck, X, Image, Video, FileText, Mic } from "lucide-react";
+import { Check, CheckCheck, X, Image, Video, FileText, Mic, MapPin, Bot } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MessageBubbleProps {
   content: string | null;
@@ -8,6 +9,8 @@ interface MessageBubbleProps {
   media_url: string | null;
   created_at: string;
   error_message?: string | null;
+  template_name?: string | null;
+  metadata?: any;
 }
 
 function StatusIcon({ status }: { status: string | null }) {
@@ -32,7 +35,8 @@ function MediaIcon({ type }: { type: string }) {
     case "video": return <Video className={cls} />;
     case "audio": return <Mic className={cls} />;
     case "document": return <FileText className={cls} />;
-    default: return null;
+    case "location": return <MapPin className={cls} />;
+    default: return <FileText className={cls} />;
   }
 }
 
@@ -48,9 +52,23 @@ export default function MessageBubble({
   media_url,
   created_at,
   error_message,
+  template_name,
+  metadata,
 }: MessageBubbleProps) {
   const isOutbound = direction === "outbound";
-  const isMedia = message_type && message_type !== "text";
+  const isMedia = message_type && !["text", "template"].includes(message_type);
+  const isTemplate = message_type === "template";
+  const isInteractive = message_type === "interactive" || message_type === "interactive_buttons" || message_type === "interactive_list";
+  const isReaction = message_type === "reaction";
+  const isAutomation = metadata?.automation_id;
+
+  if (isReaction) {
+    return (
+      <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} mb-1`}>
+        <span className="text-lg">{content}</span>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex ${isOutbound ? "justify-end" : "justify-start"} mb-1`}>
@@ -61,6 +79,23 @@ export default function MessageBubble({
             : "bg-erp-bg3 text-erp-text0 rounded-bl-sm"
         }`}
       >
+        {/* Template label */}
+        {isTemplate && template_name && (
+          <div className="flex items-center gap-1 mb-1">
+            <FileText className="w-3 h-3 text-erp-text3" />
+            <span className="text-[10px] text-erp-text3 font-medium">Template: {template_name}</span>
+          </div>
+        )}
+
+        {/* Automation indicator */}
+        {isAutomation && (
+          <div className="flex items-center gap-1 mb-1">
+            <Bot className="w-3 h-3 text-erp-text3" />
+            <span className="text-[10px] text-erp-text3">Automation</span>
+          </div>
+        )}
+
+        {/* Media type indicator */}
         {isMedia && (
           <div className="flex items-center mb-1">
             <MediaIcon type={message_type!} />
@@ -68,6 +103,7 @@ export default function MessageBubble({
           </div>
         )}
 
+        {/* Image preview */}
         {media_url && message_type === "image" && (
           <img
             src={media_url}
@@ -77,14 +113,40 @@ export default function MessageBubble({
           />
         )}
 
-        {content && (
+        {/* Interactive buttons display */}
+        {isInteractive && content && (
+          <>
+            <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{content}</p>
+            {metadata?.buttons && (
+              <div className="mt-2 space-y-1">
+                {(metadata.buttons as Array<{ title: string }>).map((btn, i) => (
+                  <div key={i} className="text-[12px] text-center py-1.5 rounded-md border border-erp-border1 text-erp-text2">
+                    {btn.title}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Regular text content */}
+        {!isInteractive && content && (
           <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words">{content}</p>
         )}
 
+        {/* Error message */}
         {error_message && (
-          <p className="text-[11px] text-erp-red mt-1">{error_message}</p>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <p className="text-[11px] text-erp-red mt-1 cursor-help truncate max-w-[200px]">⚠ {error_message}</p>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[300px]">
+              <p className="text-xs">{error_message}</p>
+            </TooltipContent>
+          </Tooltip>
         )}
 
+        {/* Timestamp + status */}
         <div className={`flex items-center gap-1 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
           <span className="text-[10px] text-erp-text3">{formatTime(created_at)}</span>
           {isOutbound && <StatusIcon status={status} />}
