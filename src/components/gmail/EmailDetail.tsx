@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ErpCard, Badge, Chip } from "@/components/erp/ErpPrimitives";
@@ -10,6 +10,40 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Sparkles } from "lucide-react";
+
+function EmailIframe({ html }: { html: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeHeight, setIframeHeight] = useState(200);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+    doc.open();
+    doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;padding:8px;font-family:Arial,sans-serif;font-size:14px;color:#222;overflow:hidden;}img{max-width:100%;height:auto;}a{color:#1a73e8;}</style></head><body>${html}</body></html>`);
+    doc.close();
+    const resize = () => {
+      const h = doc.documentElement?.scrollHeight || doc.body?.scrollHeight || 200;
+      setIframeHeight(Math.min(h + 16, 800));
+    };
+    resize();
+    const imgs = doc.querySelectorAll("img");
+    imgs.forEach(img => img.addEventListener("load", resize));
+    const timer = setTimeout(resize, 500);
+    return () => { clearTimeout(timer); imgs.forEach(img => img.removeEventListener("load", resize)); };
+  }, [html]);
+
+  return (
+    <iframe
+      ref={iframeRef}
+      sandbox="allow-same-origin"
+      className="mt-3 w-full border-0 rounded bg-white"
+      style={{ height: iframeHeight }}
+      title="Email content"
+    />
+  );
+}
 
 interface Props {
   thread: EmailThread | null;
@@ -166,10 +200,7 @@ export default function EmailDetail({ thread, emails, isLoading, connectionId, o
                     {loadingBodies.has(email.id) ? (
                       <Skeleton className="h-20 w-full bg-erp-bg4 rounded mt-3" />
                     ) : emailBodies[email.id] ? (
-                      <div
-                        className="mt-3 text-[12px] text-erp-text1 [&_a]:text-erp-blue [&_img]:max-w-full overflow-x-auto"
-                        dangerouslySetInnerHTML={{ __html: emailBodies[email.id] }}
-                      />
+                      <EmailIframe html={emailBodies[email.id]} />
                     ) : (
                       <p className="mt-3 text-[12px] text-erp-text1 whitespace-pre-wrap">
                         {email.body_text || email.snippet}
