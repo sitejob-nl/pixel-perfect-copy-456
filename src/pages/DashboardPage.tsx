@@ -304,7 +304,7 @@ function AiWidgetsRow({ orgId, accessToken, navigate }: { orgId?: string; access
   });
 
   const digestItems = digest ? [
-    { label: "Rode klanten", count: digest.rode_klanten ?? 0, color: "#ef4444", link: "/companies" },
+    { label: "Rode klanten", count: digest.rode_klanten ?? 0, color: "#ef4444", link: "/klanten" },
     { label: "Overdue taken", count: digest.overdue_taken ?? 0, color: "#f59e0b", link: "/tasks" },
     { label: "Open facturen", count: digest.open_facturen ?? 0, color: "#f59e0b", link: "/invoices" },
     { label: "Deals in pipeline", count: digest.deals_in_pipeline ?? 0, color: "#3b82f6", link: "/pipeline" },
