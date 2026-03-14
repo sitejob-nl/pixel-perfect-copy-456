@@ -34,6 +34,7 @@ import DemoViewPage from "./pages/DemoViewPage";
 import PortalAdminPage from "./pages/PortalAdminPage";
 import ClientPortalPage from "./pages/ClientPortalPage";
 import EmailPage from "./pages/EmailPage";
+import WhatsAppPage from "./pages/WhatsAppPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
 const queryClient = new QueryClient();
 
