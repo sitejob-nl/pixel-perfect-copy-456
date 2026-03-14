@@ -40,6 +40,8 @@ import AcceptInvitePage from "./pages/AcceptInvitePage";
 import TasksPage from "./pages/TasksPage";
 import ReportingPage from "./pages/ReportingPage";
 import CompanyDetailPage from "./pages/CompanyDetailPage";
+import GmailPage from "./pages/GmailPage";
+import CalendarPage from "./pages/CalendarPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
