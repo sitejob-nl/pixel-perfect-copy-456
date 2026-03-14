@@ -80,3 +80,9 @@ verify_jwt = false
 
 [functions.google-api]
 verify_jwt = false
+
+[functions.voys-webhook]
+verify_jwt = false
+
+[functions.booking-service]
+verify_jwt = false
