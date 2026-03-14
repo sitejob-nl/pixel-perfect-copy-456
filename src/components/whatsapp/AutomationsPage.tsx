@@ -82,11 +82,11 @@ export default function AutomationsPage() {
   }, []);
 
   const fetchAutomations = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("whatsapp_automations")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) setAutomations(data as unknown as Automation[]);
+    if (!error && data) setAutomations(data as Automation[]);
     setLoading(false);
   };
 
