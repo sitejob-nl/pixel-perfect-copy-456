@@ -8,6 +8,7 @@ import TeamSettings from "@/components/erp/TeamSettings";
 import OrgSettings from "@/components/erp/OrgSettings";
 import ResendSettings from "@/components/erp/ResendSettings";
 import LinkedInSettings from "@/components/erp/LinkedInSettings";
+import WhatsAppSettings from "@/components/erp/WhatsAppSettings";
 
 const allTabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
@@ -16,6 +17,7 @@ const allTabs = [
   { key: "email", label: "E-mail", icon: "✉️", adminOnly: true },
   { key: "snelstart", label: "Snelstart", icon: "🔗", adminOnly: true },
   { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
+  { key: "whatsapp", label: "WhatsApp", icon: "📱", adminOnly: true },
   { key: "notificaties", label: "Notificaties", icon: "🔔", adminOnly: false },
   { key: "account", label: "Account", icon: "👤", adminOnly: false },
 ] as const;
