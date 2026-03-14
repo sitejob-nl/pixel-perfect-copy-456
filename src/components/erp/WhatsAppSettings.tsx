@@ -218,10 +218,16 @@ export default function WhatsAppSettings() {
           </>
         )}
 
-        {/* Messages tab */}
-        {isConnected && subTab === "berichten" && <MessagesTab />}
+        {/* Profile tab */}
+        {isConnected && subTab === "profiel" && <ProfileSettings />}
 
-        {/* Webhook Logs tab */}
+        {/* Templates tab */}
+        {isConnected && subTab === "templates" && <TemplateManager />}
+
+        {/* Automations tab */}
+        {isConnected && subTab === "automations" && <AutomationsPage />}
+
+        {/* Messages tab (legacy) */}
         {isConnected && subTab === "logs" && <WebhookLogsTab />}
       </div>
     </div>
