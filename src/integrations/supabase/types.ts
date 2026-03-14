@@ -244,6 +244,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_summaries: {
+        Row: {
+          activities_count: number | null
+          entity_id: string
+          entity_type: string
+          generated_at: string
+          generated_by: string | null
+          id: string
+          is_stale: boolean | null
+          key_points: Json | null
+          organization_id: string
+          summary: string
+        }
+        Insert: {
+          activities_count?: number | null
+          entity_id: string
+          entity_type: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          is_stale?: boolean | null
+          key_points?: Json | null
+          organization_id: string
+          summary: string
+        }
+        Update: {
+          activities_count?: number | null
+          entity_id?: string
+          entity_type?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          is_stale?: boolean | null
+          key_points?: Json | null
+          organization_id?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_summaries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_summaries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       apify_actor_configs: {
         Row: {
           avg_duration_seconds: number | null
@@ -467,6 +521,77 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comments: {
+        Row: {
+          content: string
+          created_at: string
+          edited_at: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          is_edited: boolean | null
+          mentions: string[] | null
+          organization_id: string
+          parent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          edited_at?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          is_edited?: boolean | null
+          mentions?: string[] | null
+          organization_id: string
+          parent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_edited?: boolean | null
+          mentions?: string[] | null
+          organization_id?: string
+          parent_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "v_comments"
             referencedColumns: ["id"]
           },
         ]
@@ -3441,6 +3566,66 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_read: boolean | null
+          message: string | null
+          organization_id: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          organization_id: string
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string | null
+          organization_id?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       onboarding_questions: {
         Row: {
           created_at: string
@@ -6390,6 +6575,144 @@ export type Database = {
           },
         ]
       }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          company_id: string | null
+          completed_at: string | null
+          completed_by: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          organization_id: string
+          priority: string
+          project_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id: string
+          priority?: string
+          project_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id?: string
+          priority?: string
+          project_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_endpoints: {
         Row: {
           api_key_hash: string | null
@@ -7366,6 +7689,54 @@ export type Database = {
           },
         ]
       }
+      v_comments: {
+        Row: {
+          author_email: string | null
+          author_name: string | null
+          content: string | null
+          created_at: string | null
+          edited_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string | null
+          is_edited: boolean | null
+          mentions: string[] | null
+          organization_id: string | null
+          parent_id: string | null
+          reply_count: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "v_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_company_health: {
         Row: {
           active_projects: number | null
@@ -7632,6 +8003,111 @@ export type Database = {
           },
         ]
       }
+      v_my_tasks: {
+        Row: {
+          assigned_to: string | null
+          assigned_to_name: string | null
+          company_id: string | null
+          company_name: string | null
+          completed_at: string | null
+          completed_by: string | null
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          deal_id: string | null
+          description: string | null
+          due_date: string | null
+          id: string | null
+          organization_id: string | null
+          priority: string | null
+          project_id: string | null
+          project_name: string | null
+          project_number: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          urgency: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_project_overview: {
         Row: {
           assigned_to_name: string | null
@@ -7717,6 +8193,10 @@ export type Database = {
         Returns: undefined
       }
       fn_daily_digest: { Args: { p_org_id: string }; Returns: Json }
+      fn_get_entity_context: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: Json
+      }
       fn_get_expiring_contracts: {
         Args: { p_days?: number; p_org_id: string }
         Returns: {
@@ -7740,10 +8220,31 @@ export type Database = {
           project_number: string
         }[]
       }
+      fn_mark_notifications_read: {
+        Args: { p_ids: string[] }
+        Returns: undefined
+      }
       fn_mark_overdue_invoices: { Args: { p_org_id: string }; Returns: number }
+      fn_notify: {
+        Args: {
+          p_action_url?: string
+          p_entity_id?: string
+          p_entity_type?: string
+          p_message?: string
+          p_org_id: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       fn_take_monthly_snapshot: {
         Args: { p_org_id: string }
         Returns: undefined
+      }
+      fn_unread_notification_count: {
+        Args: { p_user_id: string }
+        Returns: number
       }
       generate_document_number: {
         Args: { p_entity: string; p_org_id: string; p_prefix: string }
