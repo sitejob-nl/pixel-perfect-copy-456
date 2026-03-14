@@ -193,7 +193,7 @@ export default function AutomationsPage() {
   };
 
   const handleToggle = async (id: string, active: boolean) => {
-    const { error } = await supabase.from("whatsapp_automations").update({ is_active: active }).eq("id", id);
+    const { error } = await (supabase as any).from("whatsapp_automations").update({ is_active: active }).eq("id", id);
     if (error) {
       toast.error("Schakelen mislukt");
     } else {
