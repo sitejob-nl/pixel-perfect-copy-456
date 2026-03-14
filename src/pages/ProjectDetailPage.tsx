@@ -134,7 +134,7 @@ export default function ProjectDetailPage() {
       </div>
 
       <ErpTabs
-        items={[["overview", "Overzicht"], ["timeline", "Timeline"], ["checklist", "Checklist"]]}
+        items={[["overview", "Overzicht"], ["timeline", "Timeline"], ["checklist", "Checklist"], ["comments", "Comments"]]}
         active={tab}
         onChange={setTab}
       />
