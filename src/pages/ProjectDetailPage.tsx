@@ -256,6 +256,10 @@ export default function ProjectDetailPage() {
         </div>
       )}
 
+      {tab === "comments" && (
+        <CommentsSection entityType="project" entityId={id!} />
+      )}
+
       <CreateActivityDialog open={activityOpen} onOpenChange={setActivityOpen} defaultProjectId={id} />
     </div>
   );
