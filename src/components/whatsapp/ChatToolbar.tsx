@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Paperclip, LayoutGrid, List, Link2, FileText, Smile, Image, File, X, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -388,9 +388,12 @@ export function TemplateSheet({ open, onOpenChange, phone, contactId, onSending,
     } catch {}
   };
 
+  useEffect(() => {
+    if (open) { loadTemplates(); loadContactData(); setSelected(null); setVarMappings({}); setSearch(""); }
+  }, [open]);
+
   const handleOpen = (isOpen: boolean) => {
     onOpenChange(isOpen);
-    if (isOpen) { loadTemplates(); loadContactData(); setSelected(null); setVarMappings({}); setSearch(""); }
   };
 
   const extractVars = (tpl: any): string[] => {
