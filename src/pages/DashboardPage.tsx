@@ -1,12 +1,16 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { StatCard, ErpCard, Dot, Chip, PageHeader, ErpButton, Badge, TH, TD, TR, fmt } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
+import { AlertTriangle, Lightbulb, Bell, TrendingUp, Sparkles } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const EXCLUDED_KEYWORDS = ['Web', 'Agency', 'Media', 'Brendly', 'Rickid', 'Savvy', 'Yellow', 'Fluencer', 'Lefhebbers', 'Marsmedia'];
 
@@ -22,7 +26,9 @@ const healthColors: Record<string, string> = {
 export default function DashboardPage() {
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   const { data: org } = useOrganization();
+  const { session } = useAuth();
   const orgId = org?.organization_id;
+  const navigate = useNavigate();
 
   const { data: dealStats } = useQuery({
     queryKey: ["dashboard-deals", orgId],
@@ -244,7 +250,128 @@ export default function DashboardPage() {
         </ErpCard>
       </div>
 
+      {/* AI Widgets Row */}
+      <AiWidgetsRow orgId={orgId} accessToken={session?.access_token} navigate={navigate} />
+
       <CreateActivityDialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen} />
+    </div>
+  );
+}
+
+const typeIcons: Record<string, React.ReactNode> = {
+  warning: <AlertTriangle className="w-3.5 h-3.5 text-erp-amber" />,
+  opportunity: <Lightbulb className="w-3.5 h-3.5 text-erp-green" />,
+  reminder: <Bell className="w-3.5 h-3.5 text-erp-blue" />,
+  insight: <TrendingUp className="w-3.5 h-3.5 text-erp-purple" />,
+};
+
+const priorityBorder: Record<string, string> = {
+  high: "border-l-red-500", medium: "border-l-amber-500", low: "border-l-green-500",
+};
+
+function AiWidgetsRow({ orgId, accessToken, navigate }: { orgId?: string; accessToken?: string; navigate: any }) {
+  const { data: suggestions, isLoading: sugLoading } = useQuery({
+    queryKey: ["ai-dashboard-suggestions", orgId],
+    enabled: !!orgId && !!accessToken,
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-sitejob`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ action: "suggest_actions", org_id: orgId }),
+      });
+      if (!res.ok) return { suggestions: [] };
+      return await res.json();
+    },
+  });
+
+  const { data: digest, isLoading: digLoading } = useQuery({
+    queryKey: ["ai-smart-digest", orgId],
+    enabled: !!orgId && !!accessToken,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-sitejob`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ action: "smart_digest", org_id: orgId }),
+      });
+      if (!res.ok) return {};
+      return await res.json();
+    },
+  });
+
+  const digestItems = digest ? [
+    { label: "Rode klanten", count: digest.rode_klanten ?? 0, color: "#ef4444", link: "/companies" },
+    { label: "Overdue taken", count: digest.overdue_taken ?? 0, color: "#f59e0b", link: "/tasks" },
+    { label: "Open facturen", count: digest.open_facturen ?? 0, color: "#f59e0b", link: "/invoices" },
+    { label: "Deals in pipeline", count: digest.deals_in_pipeline ?? 0, color: "#3b82f6", link: "/pipeline" },
+    { label: "Boekingen vandaag", count: digest.boekingen_vandaag ?? 0, color: "#22c55e", link: "/bookings" },
+    { label: "Gemiste gesprekken", count: digest.gemiste_gesprekken ?? 0, color: "#ef4444", link: "/calls" },
+  ] : [];
+
+  return (
+    <div className="grid grid-cols-[3fr_2fr] gap-[14px] mb-6">
+      {/* AI Suggestions */}
+      <ErpCard className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-4 h-4 text-erp-amber" />
+          <span className="text-[15px] font-semibold">AI Suggesties</span>
+        </div>
+        {sugLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-14 w-full bg-erp-bg3" />
+            <Skeleton className="h-14 w-full bg-erp-bg3" />
+            <Skeleton className="h-14 w-full bg-erp-bg3" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {(suggestions?.suggestions || []).slice(0, 4).map((s: any, i: number) => (
+              <div key={i} className={`border-l-2 ${priorityBorder[s.priority] || "border-l-gray-500"} bg-erp-bg3 rounded-r-lg p-3 cursor-pointer hover:bg-erp-hover transition-colors`}
+                onClick={() => s.action_url && navigate(s.action_url)}>
+                <div className="flex items-start gap-2">
+                  {typeIcons[s.type] || typeIcons.insight}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-erp-text0">{s.title}</p>
+                    <p className="text-[11px] text-erp-text2 mt-0.5">{s.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(!suggestions?.suggestions || suggestions.suggestions.length === 0) && (
+              <p className="text-[13px] text-erp-text3 py-4 text-center">Geen suggesties beschikbaar</p>
+            )}
+          </div>
+        )}
+      </ErpCard>
+
+      {/* Smart Digest */}
+      <ErpCard className="p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-4 h-4 text-erp-amber" />
+          <span className="text-[15px] font-semibold">Smart Overzicht</span>
+        </div>
+        {digLoading ? (
+          <div className="space-y-3">
+            {[1,2,3,4].map(i => <Skeleton key={i} className="h-8 w-full bg-erp-bg3" />)}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {digestItems.map((item, i) => (
+              <div
+                key={i}
+                onClick={() => navigate(item.link)}
+                className="flex items-center gap-3 py-2.5 px-2 rounded-lg cursor-pointer hover:bg-erp-hover transition-colors"
+              >
+                <Dot color={item.count > 0 ? item.color : "#6b7280"} size={8} />
+                <span className="flex-1 text-[13px] text-erp-text1">{item.label}</span>
+                <span className={`text-[14px] font-semibold ${item.count > 0 ? "text-erp-text0" : "text-erp-text3"}`}>
+                  {item.count}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </ErpCard>
     </div>
   );
 }

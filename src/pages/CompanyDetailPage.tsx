@@ -12,6 +12,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { projStatus } from "@/data/mockData";
 import { toast } from "sonner";
+import AiSidePanel from "@/components/erp/AiSidePanel";
 
 const healthColors: Record<string, string> = {
   green: "#22c55e", orange: "#f59e0b", red: "#ef4444", unknown: "#6b7280",
@@ -24,7 +25,9 @@ export default function CompanyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [tab, setTab] = useState("overview");
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
   const qc = useQueryClient();
 
   const { data: company, isLoading } = useQuery({
@@ -81,7 +84,8 @@ export default function CompanyDetailPage() {
   const hs = health?.health_status || "unknown";
 
   return (
-    <div className="animate-fade-up max-w-[1200px]">
+    <div className="flex gap-4">
+    <div className="animate-fade-up max-w-[1200px] flex-1 min-w-0">
       <div className="flex items-center gap-2 mb-2">
         <button onClick={() => navigate("/companies")} className="text-erp-text3 hover:text-erp-text1 transition-colors">
           <Icons.ChevDown className="w-4 h-4 rotate-90" />
@@ -89,7 +93,14 @@ export default function CompanyDetailPage() {
         <span className="text-erp-text3 text-xs">Bedrijven</span>
       </div>
 
-      <PageHeader title={company.name} desc={company.industry || undefined} />
+      <PageHeader title={company.name} desc={company.industry || undefined}>
+        <button
+          onClick={() => setAiPanelOpen(!aiPanelOpen)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${aiPanelOpen ? "bg-erp-blue text-white" : "bg-erp-bg3 border border-erp-border0 text-erp-text1 hover:bg-erp-hover"}`}
+        >
+          ✨ AI {aiPanelOpen ? "Sluiten" : ""}
+        </button>
+      </PageHeader>
 
       <div className="flex items-center gap-3 mb-5 flex-wrap">
         <Badge color={healthColors[hs]}>
@@ -239,6 +250,8 @@ export default function CompanyDetailPage() {
       {tab === "comments" && (
         <CommentsSection entityType="company" entityId={id!} />
       )}
+    </div>
+    {aiPanelOpen && orgId && <AiSidePanel entityType="company" entityId={id!} orgId={orgId} />}
     </div>
   );
 }

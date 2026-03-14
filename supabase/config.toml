@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.booking-service]
 verify_jwt = false
+
+[functions.ask-sitejob]
+verify_jwt = false

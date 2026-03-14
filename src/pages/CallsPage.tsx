@@ -7,10 +7,11 @@ import { Icons } from "@/components/erp/ErpIcons";
 import { format, formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
-import { Loader2, PhoneIncoming, PhoneOutgoing, PhoneMissed, Mic, FileText, X } from "lucide-react";
+import { Loader2, PhoneIncoming, PhoneOutgoing, PhoneMissed, Mic, FileText, X, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 
 const sb = supabase as any;
 
@@ -31,6 +32,8 @@ export default function CallsPage() {
   const [selectedCall, setSelectedCall] = useState<any>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const { session } = useAuth();
 
   const { data: calls = [], isLoading } = useQuery({
     queryKey: ["call-log", orgId, filter],
@@ -97,6 +100,31 @@ export default function CallsPage() {
     await sb.from("call_log").update({ matched_project_id: projectId || null }).eq("id", selectedCall.id);
     qc.invalidateQueries({ queryKey: ["call-log"] });
     toast.success("Project gekoppeld");
+  };
+
+  const analyzeCall = async () => {
+    if (!selectedCall || !session?.access_token) return;
+    setAnalyzing(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-sitejob`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: "analyze_call", entity_id: selectedCall.id, org_id: orgId }),
+      });
+      if (!res.ok) throw new Error("Analyse mislukt");
+      const result = await res.json();
+      // Refresh call data
+      qc.invalidateQueries({ queryKey: ["call-log"] });
+      setSelectedCall({ ...selectedCall, sentiment: result.sentiment, ai_summary: result.summary, ai_action_items: result.action_items });
+      toast.success("Gesprek geanalyseerd");
+    } catch (err: any) {
+      toast.error(err.message || "Analyse mislukt");
+    } finally {
+      setAnalyzing(false);
+    }
   };
 
   const openCall = (call: any) => {
@@ -258,6 +286,18 @@ export default function CallsPage() {
                     {selectedCall.transcription_text}
                   </div>
                 </div>
+              )}
+
+              {/* AI Analyze button */}
+              {selectedCall.has_transcription && !selectedCall.ai_summary && (
+                <button
+                  onClick={analyzeCall}
+                  disabled={analyzing}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-erp-blue to-erp-purple text-white text-xs font-medium hover:brightness-110 disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {analyzing ? "Analyseren..." : "AI Analyse"}
+                </button>
               )}
 
               {/* AI Summary */}

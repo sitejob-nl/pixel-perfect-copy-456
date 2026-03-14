@@ -45,6 +45,7 @@ import CalendarPage from "./pages/CalendarPage";
 import BookingPage from "./pages/BookingPage";
 import BookingsPage from "./pages/BookingsPage";
 import CallsPage from "./pages/CallsPage";
+import AiAssistantPage from "./pages/AiAssistantPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -173,6 +174,7 @@ const App = () => (
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="scrapers" element={<ScrapersPage />} />
               <Route path="reports" element={<ReportingPage />} />
+              <Route path="ai" element={<AiAssistantPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="demos" element={<DemosPage />} />
               <Route path="content" element={<ContentPage />} />

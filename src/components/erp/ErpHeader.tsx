@@ -5,7 +5,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import MobileNav from "./MobileNav";
 import NotificationBell from "./NotificationBell";
 
-export default function ErpHeader() {
+interface Props {
+  onSearchClick?: () => void;
+}
+
+export default function ErpHeader({ onSearchClick }: Props) {
   const { user, signOut } = useAuth();
   const isMobile = useIsMobile();
 
@@ -19,12 +23,12 @@ export default function ErpHeader() {
     <header className="h-[52px] min-h-[52px] border-b border-erp-border0 flex items-center justify-between px-3 md:px-5 bg-erp-bg1">
       <div className="flex items-center gap-2">
         {isMobile && <MobileNav />}
-        <div className={cn("flex items-center gap-[7px] bg-erp-bg3 rounded-lg px-3 py-[6px] border border-erp-border0", isMobile ? "flex-1" : "w-[300px]")}>
+        <div
+          onClick={onSearchClick}
+          className={cn("flex items-center gap-[7px] bg-erp-bg3 rounded-lg px-3 py-[6px] border border-erp-border0 cursor-pointer hover:border-erp-text3 transition-colors", isMobile ? "flex-1" : "w-[300px]")}
+        >
           <span className="text-erp-text3"><Icons.Search className="w-[15px] h-[15px]" /></span>
-          <input
-            placeholder={isMobile ? "Zoeken..." : "Zoeken... (⌘K)"}
-            className="bg-transparent border-none outline-none text-erp-text0 text-[13px] w-full"
-          />
+          <span className="text-erp-text3 text-[13px]">{isMobile ? "Zoeken..." : "Vraag iets aan AI... (⌘K)"}</span>
         </div>
       </div>
       <div className="flex items-center gap-1">
