@@ -38,6 +38,8 @@ import EmailPage from "./pages/EmailPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
 import TasksPage from "./pages/TasksPage";
+import ReportingPage from "./pages/ReportingPage";
+import CompanyDetailPage from "./pages/CompanyDetailPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -154,6 +156,7 @@ const App = () => (
               <Route path="contacts" element={<ContactsPage />} />
               <Route path="contacts/:id" element={<ContactDetailPage />} />
               <Route path="companies" element={<CompaniesPage />} />
+              <Route path="companies/:id" element={<CompanyDetailPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="projects/:id" element={<ProjectDetailPage />} />
@@ -163,6 +166,7 @@ const App = () => (
               <Route path="knowledgebase" element={<KnowledgeBasePage />} />
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="scrapers" element={<ScrapersPage />} />
+              <Route path="reports" element={<ReportingPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="demos" element={<DemosPage />} />
               <Route path="content" element={<ContentPage />} />

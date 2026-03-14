@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader, ErpButton, ErpCard, FilterButton, Avatar, Badge, Dot, TH, TD, TR, fmt } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { useCompanies, useDeleteCompany } from "@/hooks/useCompanies";
@@ -21,6 +22,7 @@ const healthColors: Record<string, string> = {
 type HealthFilter = "all" | "green" | "orange" | "red" | "mrr";
 
 export default function CompaniesPage() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filter, setFilter] = useState<HealthFilter>("all");
@@ -117,7 +119,7 @@ export default function CompaniesPage() {
                 <tr><td colSpan={8} className="px-4 py-8 border-b border-erp-border0 text-center text-erp-text3 text-sm">Geen bedrijven gevonden</td></tr>
               )}
               {list.map(c => (
-                <TR key={c.id}>
+                <TR key={c.id} onClick={() => navigate(`/companies/${c.id}`)}>
                   <TD>
                     <div className="flex items-center gap-[10px]">
                       <Avatar name={c.name} id={c.id.charCodeAt(0)} />

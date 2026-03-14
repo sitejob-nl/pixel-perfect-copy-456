@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
 import CommentsSection from "@/components/erp/CommentsSection";
+import AiSummaryCard from "@/components/erp/AiSummaryCard";
 import { projStatus } from "@/data/mockData";
 
 export default function ProjectDetailPage() {
@@ -105,7 +106,8 @@ export default function ProjectDetailPage() {
   const totalCount = checklist.length;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  const sourceIcon = (source: string) => {
+  const sourceIcon = (source: string, eventType?: string) => {
+    if (eventType === "email" || source === "email") return "📧";
     switch (source) {
       case "activity": return "📝"; case "status_update": return "📢"; case "invoice": return "💰";
       case "checklist": return "✓"; case "contract": return "📄"; default: return "⚡";
@@ -141,6 +143,7 @@ export default function ProjectDetailPage() {
 
       {tab === "overview" && (
         <div className="space-y-5">
+          <AiSummaryCard entityType="project" entityId={id!} />
           <ErpCard className="p-5">
             <div className="text-[14px] font-semibold mb-4">Details</div>
             <div className="grid grid-cols-3 gap-4">
@@ -187,11 +190,16 @@ export default function ProjectDetailPage() {
             {timeline.map((ev: any, i: number) => (
               <div key={ev.id} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <span className="text-base w-7 h-7 flex items-center justify-center">{sourceIcon(ev.source)}</span>
+                  <span className="text-base w-7 h-7 flex items-center justify-center">{sourceIcon(ev.source, ev.event_type)}</span>
                   {i < timeline.length - 1 && <div className="w-px flex-1 bg-erp-border0 my-1" />}
                 </div>
                 <div className="pb-5 flex-1 min-w-0">
                   <div className="text-[13px] text-erp-text0 font-medium">{ev.title}</div>
+                  {ev.event_type === "email" && ev.metadata?.from && (
+                    <div className="text-[11px] text-erp-text3 mt-0.5">
+                      Van: {(ev.metadata as any).from} → {(ev.metadata as any).to || "—"}
+                    </div>
+                  )}
                   {ev.description && <div className="text-[12px] text-erp-text2 mt-0.5 truncate">{ev.description}</div>}
                   <div className="text-[11px] text-erp-text3 mt-1">
                     {formatDistanceToNow(new Date(ev.event_at), { addSuffix: true, locale: nl })}

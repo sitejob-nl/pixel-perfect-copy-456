@@ -54,6 +54,11 @@ const nav: NavSection[] = [
     ]
   },
   {
+    l: "Inzichten", items: [
+      { k: "reports", l: "Rapportages", i: "BarChart" },
+    ]
+  },
+  {
     l: "Communicatie", items: [
       { k: "email", l: "Email", i: "Send" },
       { k: "portals", l: "Klantenportaal", i: "Portal" },
