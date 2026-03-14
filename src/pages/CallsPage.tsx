@@ -102,6 +102,31 @@ export default function CallsPage() {
     toast.success("Project gekoppeld");
   };
 
+  const analyzeCall = async () => {
+    if (!selectedCall || !session?.access_token) return;
+    setAnalyzing(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-sitejob`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ action: "analyze_call", entity_id: selectedCall.id, org_id: orgId }),
+      });
+      if (!res.ok) throw new Error("Analyse mislukt");
+      const result = await res.json();
+      // Refresh call data
+      qc.invalidateQueries({ queryKey: ["call-log"] });
+      setSelectedCall({ ...selectedCall, sentiment: result.sentiment, ai_summary: result.summary, ai_action_items: result.action_items });
+      toast.success("Gesprek geanalyseerd");
+    } catch (err: any) {
+      toast.error(err.message || "Analyse mislukt");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   const openCall = (call: any) => {
     setSelectedCall(call);
     setNotes(call.notes || "");
