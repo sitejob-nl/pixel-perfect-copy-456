@@ -1,9 +1,12 @@
 import { Icons } from "@/components/erp/ErpIcons";
 import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useIsMobile } from "@/hooks/use-mobile";
+import MobileNav from "./MobileNav";
 
 export default function ErpHeader() {
   const { user, signOut } = useAuth();
+  const isMobile = useIsMobile();
 
   const initials = (() => {
     const name = user?.user_metadata?.full_name || user?.email || "";
@@ -12,13 +15,16 @@ export default function ErpHeader() {
   })();
 
   return (
-    <header className="h-[52px] min-h-[52px] border-b border-erp-border0 flex items-center justify-between px-5 bg-erp-bg1">
-      <div className="flex items-center gap-[7px] bg-erp-bg3 rounded-lg px-3 py-[6px] border border-erp-border0 w-[300px]">
-        <span className="text-erp-text3"><Icons.Search className="w-[15px] h-[15px]" /></span>
-        <input
-          placeholder="Zoeken... (⌘K)"
-          className="bg-transparent border-none outline-none text-erp-text0 text-[13px] w-full"
-        />
+    <header className="h-[52px] min-h-[52px] border-b border-erp-border0 flex items-center justify-between px-3 md:px-5 bg-erp-bg1">
+      <div className="flex items-center gap-2">
+        {isMobile && <MobileNav />}
+        <div className={cn("flex items-center gap-[7px] bg-erp-bg3 rounded-lg px-3 py-[6px] border border-erp-border0", isMobile ? "flex-1" : "w-[300px]")}>
+          <span className="text-erp-text3"><Icons.Search className="w-[15px] h-[15px]" /></span>
+          <input
+            placeholder={isMobile ? "Zoeken..." : "Zoeken... (⌘K)"}
+            className="bg-transparent border-none outline-none text-erp-text0 text-[13px] w-full"
+          />
+        </div>
       </div>
       <div className="flex items-center gap-1">
         <button className="w-[34px] h-[34px] rounded-lg flex items-center justify-center cursor-pointer text-erp-text2 bg-transparent border-none relative">
@@ -43,4 +49,8 @@ export default function ErpHeader() {
       </div>
     </header>
   );
+}
+
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
 }
