@@ -3,8 +3,11 @@ import { useWhatsAppAccount, useWhatsAppRegister, useWhatsAppDisconnect, useWhat
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Check, X, RefreshCw, ExternalLink } from "lucide-react";
+import ProfileSettings from "@/components/whatsapp/ProfileSettings";
+import TemplateManager from "@/components/whatsapp/TemplateManager";
+import AutomationsPage from "@/components/whatsapp/AutomationsPage";
 
-type SubTab = "verbinding" | "berichten" | "logs";
+type SubTab = "verbinding" | "profiel" | "templates" | "automations" | "logs";
 
 export default function WhatsAppSettings() {
   const { data: account, isLoading, refetch } = useWhatsAppAccount();
