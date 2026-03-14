@@ -6,6 +6,9 @@ import { Dot } from "@/components/erp/ErpPrimitives";
 import { useOrgModules } from "@/hooks/useOrgModules";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useBranding } from "@/contexts/BrandingContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useOrganization } from "@/hooks/useOrganization";
 
 interface NavItem {
   k: string;
@@ -76,6 +79,23 @@ const moduleMap: Record<string, string> = {
   email: "mod_email_accounts",
 };
 
+const entityRouteMap: Record<string, string> = {
+  projects: "/projects",
+  companies: "/companies",
+  contacts: "/contacts",
+  deals: "/pipeline",
+  invoices: "/invoices",
+  quotes: "/quotes",
+  contracts: "/contracts",
+};
+
+const iconNameMap: Record<string, IconName> = {
+  folder: "Folder", building: "Building", users: "Users", kanban: "Kanban",
+  receipt: "Receipt", file: "File", pen: "Pen", zap: "Zap", search: "Search",
+  globe: "Globe", home: "Home", bot: "Bot", send: "Send", mail: "Mail",
+  calendar: "Calendar", book: "Book", star: "Zap",
+};
+
 export default function ErpSidebar() {
   const [hov, setHov] = useState<string | null>(null);
   const { data: modules } = useOrgModules();
@@ -83,8 +103,22 @@ export default function ErpSidebar() {
   const { org: brandOrg } = useBranding();
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: org } = useOrganization();
 
-  // Derive active page from pathname
+  const { data: savedViews = [] } = useQuery({
+    queryKey: ["saved-views-pinned", org?.organization_id],
+    enabled: !!org?.organization_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("saved_views" as any)
+        .select("*")
+        .eq("is_pinned", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+  });
+
   const pathSegment = location.pathname.split("/")[1] || "dashboard";
   const activePage = pathSegment;
 
@@ -103,6 +137,15 @@ export default function ErpSidebar() {
 
   const handleNavigate = (key: string) => {
     navigate(`/${key}`);
+  };
+
+  const handleViewClick = (view: any) => {
+    const route = entityRouteMap[view.entity_type] || "/dashboard";
+    const params = new URLSearchParams();
+    if (view.filters) {
+      params.set("view", view.id);
+    }
+    navigate(params.toString() ? `${route}?${params}` : route);
   };
 
   return (
@@ -165,6 +208,34 @@ export default function ErpSidebar() {
             </div>
           );
         })}
+
+        {/* Saved Views */}
+        {savedViews.length > 0 && (
+          <div className="mb-[18px]">
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">Saved Views</div>
+            {savedViews.map((view: any) => {
+              const iconKey = (view.icon || "folder").toLowerCase();
+              const IconComp = Icons[iconNameMap[iconKey] || "Folder"];
+              const viewId = `view-${view.id}`;
+              const isHov = hov === viewId;
+              return (
+                <div
+                  key={view.id}
+                  onClick={() => handleViewClick(view)}
+                  onMouseEnter={() => setHov(viewId)}
+                  onMouseLeave={() => setHov(null)}
+                  className={cn(
+                    "flex items-center gap-[9px] px-[10px] py-[7px] rounded-lg cursor-pointer text-[13px] transition-all duration-100",
+                    isHov ? "text-erp-text1 bg-erp-hover" : "text-erp-text2"
+                  )}
+                >
+                  <IconComp className="w-[18px] h-[18px]" />
+                  <span className="flex-1 truncate">{view.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Super Admin link */}
         {isSuperAdmin && (

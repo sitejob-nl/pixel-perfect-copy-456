@@ -1,20 +1,37 @@
-import { useState } from "react";
-import { PageHeader, ErpButton, ErpCard, StatCard, Badge, Dot, TH, TD, TR, fmt } from "@/components/erp/ErpPrimitives";
+import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { PageHeader, ErpButton, ErpCard, StatCard, Badge, Dot, TH, TD, TR, fmt, FilterButton, Chip } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { projStatus, invStatus } from "@/data/mockData";
-import { useProjects, useUpdateProject, useDeleteProject } from "@/hooks/useProjects";
+import { useProjects, useDeleteProject } from "@/hooks/useProjects";
 import { useInvoices, useUpdateInvoice, useDeleteInvoice } from "@/hooks/useInvoices";
 import CreateProjectDialog from "@/components/erp/CreateProjectDialog";
 import CreateInvoiceDialog from "@/components/erp/CreateInvoiceDialog";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { nl } from "date-fns/locale";
+
+type ProjFilter = "all" | "active" | "delivered" | "dev" | "intern";
 
 export function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [filter, setFilter] = useState<ProjFilter>("all");
   const { data: projects = [], isLoading } = useProjects();
   const deleteProject = useDeleteProject();
+  const navigate = useNavigate();
 
   const activeCount = projects.filter(p => p.status === "in_progress").length;
+
+  const list = useMemo(() => {
+    let result = [...projects];
+    switch (filter) {
+      case "active": result = result.filter(p => p.status === "in_progress"); break;
+      case "delivered": result = result.filter(p => p.status === "delivered"); break;
+      case "dev": result = result.filter(p => ["intake", "quoted", "accepted"].includes(p.status)); break;
+      case "intern": result = result.filter(p => p.service_type === "saas" || p.service_type === "intern"); break;
+    }
+    return result;
+  }, [projects, filter]);
 
   return (
     <div className="animate-fade-up max-w-[1200px]">
@@ -22,23 +39,31 @@ export function ProjectsPage() {
         <ErpButton primary onClick={() => setDialogOpen(true)}><Icons.Plus className="w-4 h-4" /> Nieuw project</ErpButton>
       </PageHeader>
 
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>Alle</FilterButton>
+        <FilterButton active={filter === "active"} onClick={() => setFilter("active")}>Actief</FilterButton>
+        <FilterButton active={filter === "delivered"} onClick={() => setFilter("delivered")}>Opgeleverd</FilterButton>
+        <FilterButton active={filter === "dev"} onClick={() => setFilter("dev")}>In development</FilterButton>
+        <FilterButton active={filter === "intern"} onClick={() => setFilter("intern")}>Intern</FilterButton>
+      </div>
+
       {isLoading ? (
         <ErpCard className="p-8 text-center text-erp-text2 text-sm">Laden...</ErpCard>
       ) : (
         <ErpCard className="overflow-hidden">
           <table className="w-full border-collapse">
-            <thead><tr><TH>Project</TH><TH>Klant</TH><TH>Status</TH><TH>Waarde</TH><TH>Prioriteit</TH><TH></TH></tr></thead>
+            <thead><tr><TH>Project</TH><TH>Klant</TH><TH>Status</TH><TH>Waarde</TH><TH>MRR</TH><TH>Laatste activiteit</TH><TH>Info</TH><TH></TH></tr></thead>
             <tbody>
-              {projects.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 border-b border-erp-border0 text-center text-erp-text3 text-sm">Geen projecten gevonden</td></tr>
+              {list.length === 0 && (
+                <tr><td colSpan={8} className="px-4 py-8 border-b border-erp-border0 text-center text-erp-text3 text-sm">Geen projecten gevonden</td></tr>
               )}
-              {projects.map(p => {
+              {list.map(p => {
                 const [sl, sc] = projStatus[p.status] || ["?", "#6b7280"];
                 const contactName = p.contacts ? `${p.contacts.first_name} ${p.contacts.last_name ?? ""}`.trim() : null;
                 return (
-                  <TR key={p.id}>
+                  <TR key={p.id} onClick={() => navigate(`/projects/${p.id}`)}>
                     <TD>
-                      <div className="font-medium text-erp-text0">{p.name}</div>
+                      <div className="font-medium text-erp-blue hover:underline cursor-pointer">{p.name}</div>
                       <div className="text-[11px] text-erp-text3">{p.project_number}</div>
                     </TD>
                     <TD>
@@ -47,10 +72,23 @@ export function ProjectsPage() {
                     </TD>
                     <TD><Badge color={sc}><Dot color={sc} size={5} />{sl}</Badge></TD>
                     <TD className="font-semibold">{p.estimated_value ? `€${fmt(p.estimated_value)}` : "—"}</TD>
-                    <TD className="text-erp-text2 text-xs capitalize">{p.priority ?? "—"}</TD>
+                    <TD className="text-erp-text0 text-xs font-medium">
+                      {(p as any).monthly_amount ? `€${fmt((p as any).monthly_amount)}` : "—"}
+                    </TD>
+                    <TD className="text-erp-text2 text-xs">
+                      {(p as any).last_activity_at
+                        ? formatDistanceToNow(new Date((p as any).last_activity_at), { addSuffix: true, locale: nl })
+                        : "—"}
+                    </TD>
+                    <TD>
+                      <div className="flex gap-1">
+                        {(p as any).billing_frequency && <Chip>{(p as any).billing_frequency}</Chip>}
+                        {(p as any).sla_level && <Chip>{(p as any).sla_level}</Chip>}
+                      </div>
+                    </TD>
                     <TD>
                       <button
-                        onClick={() => { if (confirm("Project verwijderen?")) deleteProject.mutate(p.id, { onSuccess: () => toast.success("Verwijderd") }); }}
+                        onClick={e => { e.stopPropagation(); if (confirm("Project verwijderen?")) deleteProject.mutate(p.id, { onSuccess: () => toast.success("Verwijderd") }); }}
                         className="text-erp-text3 hover:text-erp-red transition-colors p-1"
                       >
                         <Icons.Trash className="w-3.5 h-3.5" />
