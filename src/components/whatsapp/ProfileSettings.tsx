@@ -110,8 +110,13 @@ export default function ProfileSettings() {
       });
 
       if (res.data?.error) throw new Error(res.data.error);
-      toast.success("Profielfoto geüpload");
-      loadProfile();
+
+      // Show local preview immediately
+      setLocalPreview(URL.createObjectURL(file));
+      toast.success("Profielfoto geüpload. Het kan even duren voordat deze overal zichtbaar is.");
+
+      // Delayed reload — Meta needs time to process
+      setTimeout(() => loadProfile(), 5000);
     } catch (err: any) {
       toast.error(err.message || "Upload mislukt");
     } finally {
