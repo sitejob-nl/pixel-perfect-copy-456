@@ -166,10 +166,7 @@ export default function EmailDetail({ thread, emails, isLoading, connectionId, o
                     {loadingBodies.has(email.id) ? (
                       <Skeleton className="h-20 w-full bg-erp-bg4 rounded mt-3" />
                     ) : emailBodies[email.id] ? (
-                      <div
-                        className="mt-3 text-[12px] text-erp-text1 [&_a]:text-erp-blue [&_img]:max-w-full overflow-x-auto"
-                        dangerouslySetInnerHTML={{ __html: emailBodies[email.id] }}
-                      />
+                      <EmailIframe html={emailBodies[email.id]} />
                     ) : (
                       <p className="mt-3 text-[12px] text-erp-text1 whitespace-pre-wrap">
                         {email.body_text || email.snippet}
