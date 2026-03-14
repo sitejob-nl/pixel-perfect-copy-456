@@ -26,7 +26,9 @@ const healthColors: Record<string, string> = {
 export default function DashboardPage() {
   const [activityDialogOpen, setActivityDialogOpen] = useState(false);
   const { data: org } = useOrganization();
+  const { session } = useAuth();
   const orgId = org?.organization_id;
+  const navigate = useNavigate();
 
   const { data: dealStats } = useQuery({
     queryKey: ["dashboard-deals", orgId],
