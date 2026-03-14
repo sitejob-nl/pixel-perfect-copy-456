@@ -205,9 +205,13 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-erp-border0 bg-erp-bg1">
-        <div className="flex items-end gap-2">
+      <div className="border-t border-erp-border0 bg-erp-bg1">
+        <div className="px-2 py-1 border-b border-erp-border0">
+          <ChatToolbar phoneNumber={phoneNumber} contactId={contactId} />
+        </div>
+        <div className="px-4 py-2 flex items-end gap-2">
           <Textarea
+            ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
