@@ -179,6 +179,76 @@ export type Database = {
           },
         ]
       }
+      ai_actions: {
+        Row: {
+          action_input: Json | null
+          action_output: Json | null
+          action_type: string
+          conversation_id: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
+          execution_ms: number | null
+          id: string
+          organization_id: string
+          success: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          action_input?: Json | null
+          action_output?: Json | null
+          action_type: string
+          conversation_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          execution_ms?: number | null
+          id?: string
+          organization_id: string
+          success?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          action_input?: Json | null
+          action_output?: Json | null
+          action_type?: string
+          conversation_id?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          execution_ms?: number | null
+          id?: string
+          organization_id?: string
+          success?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_chat_sessions: {
         Row: {
           created_at: string
@@ -208,6 +278,63 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ai_conversations: {
+        Row: {
+          context_id: string | null
+          context_type: string | null
+          created_at: string
+          id: string
+          messages: Json
+          model: string | null
+          organization_id: string
+          title: string | null
+          tokens_used: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string
+          id?: string
+          messages?: Json
+          model?: string | null
+          organization_id: string
+          title?: string | null
+          tokens_used?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context_id?: string | null
+          context_type?: string | null
+          created_at?: string
+          id?: string
+          messages?: Json
+          model?: string | null
+          organization_id?: string
+          title?: string | null
+          tokens_used?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_models: {
         Row: {
@@ -250,6 +377,69 @@ export type Database = {
           tier?: string
         }
         Relationships: []
+      }
+      ai_queue: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
+          id: string
+          input_data: Json | null
+          job_type: string
+          organization_id: string
+          output_data: Json | null
+          priority: number | null
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          job_type: string
+          organization_id: string
+          output_data?: Json | null
+          priority?: number | null
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          job_type?: string
+          organization_id?: string
+          output_data?: Json | null
+          priority?: number | null
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_queue_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_summaries: {
         Row: {
@@ -9941,6 +10131,35 @@ export type Database = {
     }
     Functions: {
       cleanup_expired_raw_leads: { Args: never; Returns: number }
+      fn_ai_deal_signals: {
+        Args: { p_org_id: string }
+        Returns: {
+          company_name: string
+          dagen_in_fase: number
+          deal_title: string
+          fase: string
+          risico_score: number
+          signaal: string
+          waarde: number
+        }[]
+      }
+      fn_ai_get_crm_snapshot: { Args: { p_org_id: string }; Returns: Json }
+      fn_ai_lead_context: { Args: { p_contact_id: string }; Returns: Json }
+      fn_ai_meeting_prep: { Args: { p_booking_id: string }; Returns: Json }
+      fn_ai_queue_job: {
+        Args: {
+          p_entity_id?: string
+          p_entity_type?: string
+          p_input?: Json
+          p_job_type: string
+          p_org_id: string
+        }
+        Returns: string
+      }
+      fn_ai_smart_digest: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: Json
+      }
       fn_create_project_checklist: {
         Args: { p_project_id: string; p_template_id?: string }
         Returns: undefined
