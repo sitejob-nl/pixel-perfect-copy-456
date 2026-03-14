@@ -253,6 +253,9 @@ export default function DashboardPage() {
       {/* AI Widgets Row */}
       <AiWidgetsRow orgId={orgId} accessToken={session?.access_token} navigate={navigate} />
 
+      {/* AI Email Suggestions */}
+      <AiEmailSuggestionsCard navigate={navigate} />
+
       <CreateActivityDialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen} />
     </div>
   );
