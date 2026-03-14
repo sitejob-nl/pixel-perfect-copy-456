@@ -1,53 +1,51 @@
 
 
-# ✅ LinkedIn Integratie: Posts Plaatsen
+## Probleem
 
-## Wat is gebouwd
+De Cloudflare API test op regel 722 van `IntegrationSettings.tsx` doet een directe `fetch` vanuit de browser naar `https://api.cloudflare.com/client/v4/accounts/...`. Dit faalt door **CORS-restricties** — Cloudflare's API staat geen cross-origin requests vanuit browsers toe.
 
-### Database
-- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
+## Oplossing
 
-### Edge Functions
-- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
-- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
+Route de test-aanroep via een Supabase Edge Function, net zoals de Gemini-test al via de browser gaat (die API staat CORS wel toe). Twee opties:
 
-### Frontend
-- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
-- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
+1. **Proxy via bestaande Edge Function** (bv. een generieke `test-integration` function)
+2. **Client-side workaround**: niet mogelijk vanwege CORS
 
-### Secrets
-- `LINKEDIN_CLIENT_ID` — opgeslagen
-- `LINKEDIN_CLIENT_SECRET` — opgeslagen
+### Plan
 
-## ⚠️ Actie vereist
+1. **Nieuwe Edge Function `test-cloudflare`** aanmaken die:
+   - De `account_id` en `api_token` uit `integration_secrets` ophaalt (of ontvangt als parameters)
+   - Een test-request doet naar `https://api.cloudflare.com/client/v4/accounts/{account_id}`
+   - Het resultaat (`success` / error) teruggeeft
 
-Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
+2. **`CloudflareCard` aanpassen** (IntegrationSettings.tsx):
+   - De `testConnection` functie wijzigen om de Edge Function aan te roepen via `supabase.functions.invoke("test-cloudflare", ...)` in plaats van directe fetch
+   - Parameters meegeven: `organization_id` (de function haalt dan zelf de secrets op uit de DB)
+
+### Technische details
+
+**Edge Function `test-cloudflare/index.ts`:**
+- Authenticatie: JWT verificatie + org membership check
+- Haalt `account_id` en `api_token` op uit `integration_secrets` voor de betreffende org
+- Doet server-side fetch naar Cloudflare API
+- Retourneert `{ success: true/false, error?: string }`
+
+**CloudflareCard wijziging:**
+```typescript
+const testConnection = async () => {
+  setTesting(true);
+  try {
+    const { data, error } = await sb.functions.invoke("test-cloudflare", {
+      body: { organization_id: orgId },
+    });
+    if (error) throw error;
+    if (data.success) toast.success("Cloudflare verbinding werkt");
+    else toast.error(data.error || "Ongeldige credentials");
+  } catch (e: any) {
+    toast.error("Test mislukt: " + e.message);
+  } finally {
+    setTesting(false);
+  }
+};
 ```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
-```
 
----
-
-# ✅ LinkedIn Webhooks: Real-time Notificaties
-
-## Wat is gebouwd
-
-### Database
-- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
-
-### Edge Function
-- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
-
-### Frontend
-- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
-
-### Webhook URL
-```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
-```
-
-## ⚠️ Actie vereist
-
-1. Vraag een webhook use case aan in je LinkedIn Developer Portal
-2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
-3. LinkedIn valideert automatisch via de challenge-response flow
