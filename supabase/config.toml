@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.test-cloudflare]
 verify_jwt = false
+
+[functions.prospect-engine]
+verify_jwt = false
