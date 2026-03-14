@@ -256,6 +256,9 @@ export default function DashboardPage() {
       {/* AI Email Suggestions */}
       <AiEmailSuggestionsCard navigate={navigate} />
 
+      {/* Email Drafts Widget */}
+      <EmailDraftsWidget orgId={orgId} navigate={navigate} />
+
       <CreateActivityDialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen} />
     </div>
   );
