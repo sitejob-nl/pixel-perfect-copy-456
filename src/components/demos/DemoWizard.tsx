@@ -400,7 +400,7 @@ export default function DemoWizard({ onClose }: Props) {
             )}
 
             {(crawlFailed || manualMode) && (
-              <Card className="p-4 space-y-3 border-amber-500/30">
+              <Card className="p-4 space-y-3 border-destructive/20">
                 <p className="text-xs text-muted-foreground">
                   {crawlFailed ? "Cloudflare is niet geconfigureerd of de crawl is mislukt. " : ""}
                   Je kunt handmatig doorgaan.
