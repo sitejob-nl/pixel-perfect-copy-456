@@ -2867,6 +2867,90 @@ export type Database = {
           },
         ]
       }
+      crawl_jobs: {
+        Row: {
+          branding: Json | null
+          cf_job_id: string | null
+          company_info: Json | null
+          completed_at: string | null
+          created_at: string
+          depth: number | null
+          duration_seconds: number | null
+          error_message: string | null
+          finished_pages: number | null
+          formats: string[] | null
+          id: string
+          organization_id: string
+          page_limit: number | null
+          pages_data: Json | null
+          site_structure: Json | null
+          started_at: string | null
+          status: string
+          tech_stack: string[] | null
+          total_pages: number | null
+          url: string
+        }
+        Insert: {
+          branding?: Json | null
+          cf_job_id?: string | null
+          company_info?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          depth?: number | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          finished_pages?: number | null
+          formats?: string[] | null
+          id?: string
+          organization_id: string
+          page_limit?: number | null
+          pages_data?: Json | null
+          site_structure?: Json | null
+          started_at?: string | null
+          status?: string
+          tech_stack?: string[] | null
+          total_pages?: number | null
+          url: string
+        }
+        Update: {
+          branding?: Json | null
+          cf_job_id?: string | null
+          company_info?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          depth?: number | null
+          duration_seconds?: number | null
+          error_message?: string | null
+          finished_pages?: number | null
+          formats?: string[] | null
+          id?: string
+          organization_id?: string
+          page_limit?: number | null
+          pages_data?: Json | null
+          site_structure?: Json | null
+          started_at?: string | null
+          status?: string
+          tech_stack?: string[] | null
+          total_pages?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crawl_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crawl_jobs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       custom_field_definitions: {
         Row: {
           created_at: string
@@ -3204,6 +3288,63 @@ export type Database = {
         }
         Relationships: []
       }
+      demo_feedback: {
+        Row: {
+          created_at: string
+          demo_id: string
+          element_selector: string | null
+          feedback_type: string
+          id: string
+          message: string | null
+          page_slug: string | null
+          position_x: number | null
+          position_y: number | null
+          visitor_email: string | null
+          visitor_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          demo_id: string
+          element_selector?: string | null
+          feedback_type: string
+          id?: string
+          message?: string | null
+          page_slug?: string | null
+          position_x?: number | null
+          position_y?: number | null
+          visitor_email?: string | null
+          visitor_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          demo_id?: string
+          element_selector?: string | null
+          feedback_type?: string
+          id?: string
+          message?: string | null
+          page_slug?: string | null
+          position_x?: number | null
+          position_y?: number | null
+          visitor_email?: string | null
+          visitor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_feedback_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_feedback_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "v_demos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       demo_industry_modules: {
         Row: {
           demo_type: string
@@ -3221,6 +3362,66 @@ export type Database = {
           module_ids?: string[]
         }
         Relationships: []
+      }
+      demo_pages: {
+        Row: {
+          created_at: string
+          demo_id: string
+          generation_status: string | null
+          html_content: string
+          id: string
+          is_active: boolean | null
+          slug: string
+          sort_order: number
+          source_markdown: string | null
+          source_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          demo_id: string
+          generation_status?: string | null
+          html_content?: string
+          id?: string
+          is_active?: boolean | null
+          slug: string
+          sort_order?: number
+          source_markdown?: string | null
+          source_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          demo_id?: string
+          generation_status?: string | null
+          html_content?: string
+          id?: string
+          is_active?: boolean | null
+          slug?: string
+          sort_order?: number
+          source_markdown?: string | null
+          source_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_pages_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_pages_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "v_demos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       demo_versions: {
         Row: {
@@ -3265,6 +3466,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "demo_versions_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "v_demos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "demo_versions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -3276,6 +3484,54 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      demo_views: {
+        Row: {
+          created_at: string
+          demo_id: string
+          duration_seconds: number | null
+          id: string
+          pages_viewed: string[] | null
+          referrer: string | null
+          user_agent: string | null
+          visitor_hash: string | null
+        }
+        Insert: {
+          created_at?: string
+          demo_id: string
+          duration_seconds?: number | null
+          id?: string
+          pages_viewed?: string[] | null
+          referrer?: string | null
+          user_agent?: string | null
+          visitor_hash?: string | null
+        }
+        Update: {
+          created_at?: string
+          demo_id?: string
+          duration_seconds?: number | null
+          id?: string
+          pages_viewed?: string[] | null
+          referrer?: string | null
+          user_agent?: string | null
+          visitor_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_views_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_views_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "v_demos"
             referencedColumns: ["id"]
           },
         ]
@@ -3316,16 +3572,22 @@ export type Database = {
       demos: {
         Row: {
           active_page: string | null
+          avg_view_seconds: number | null
+          branding: Json | null
+          company_id: string | null
           company_name: string | null
           company_research: Json | null
           contact_id: string | null
+          crawl_job_id: string | null
           created_at: string
+          deal_id: string | null
           demo_html: string
           demo_type: string
           email_sent_at: string | null
           feedback: Json | null
           generation_duration_seconds: number | null
           generation_error: string | null
+          generation_progress: Json | null
           generation_started_at: string | null
           generation_status: string | null
           id: string
@@ -3334,28 +3596,38 @@ export type Database = {
           last_viewed_at: string | null
           model_used: string | null
           organization_id: string
+          page_config: Json | null
           pages: Json | null
           password_hash: string | null
           password_hint: string | null
           public_slug: string | null
           scrape_id: string | null
+          share_settings: Json | null
           shared_via_email: boolean | null
           title: string | null
           updated_at: string
           views: number | null
+          visitor_count: number | null
+          wizard_state: Json | null
         }
         Insert: {
           active_page?: string | null
+          avg_view_seconds?: number | null
+          branding?: Json | null
+          company_id?: string | null
           company_name?: string | null
           company_research?: Json | null
           contact_id?: string | null
+          crawl_job_id?: string | null
           created_at?: string
+          deal_id?: string | null
           demo_html: string
           demo_type: string
           email_sent_at?: string | null
           feedback?: Json | null
           generation_duration_seconds?: number | null
           generation_error?: string | null
+          generation_progress?: Json | null
           generation_started_at?: string | null
           generation_status?: string | null
           id?: string
@@ -3364,28 +3636,38 @@ export type Database = {
           last_viewed_at?: string | null
           model_used?: string | null
           organization_id: string
+          page_config?: Json | null
           pages?: Json | null
           password_hash?: string | null
           password_hint?: string | null
           public_slug?: string | null
           scrape_id?: string | null
+          share_settings?: Json | null
           shared_via_email?: boolean | null
           title?: string | null
           updated_at?: string
           views?: number | null
+          visitor_count?: number | null
+          wizard_state?: Json | null
         }
         Update: {
           active_page?: string | null
+          avg_view_seconds?: number | null
+          branding?: Json | null
+          company_id?: string | null
           company_name?: string | null
           company_research?: Json | null
           contact_id?: string | null
+          crawl_job_id?: string | null
           created_at?: string
+          deal_id?: string | null
           demo_html?: string
           demo_type?: string
           email_sent_at?: string | null
           feedback?: Json | null
           generation_duration_seconds?: number | null
           generation_error?: string | null
+          generation_progress?: Json | null
           generation_started_at?: string | null
           generation_status?: string | null
           id?: string
@@ -3394,17 +3676,49 @@ export type Database = {
           last_viewed_at?: string | null
           model_used?: string | null
           organization_id?: string
+          page_config?: Json | null
           pages?: Json | null
           password_hash?: string | null
           password_hint?: string | null
           public_slug?: string | null
           scrape_id?: string | null
+          share_settings?: Json | null
           shared_via_email?: boolean | null
           title?: string | null
           updated_at?: string
           views?: number | null
+          visitor_count?: number | null
+          wizard_state?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "demos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "demos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "demos_contact_id_fkey"
             columns: ["contact_id"]
@@ -3424,6 +3738,27 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_crawl_job_id_fkey"
+            columns: ["crawl_job_id"]
+            isOneToOne: false
+            referencedRelation: "crawl_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
             referencedColumns: ["id"]
           },
           {
@@ -10137,6 +10472,100 @@ export type Database = {
           },
           {
             foreignKeyName: "deals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_demos: {
+        Row: {
+          branding: Json | null
+          company_id: string | null
+          company_industry: string | null
+          company_name: string | null
+          contact_email: string | null
+          contact_name: string | null
+          crawl_job_id: string | null
+          created_at: string | null
+          deal_id: string | null
+          demo_type: string | null
+          feedback_count: number | null
+          generation_duration_seconds: number | null
+          generation_status: string | null
+          id: string | null
+          is_multipage: boolean | null
+          is_public: boolean | null
+          linked_company_name: string | null
+          model_used: string | null
+          organization_id: string | null
+          page_count: number | null
+          public_slug: string | null
+          title: string | null
+          updated_at: string | null
+          views: number | null
+          visitor_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "demos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_crawl_job_id_fkey"
+            columns: ["crawl_job_id"]
+            isOneToOne: false
+            referencedRelation: "crawl_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demos_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"

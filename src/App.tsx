@@ -35,6 +35,8 @@ import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import DemosPage from "./pages/DemosPage";
 import DemoViewPage from "./pages/DemoViewPage";
+import PublicDemoPage from "./pages/PublicDemoPage";
+import DemoEditPage from "./pages/DemoEditPage";
 import PortalAdminPage from "./pages/PortalAdminPage";
 import ClientPortalPage from "./pages/ClientPortalPage";
 import EmailPage from "./pages/EmailPage";
@@ -155,7 +157,7 @@ const App = () => (
             <Route path="/sign" element={<ContractSigningPage />} />
             <Route path="/book/:slug" element={<BookingPage />} />
             <Route path="/portal" element={<ClientPortalPage />} />
-            <Route path="/demo/:slug" element={<DemoViewPage />} />
+            <Route path="/demo/:slug" element={<PublicDemoPage />} />
             <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
 
             {/* Protected layout with sidebar */}
@@ -182,6 +184,7 @@ const App = () => (
               <Route path="ai" element={<AiAssistantPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="demos" element={<DemosPage />} />
+              <Route path="demos/:id/edit" element={<DemoEditPage />} />
               <Route path="content" element={<ContentPage />} />
               <Route path="portals" element={<PortalAdminPage />} />
               <Route path="whatsapp" element={<WhatsAppPage />} />

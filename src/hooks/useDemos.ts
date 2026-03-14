@@ -4,8 +4,40 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "./useOrganization";
 import { toast } from "sonner";
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// Helper for calling demo-service edge function
+export async function callDemoService(action: string, params: any) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/demo-service`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session?.access_token}`,
+      apikey: SUPABASE_ANON_KEY,
+    },
+    body: JSON.stringify({ action, ...params }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || err.message || "Edge function error");
+  }
+  return res.json();
+}
+
+// ── Polling hook (reusable) ─────────────────────────────────────
+export function usePollStatus(action: string, params: any, interval = 3000, enabled = false) {
+  return useQuery({
+    queryKey: ["poll", action, JSON.stringify(params)],
+    queryFn: () => callDemoService(action, params),
+    refetchInterval: enabled ? interval : false,
+    enabled,
+  });
+}
+
+// ── Demo list ───────────────────────────────────────────────────
 export function useDemos() {
-  const { user } = useAuth();
   const { data: orgData } = useOrganization();
   const orgId = (orgData?.organizations as any)?.id;
 
@@ -24,6 +56,7 @@ export function useDemos() {
   });
 }
 
+// ── Single demo ─────────────────────────────────────────────────
 export function useDemo(id: string | undefined) {
   return useQuery({
     queryKey: ["demo", id],
@@ -40,6 +73,25 @@ export function useDemo(id: string | undefined) {
   });
 }
 
+// ── Demo pages (multi-page) ─────────────────────────────────────
+export function useDemoPages(demoId: string | undefined) {
+  return useQuery({
+    queryKey: ["demo-pages", demoId],
+    enabled: !!demoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("demo_pages")
+        .select("*")
+        .eq("demo_id", demoId!)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+}
+
+// ── Demo versions ───────────────────────────────────────────────
 export function useDemoVersions(demoId: string | undefined) {
   return useQuery({
     queryKey: ["demo-versions", demoId],
@@ -56,6 +108,7 @@ export function useDemoVersions(demoId: string | undefined) {
   });
 }
 
+// ── Public demo (no auth) ───────────────────────────────────────
 export function usePublicDemo(slug: string | undefined) {
   return useQuery({
     queryKey: ["public-demo", slug],
@@ -63,20 +116,34 @@ export function usePublicDemo(slug: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("demos")
-        .select("*")
+        .select("id, title, company_name, public_slug, branding, share_settings, is_public, password_hash, demo_html")
         .eq("public_slug", slug!)
-        .eq("is_public", true)
         .single();
       if (error) throw error;
-      // Increment views
-      if (data?.id) {
-        await supabase.rpc("increment_demo_views", { p_demo_id: data.id });
-      }
       return data;
     },
   });
 }
 
+// ── Public demo pages ───────────────────────────────────────────
+export function usePublicDemoPages(demoId: string | undefined) {
+  return useQuery({
+    queryKey: ["public-demo-pages", demoId],
+    enabled: !!demoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("demo_pages")
+        .select("slug, title, html_content, sort_order")
+        .eq("demo_id", demoId!)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+}
+
+// ── Website scrapes ─────────────────────────────────────────────
 export function useWebsiteScrapes() {
   const { data: orgData } = useOrganization();
   const orgId = (orgData?.organizations as any)?.id;
@@ -96,6 +163,7 @@ export function useWebsiteScrapes() {
   });
 }
 
+// ── CRUD mutations ──────────────────────────────────────────────
 export function useCreateDemo() {
   const qc = useQueryClient();
   const { data: orgData } = useOrganization();
@@ -176,16 +244,10 @@ export function useDuplicateDemo() {
         .eq("id", id)
         .single();
       if (fetchErr) throw fetchErr;
-
       const { id: _id, created_at, updated_at, public_slug, views, last_viewed_at, ...rest } = original;
       const { data, error } = await supabase
         .from("demos")
-        .insert({
-          ...rest,
-          title: (rest.title || "Demo") + " (kopie)",
-          is_public: false,
-          public_slug: null,
-        })
+        .insert({ ...rest, title: (rest.title || "Demo") + " (kopie)", is_public: false, public_slug: null })
         .select()
         .single();
       if (error) throw error;
@@ -199,6 +261,7 @@ export function useDuplicateDemo() {
   });
 }
 
+// ── Edge function mutations ─────────────────────────────────────
 export function useGenerateDemo() {
   const qc = useQueryClient();
   return useMutation({
@@ -210,16 +273,14 @@ export function useGenerateDemo() {
       model?: string;
       organization_id: string;
       scrape_id?: string;
+      pages?: { title: string; slug: string; description: string }[];
+      extra_instructions?: string;
+      branding?: any;
     }) => {
-      const { data, error } = await supabase.functions.invoke("demo-service", {
-        body: { action: "generate", ...payload },
-      });
-      if (error) throw error;
-      return data;
+      return callDemoService("generate", payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["demos"] });
-      toast.success("Demo gegenereerd");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -232,16 +293,14 @@ export function useEditDemo() {
       demo_id: string;
       instruction: string;
       model?: string;
+      page_slug?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke("demo-service", {
-        body: { action: "edit", ...payload },
-      });
-      if (error) throw error;
-      return data;
+      return callDemoService("edit", payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["demos"] });
       qc.invalidateQueries({ queryKey: ["demo-versions"] });
+      qc.invalidateQueries({ queryKey: ["demo-pages"] });
       toast.success("Demo bewerkt");
     },
     onError: (e: any) => toast.error(e.message),
@@ -251,20 +310,50 @@ export function useEditDemo() {
 export function useAnalyzeWebsite() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: {
-      url: string;
-      organization_id: string;
-    }) => {
-      const { data, error } = await supabase.functions.invoke("demo-service", {
-        body: { action: "analyze", ...payload },
-      });
-      if (error) throw error;
-      return data;
+    mutationFn: async (payload: { url: string; organization_id: string }) => {
+      return callDemoService("analyze", payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["website-scrapes"] });
       toast.success("Website analyse gestart");
     },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
+// ── Crawl mutations ─────────────────────────────────────────────
+export function useCrawlStart() {
+  return useMutation({
+    mutationFn: async (payload: { url: string; organization_id: string; page_limit?: number; depth?: number }) => {
+      return callDemoService("crawl-start", payload);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
+export function useCrawlAnalyze() {
+  return useMutation({
+    mutationFn: async (payload: { crawl_job_id: string }) => {
+      return callDemoService("crawl-analyze", payload);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+}
+
+// ── Feedback ────────────────────────────────────────────────────
+export function useSubmitFeedback() {
+  return useMutation({
+    mutationFn: async (payload: {
+      demo_id: string;
+      page_slug?: string;
+      feedback_type: string;
+      name?: string;
+      email?: string;
+      message?: string;
+    }) => {
+      return callDemoService("feedback", payload);
+    },
+    onSuccess: () => toast.success("Bedankt voor je feedback!"),
     onError: (e: any) => toast.error(e.message),
   });
 }
