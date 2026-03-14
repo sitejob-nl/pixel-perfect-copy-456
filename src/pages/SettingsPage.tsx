@@ -10,6 +10,7 @@ import ResendSettings from "@/components/erp/ResendSettings";
 import LinkedInSettings from "@/components/erp/LinkedInSettings";
 import WhatsAppSettings from "@/components/erp/WhatsAppSettings";
 import NotificationSettings from "@/components/erp/NotificationSettings";
+import GoogleSettings from "@/components/erp/GoogleSettings";
 
 const allTabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
