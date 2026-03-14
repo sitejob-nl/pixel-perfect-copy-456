@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileNav from "./MobileNav";
+import NotificationBell from "./NotificationBell";
 
 export default function ErpHeader() {
   const { user, signOut } = useAuth();
