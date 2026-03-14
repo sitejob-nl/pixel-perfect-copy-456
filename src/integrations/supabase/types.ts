@@ -3267,6 +3267,7 @@ export type Database = {
         Row: {
           contract_signed: string | null
           created_at: string
+          deal_stage_change: string | null
           deal_won: string | null
           feedback_received: string | null
           id: string
@@ -3277,10 +3278,12 @@ export type Database = {
           task_due: string | null
           updated_at: string
           user_id: string
+          whatsapp_message: string | null
         }
         Insert: {
           contract_signed?: string | null
           created_at?: string
+          deal_stage_change?: string | null
           deal_won?: string | null
           feedback_received?: string | null
           id?: string
@@ -3291,10 +3294,12 @@ export type Database = {
           task_due?: string | null
           updated_at?: string
           user_id: string
+          whatsapp_message?: string | null
         }
         Update: {
           contract_signed?: string | null
           created_at?: string
+          deal_stage_change?: string | null
           deal_won?: string | null
           feedback_received?: string | null
           id?: string
@@ -3305,6 +3310,7 @@ export type Database = {
           task_due?: string | null
           updated_at?: string
           user_id?: string
+          whatsapp_message?: string | null
         }
         Relationships: [
           {
@@ -4973,6 +4979,57 @@ export type Database = {
           },
           {
             foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string
+          endpoint: string
+          id: string
+          organization_id: string
+          p256dh: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          organization_id: string
+          p256dh: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          organization_id?: string
+          p256dh?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -7189,6 +7246,10 @@ export type Database = {
       }
       user_organization_ids: { Args: never; Returns: string[] }
       user_role_in_org: { Args: { p_org_id: string }; Returns: string }
+      user_wants_push: {
+        Args: { p_event: string; p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
       verify_webhook_api_key: { Args: { p_api_key: string }; Returns: string }
     }
     Enums: {
