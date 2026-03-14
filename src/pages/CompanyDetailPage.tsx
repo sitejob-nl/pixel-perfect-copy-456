@@ -251,5 +251,7 @@ export default function CompanyDetailPage() {
         <CommentsSection entityType="company" entityId={id!} />
       )}
     </div>
+    {aiPanelOpen && orgId && <AiSidePanel entityType="company" entityId={id!} orgId={orgId} />}
+    </div>
   );
 }
