@@ -1096,7 +1096,7 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
       {showCancelDialog && <CancelDialog open={showCancelDialog} onClose={() => setShowCancelDialog(false)} contract={contract} />}
 
       <ErpTabs
-        items={[["overview", "Overzicht"], ["signers", "Ondertekenaars"], ["content", "Document"], ["audit", "Audit Trail"], ...(contract.pdf_url ? [["fields", "Velden"]] : [])]}
+        items={[["overview", "Overzicht"], ["signers", "Ondertekenaars"], ["content", "Document"], ["audit", "Audit Trail"], ...(contract.pdf_url ? [["fields", "Velden"] as [string, string]] : [])] as [string, string][]}
         active={tab} onChange={setTab}
       />
 
