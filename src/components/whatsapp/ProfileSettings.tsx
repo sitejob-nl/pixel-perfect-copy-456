@@ -30,6 +30,7 @@ export default function ProfileSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [profile, setProfile] = useState({
     about: "", address: "", description: "", email: "", websites: [] as string[], vertical: "", profile_picture_url: "",
