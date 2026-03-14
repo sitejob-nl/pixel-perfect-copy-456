@@ -1,53 +1,23 @@
 
 
-# ✅ LinkedIn Integratie: Posts Plaatsen
+## Waarom templates niet verschijnen
 
-## Wat is gebouwd
-
-### Database
-- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
-
-### Edge Functions
-- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
-- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
-
-### Frontend
-- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
-- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
-
-### Secrets
-- `LINKEDIN_CLIENT_ID` — opgeslagen
-- `LINKEDIN_CLIENT_SECRET` — opgeslagen
-
-## ⚠️ Actie vereist
-
-Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
+### Probleem 1: Status-filter wordt lowercase gemaakt
+In `whatsapp-templates/index.ts` regel 86:
+```ts
+if (body.status) url += `&status=${body.status.toLowerCase()}`;
 ```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
-```
+De frontend stuurt `status: "APPROVED"` (correct), maar `.toLowerCase()` maakt er `"approved"` van. De Meta Graph API is **case-sensitive** en verwacht `APPROVED` in hoofdletters. Resultaat: 0 templates terug.
 
----
+### Probleem 2: `whatsapp-send` crasht op auth
+In `whatsapp-send/index.ts` regel 43 staat nog steeds `getClaims()` — dezelfde bug die we al in andere functies hebben gefixt. Dit betekent dat zelfs als templates wél zouden laden, het versturen ervan faalt.
 
-# ✅ LinkedIn Webhooks: Real-time Notificaties
+### Plan
 
-## Wat is gebouwd
+| Bestand | Wijziging |
+|---|---|
+| `supabase/functions/whatsapp-templates/index.ts` regel 86 | Verwijder `.toLowerCase()` zodat `APPROVED` uppercase blijft |
+| `supabase/functions/whatsapp-send/index.ts` regel 42-51 | Vervang `getClaims()` door `getUser()`, gebruik `user.id` i.p.v. `claims.claims.sub` |
 
-### Database
-- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
+Beide edge functions worden opnieuw gedeployed en getest.
 
-### Edge Function
-- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
-
-### Frontend
-- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
-
-### Webhook URL
-```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
-```
-
-## ⚠️ Actie vereist
-
-1. Vraag een webhook use case aan in je LinkedIn Developer Portal
-2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
-3. LinkedIn valideert automatisch via de challenge-response flow
