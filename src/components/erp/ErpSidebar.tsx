@@ -9,6 +9,7 @@ import { useBranding } from "@/contexts/BrandingContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
+import { usePendingSuggestionCount } from "@/hooks/useGmailThreads";
 
 interface NavItem {
   k: string;
