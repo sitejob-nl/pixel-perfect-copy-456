@@ -8,6 +8,7 @@ import ChatToolbar, { TemplateSheet } from "./ChatToolbar";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   phoneNumber: string | null;
@@ -44,6 +45,23 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Mark unread inbound messages as read when opening chat
+  useEffect(() => {
+    if (!messages || !phoneNumber) return;
+    const unreadInbound = messages.filter(m => m.direction === "inbound" && m.whatsapp_msg_id && m.status !== "read");
+    if (unreadInbound.length === 0) return;
+
+    // Mark the latest inbound message as read via Meta API
+    const latestInbound = unreadInbound[unreadInbound.length - 1];
+    if (latestInbound?.whatsapp_msg_id) {
+      supabase.functions.invoke("whatsapp-mark-read", {
+        body: { message_id: latestInbound.whatsapp_msg_id },
+      }).catch(() => {
+        // Non-critical, ignore errors
+      });
+    }
+  }, [messages, phoneNumber]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -230,7 +248,6 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
       {/* Input area */}
       <div className="border-t border-erp-border0 bg-erp-bg1">
         {requiresTemplate ? (
-          /* Template-first banner */
           <div className="px-4 py-3 flex items-center gap-3">
             <div className="flex-1">
               <p className="text-[12px] text-erp-text2">
