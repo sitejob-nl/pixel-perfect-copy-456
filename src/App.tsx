@@ -166,6 +166,7 @@ const App = () => (
               <Route path="knowledgebase" element={<KnowledgeBasePage />} />
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="scrapers" element={<ScrapersPage />} />
+              <Route path="reports" element={<ReportingPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="demos" element={<DemosPage />} />
               <Route path="content" element={<ContentPage />} />
