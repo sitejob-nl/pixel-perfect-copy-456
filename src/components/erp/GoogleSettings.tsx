@@ -182,9 +182,9 @@ function ConnectionRow({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <Badge variant="default" className="bg-emerald-500/15 text-emerald-400 border-0 text-[10px]">
+        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">
           Actief
-        </Badge>
+        </span>
         <button
           onClick={() => onSync(conn.id, "emails")}
           disabled={syncing}
