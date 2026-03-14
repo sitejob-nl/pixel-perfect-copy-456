@@ -3,11 +3,28 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Camera } from "lucide-react";
+import { Upload, Camera, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const VERTICALS = ["RETAIL", "FOOD", "TRAVEL", "ENTERTAINMENT", "FINANCE", "TECH", "OTHER"];
+const VERTICALS = [
+  { value: "AUTOMOTIVE", label: "Automotive" },
+  { value: "BEAUTY", label: "Beauty" },
+  { value: "RETAIL", label: "Retail" },
+  { value: "FINANCE", label: "Financiën" },
+  { value: "EDUCATION", label: "Onderwijs" },
+  { value: "ENTERTAINMENT", label: "Entertainment" },
+  { value: "FOOD", label: "Voeding" },
+  { value: "GOVT", label: "Overheid" },
+  { value: "HOTEL", label: "Hotel" },
+  { value: "HEALTH", label: "Gezondheid" },
+  { value: "NONPROFIT", label: "Non-profit" },
+  { value: "PROF_SERVICES", label: "Professionele diensten" },
+  { value: "TRAVEL", label: "Reizen" },
+  { value: "RESTAURANT", label: "Restaurant" },
+  { value: "NOT_A_BIZ", label: "Geen bedrijf" },
+  { value: "OTHER", label: "Overig" },
+];
 
 export default function ProfileSettings() {
   const [loading, setLoading] = useState(true);
@@ -23,9 +40,11 @@ export default function ProfileSettings() {
   const loadProfile = async () => {
     setLoading(true);
     try {
-      const res = await supabase.functions.invoke("whatsapp-send", { body: { action: "get_profile" } });
-      if (res.data?.profile) {
-        const p = res.data.profile;
+      const res = await supabase.functions.invoke("whatsapp-business-profile", {
+        body: { action: "get" },
+      });
+      if (res.data && !res.data.error) {
+        const p = res.data;
         setProfile({
           about: p.about || "",
           address: p.address || "",
@@ -42,7 +61,7 @@ export default function ProfileSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const body: any = { action: "update_profile" };
+      const body: Record<string, unknown> = { action: "update" };
       if (profile.about) body.about = profile.about;
       if (profile.address) body.address = profile.address;
       if (profile.description) body.description = profile.description;
@@ -50,7 +69,7 @@ export default function ProfileSettings() {
       if (profile.websites.length > 0) body.websites = profile.websites;
       if (profile.vertical) body.vertical = profile.vertical;
 
-      const res = await supabase.functions.invoke("whatsapp-send", { body });
+      const res = await supabase.functions.invoke("whatsapp-business-profile", { body });
       if (res.data?.error) throw new Error(res.data.error);
       toast.success("Profiel bijgewerkt");
     } catch (err: any) { toast.error(err.message || "Bijwerken mislukt"); }
@@ -61,36 +80,37 @@ export default function ProfileSettings() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate: JPEG/PNG, max 5MB, min 192x192
-    if (!["image/jpeg", "image/png"].includes(file.type)) {
-      toast.error("Alleen JPEG of PNG bestanden toegestaan");
+    if (!file.type.startsWith("image/")) {
+      toast.error("Alleen afbeeldingen toegestaan");
       return;
     }
     if (file.size > 5 * 1024 * 1024) {
-      toast.error("Bestand mag maximaal 5MB zijn");
+      toast.error("Bestand is te groot (max 5MB)");
       return;
     }
 
     setUploadingPhoto(true);
     try {
-      // Convert to base64
       const buffer = await file.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
-      );
+      const bytes = new Uint8Array(buffer);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binary);
 
-      const res = await supabase.functions.invoke("whatsapp-send", {
+      const res = await supabase.functions.invoke("whatsapp-business-profile", {
         body: {
-          action: "upload_profile_photo",
+          action: "upload_photo",
           file_base64: base64,
           file_type: file.type,
-          file_size: file.size,
+          file_name: file.name,
         },
       });
 
       if (res.data?.error) throw new Error(res.data.error);
       toast.success("Profielfoto geüpload");
-      loadProfile(); // Refresh to get new URL
+      loadProfile();
     } catch (err: any) {
       toast.error(err.message || "Upload mislukt");
     } finally {
@@ -118,7 +138,7 @@ export default function ProfileSettings() {
             disabled={uploadingPhoto}
             className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
           >
-            <Upload className="w-4 h-4 text-white" />
+            {uploadingPhoto ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Upload className="w-4 h-4 text-white" />}
           </button>
           <input
             ref={fileRef}
@@ -161,7 +181,7 @@ export default function ProfileSettings() {
         <Select value={profile.vertical} onValueChange={(v) => setProfile(p => ({ ...p, vertical: v }))}>
           <SelectTrigger className="bg-erp-bg3 border-erp-border0 text-[13px]"><SelectValue placeholder="Selecteer branche" /></SelectTrigger>
           <SelectContent className="bg-erp-bg2 border-erp-border0">
-            {VERTICALS.map(v => <SelectItem key={v} value={v} className="text-[13px]">{v}</SelectItem>)}
+            {VERTICALS.map(v => <SelectItem key={v.value} value={v.value} className="text-[13px]">{v.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>

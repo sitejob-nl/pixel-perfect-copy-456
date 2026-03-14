@@ -7,6 +7,18 @@ const corsHeaders = {
 
 const META_API = "https://graph.facebook.com/v25.0";
 
+// Normalize phone number: remove formatting, ensure international format
+function normalizePhone(raw: string): string {
+  let phone = (raw || "").replace(/[\s\-\(\)]/g, "");
+  phone = phone.replace(/^\+/, "");
+  if (phone.startsWith("00")) {
+    phone = phone.slice(2);
+  } else if (phone.startsWith("0")) {
+    phone = "31" + phone.slice(1);
+  }
+  return phone;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -15,7 +27,6 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-  // Authenticate user
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -63,7 +74,6 @@ Deno.serve(async (req) => {
     const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     if (action === "register_tenant") {
-      // Register with SiteJob Connect
       const connectApiKey = Deno.env.get("CONNECT_API_KEY");
       if (!connectApiKey) {
         return new Response(JSON.stringify({ error: "CONNECT_API_KEY not configured" }), {
@@ -101,8 +111,7 @@ Deno.serve(async (req) => {
       const registerData = await registerRes.json();
       const { tenant_id, webhook_secret } = registerData;
 
-      // Create the whatsapp_accounts record
-      const { data: account, error: insertErr } = await serviceClient
+      const { error: insertErr } = await serviceClient
         .from("whatsapp_accounts")
         .insert({
           organization_id: orgId,
@@ -111,14 +120,13 @@ Deno.serve(async (req) => {
           phone_number_id: "pending",
           access_token: "pending",
           waba_id: "pending",
-          is_active: false, // Not active until OAuth completes
+          is_active: false,
         })
         .select()
         .single();
 
       if (insertErr) throw insertErr;
 
-      // Return the setup URL
       const setupUrl = `https://connect.sitejob.nl/whatsapp-setup?tenant_id=${tenant_id}`;
       return new Response(JSON.stringify({ success: true, setup_url: setupUrl, tenant_id }), {
         status: 200,
@@ -141,7 +149,19 @@ Deno.serve(async (req) => {
     }
 
     if (action === "send_message") {
-      const { to, message, message_type = "text", template_name, template_params, contact_id } = body;
+      const {
+        to: rawTo,
+        message,
+        message_type = "text",
+        template_name,
+        template_params,
+        contact_id,
+        context_message_id,
+        media_url,
+        media_caption,
+        filename,
+        interactive,
+      } = body;
 
       // Get active WhatsApp account
       const { data: account, error: accErr } = await serviceClient
@@ -158,8 +178,12 @@ Deno.serve(async (req) => {
         });
       }
 
+      const to = normalizePhone(rawTo);
+
       // Build Meta API payload
       let metaPayload: Record<string, unknown>;
+      let storedBody: string;
+      let messageType = "text";
 
       if (message_type === "template" && template_name) {
         metaPayload = {
@@ -172,12 +196,91 @@ Deno.serve(async (req) => {
             ...(template_params ? { components: template_params } : {}),
           },
         };
+        storedBody = body.template_preview || `[Template: ${template_name}]`;
+        messageType = "template";
+      } else if (message_type === "image" && media_url) {
+        metaPayload = {
+          messaging_product: "whatsapp",
+          to,
+          type: "image",
+          image: { link: media_url, caption: media_caption || "" },
+        };
+        storedBody = media_caption || "[Afbeelding]";
+        messageType = "image";
+      } else if (message_type === "document" && media_url) {
+        metaPayload = {
+          messaging_product: "whatsapp",
+          to,
+          type: "document",
+          document: { link: media_url, caption: media_caption || "", filename: filename || "document" },
+        };
+        storedBody = media_caption || `[Document: ${filename || "bestand"}]`;
+        messageType = "document";
+      } else if (message_type === "interactive" && interactive) {
+        const { interactive_type, header, body: interactiveBody, footer, buttons, sections, cta } = interactive;
+
+        const interactivePayload: Record<string, unknown> = {};
+
+        if (header) {
+          interactivePayload.header = { type: "text", text: header };
+        }
+        if (interactiveBody) {
+          interactivePayload.body = { text: interactiveBody };
+        }
+        if (footer) {
+          interactivePayload.footer = { text: footer };
+        }
+
+        if (interactive_type === "button" && buttons?.length > 0) {
+          interactivePayload.type = "button";
+          interactivePayload.action = {
+            buttons: buttons.slice(0, 3).map((btn: { id?: string; title: string }, i: number) => ({
+              type: "reply",
+              reply: { id: btn.id || `btn_${i}`, title: btn.title.slice(0, 20) },
+            })),
+          };
+        } else if (interactive_type === "list" && sections?.length > 0) {
+          interactivePayload.type = "list";
+          interactivePayload.action = {
+            button: cta?.button_text || "Menu",
+            sections: sections.map((s: { title: string; rows: { id: string; title: string; description?: string }[] }) => ({
+              title: s.title,
+              rows: s.rows.map((r) => ({
+                id: r.id,
+                title: r.title.slice(0, 24),
+                description: r.description?.slice(0, 72) || undefined,
+              })),
+            })),
+          };
+        } else if (interactive_type === "cta_url" && cta) {
+          interactivePayload.type = "cta_url";
+          interactivePayload.action = {
+            name: "cta_url",
+            parameters: {
+              display_text: cta.display_text,
+              url: cta.url,
+            },
+          };
+        } else {
+          throw new Error("Invalid interactive message configuration");
+        }
+
+        metaPayload = {
+          messaging_product: "whatsapp",
+          to,
+          type: "interactive",
+          interactive: interactivePayload,
+        };
+        storedBody = interactiveBody || `[Interactief: ${interactive_type}]`;
+        messageType = "interactive";
       } else if (message_type === "read_receipt") {
         metaPayload = {
           messaging_product: "whatsapp",
           status: "read",
           message_id: body.message_id,
         };
+        storedBody = "";
+        messageType = "read_receipt";
       } else {
         metaPayload = {
           messaging_product: "whatsapp",
@@ -186,6 +289,12 @@ Deno.serve(async (req) => {
           type: "text",
           text: { body: message, preview_url: true },
         };
+        storedBody = message || "";
+      }
+
+      // Add context for reply-to
+      if (context_message_id && message_type !== "read_receipt") {
+        (metaPayload as Record<string, unknown>).context = { message_id: context_message_id };
       }
 
       // Send to Meta API
@@ -207,18 +316,20 @@ Deno.serve(async (req) => {
         console.error("Meta API error:", metaRes.status, JSON.stringify(metaData));
 
         // Store failed message
-        await serviceClient.from("whatsapp_messages").insert({
-          account_id: account.id,
-          organization_id: orgId,
-          contact_id: contact_id || null,
-          phone_number: to,
-          direction: "outbound",
-          message_type: message_type === "template" ? "template" : "text",
-          content: message || template_name || "",
-          template_name: template_name || null,
-          status: "failed",
-          error_message: metaData?.error?.message || "Unknown Meta API error",
-        });
+        if (message_type !== "read_receipt") {
+          await serviceClient.from("whatsapp_messages").insert({
+            account_id: account.id,
+            organization_id: orgId,
+            contact_id: contact_id || null,
+            phone_number: to,
+            direction: "outbound",
+            message_type: messageType,
+            content: storedBody,
+            template_name: template_name || null,
+            status: "failed",
+            error_message: metaData?.error?.message || "Unknown Meta API error",
+          });
+        }
 
         return new Response(JSON.stringify({ error: metaData?.error?.message || "Send failed" }), {
           status: metaRes.status,
@@ -236,8 +347,8 @@ Deno.serve(async (req) => {
           contact_id: contact_id || null,
           phone_number: to,
           direction: "outbound",
-          message_type: message_type === "template" ? "template" : "text",
-          content: message || template_name || "",
+          message_type: messageType,
+          content: storedBody,
           template_name: template_name || null,
           whatsapp_msg_id: whatsappMsgId,
           status: "sent",
@@ -246,185 +357,6 @@ Deno.serve(async (req) => {
 
       return new Response(JSON.stringify({ success: true, message_id: whatsappMsgId }), {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ─── GET PROFILE ───
-    if (action === "get_profile") {
-      const { data: account } = await serviceClient
-        .from("whatsapp_accounts")
-        .select("*")
-        .eq("organization_id", orgId)
-        .eq("is_active", true)
-        .single();
-
-      if (!account) {
-        return new Response(JSON.stringify({ error: "No active WhatsApp account" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const res = await fetch(
-        `${META_API}/${account.phone_number_id}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical`,
-        { headers: { Authorization: `Bearer ${account.access_token}` } }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || "Failed to get profile");
-
-      return new Response(JSON.stringify({ profile: data?.data?.[0] || {} }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ─── UPDATE PROFILE ───
-    if (action === "update_profile") {
-      const { data: account } = await serviceClient
-        .from("whatsapp_accounts")
-        .select("*")
-        .eq("organization_id", orgId)
-        .eq("is_active", true)
-        .single();
-
-      if (!account) {
-        return new Response(JSON.stringify({ error: "No active WhatsApp account" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const profilePayload: Record<string, unknown> = { messaging_product: "whatsapp" };
-      if (body.about) profilePayload.about = body.about;
-      if (body.address) profilePayload.address = body.address;
-      if (body.description) profilePayload.description = body.description;
-      if (body.email) profilePayload.email = body.email;
-      if (body.vertical) profilePayload.vertical = body.vertical;
-      if (body.websites) profilePayload.websites = JSON.stringify(body.websites);
-
-      const res = await fetch(
-        `${META_API}/${account.phone_number_id}/whatsapp_business_profile`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${account.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(profilePayload),
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || "Failed to update profile");
-
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // ─── UPLOAD PROFILE PHOTO ───
-    if (action === "upload_profile_photo") {
-      const { file_base64, file_type, file_size } = body;
-      if (!file_base64 || !file_type || !file_size) {
-        return new Response(JSON.stringify({ error: "Missing file data" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { data: account } = await serviceClient
-        .from("whatsapp_accounts")
-        .select("*")
-        .eq("organization_id", orgId)
-        .eq("is_active", true)
-        .single();
-
-      if (!account) {
-        return new Response(JSON.stringify({ error: "No active WhatsApp account" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const accessToken = account.access_token;
-
-      // Step 1: Create upload session via Resumable Upload API
-      // Using /app/uploads which resolves to the app that owns the token
-      const createRes = await fetch(
-        `${META_API}/app/uploads`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            file_length: file_size,
-            file_type: file_type,
-            access_token: accessToken,
-          }),
-        }
-      );
-      const createData = await createRes.json();
-      console.log("Upload session create response:", JSON.stringify(createData));
-      if (!createRes.ok) {
-        console.error("Upload session create failed:", createRes.status, JSON.stringify(createData));
-        throw new Error(createData?.error?.message || "Failed to create upload session");
-      }
-
-      const uploadSessionId = createData.id;
-
-      // Step 2: Upload the file bytes
-      const binaryStr = atob(file_base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-
-      const uploadRes = await fetch(
-        `${META_API}/${uploadSessionId}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `OAuth ${accessToken}`,
-            file_offset: "0",
-            "Content-Type": file_type,
-          },
-          body: bytes,
-        }
-      );
-      const uploadData = await uploadRes.json();
-      console.log("File upload response:", JSON.stringify(uploadData));
-      if (!uploadRes.ok) {
-        console.error("File upload failed:", uploadRes.status, JSON.stringify(uploadData));
-        throw new Error(uploadData?.error?.message || "Failed to upload file");
-      }
-
-      const handle = uploadData.h;
-      if (!handle) {
-        throw new Error("No handle returned from upload");
-      }
-
-      // Step 3: Set profile picture using the handle
-      const profileRes = await fetch(
-        `${META_API}/${account.phone_number_id}/whatsapp_business_profile`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            profile_picture_handle: handle,
-          }),
-        }
-      );
-      const profileData = await profileRes.json();
-      console.log("Set profile picture response:", JSON.stringify(profileData));
-      if (!profileRes.ok) {
-        console.error("Set profile picture failed:", profileRes.status, JSON.stringify(profileData));
-        throw new Error(profileData?.error?.message || "Failed to set profile picture");
-      }
-
-      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

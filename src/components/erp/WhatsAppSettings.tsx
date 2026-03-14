@@ -1,23 +1,123 @@
-import { useState } from "react";
-import { useWhatsAppAccount, useWhatsAppRegister, useWhatsAppDisconnect, useWhatsAppWebhookLogs, useWhatsAppMessages } from "@/hooks/useWhatsApp";
+import { useState, useEffect } from "react";
+import { useWhatsAppAccount, useWhatsAppRegister, useWhatsAppDisconnect, useWhatsAppWebhookLogs } from "@/hooks/useWhatsApp";
+import { useOrganization } from "@/hooks/useOrganization";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Check, X, RefreshCw, ExternalLink } from "lucide-react";
+import { Check, X, RefreshCw, ExternalLink, Shield, BarChart3, Loader2 } from "lucide-react";
+import { format, subDays } from "date-fns";
+import { nl } from "date-fns/locale";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import ProfileSettings from "@/components/whatsapp/ProfileSettings";
 import TemplateManager from "@/components/whatsapp/TemplateManager";
 import AutomationsPage from "@/components/whatsapp/AutomationsPage";
 
 type SubTab = "verbinding" | "profiel" | "templates" | "automations" | "logs";
 
+interface PhoneQuality {
+  quality_rating: string;
+  verified_name: string | null;
+  code_verification_status: string;
+  display_phone_number: string | null;
+}
+
+interface MessageStats {
+  total_sent: number;
+  total_received: number;
+  total_delivered: number;
+  total_read: number;
+  per_day: { date: string; sent: number; received: number }[];
+}
+
 export default function WhatsAppSettings() {
   const { data: account, isLoading, refetch } = useWhatsAppAccount();
+  const { data: org } = useOrganization();
   const register = useWhatsAppRegister();
   const disconnect = useWhatsAppDisconnect();
   const [tenantName, setTenantName] = useState("");
   const [subTab, setSubTab] = useState<SubTab>("verbinding");
 
+  // Quality & Stats state
+  const [phoneQuality, setPhoneQuality] = useState<PhoneQuality | null>(null);
+  const [loadingQuality, setLoadingQuality] = useState(false);
+  const [stats, setStats] = useState<MessageStats | null>(null);
+  const [statsPeriod, setStatsPeriod] = useState(7);
+  const [loadingStats, setLoadingStats] = useState(false);
+
   const isConnected = account?.is_active && account?.phone_number_id !== "pending";
   const isPending = account && !account.is_active && account?.phone_number_id === "pending";
+
+  useEffect(() => {
+    if (isConnected) {
+      fetchPhoneQuality();
+      fetchStats();
+    }
+  }, [isConnected]);
+
+  useEffect(() => {
+    if (isConnected) fetchStats();
+  }, [statsPeriod]);
+
+  const fetchPhoneQuality = async () => {
+    setLoadingQuality(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("whatsapp-phone-quality");
+      if (error) throw error;
+      setPhoneQuality(data);
+    } catch (err: any) {
+      console.error("Phone quality error:", err);
+    }
+    setLoadingQuality(false);
+  };
+
+  const fetchStats = async () => {
+    setLoadingStats(true);
+    try {
+      const orgId = org?.organization_id;
+      if (!orgId) return;
+
+      const since = subDays(new Date(), statsPeriod).toISOString();
+      const { data: messages } = await supabase
+        .from("whatsapp_messages")
+        .select("direction, status, created_at")
+        .eq("organization_id", orgId)
+        .gte("created_at", since);
+
+      if (!messages) { setLoadingStats(false); return; }
+
+      const sent = messages.filter(m => m.direction === "outbound").length;
+      const received = messages.filter(m => m.direction === "inbound").length;
+      const delivered = messages.filter(m => m.status === "delivered").length;
+      const read = messages.filter(m => m.status === "read").length;
+
+      const dayMap: Record<string, { sent: number; received: number }> = {};
+      for (let i = statsPeriod - 1; i >= 0; i--) {
+        const d = format(subDays(new Date(), i), "yyyy-MM-dd");
+        dayMap[d] = { sent: 0, received: 0 };
+      }
+      for (const msg of messages) {
+        const d = format(new Date(msg.created_at), "yyyy-MM-dd");
+        if (dayMap[d]) {
+          if (msg.direction === "outbound") dayMap[d].sent++;
+          else dayMap[d].received++;
+        }
+      }
+
+      setStats({
+        total_sent: sent,
+        total_received: received,
+        total_delivered: delivered,
+        total_read: read,
+        per_day: Object.entries(dayMap).map(([date, v]) => ({
+          date: format(new Date(date), "d MMM", { locale: nl }),
+          ...v,
+        })),
+      });
+    } catch (err: any) {
+      console.error("Stats error:", err);
+    }
+    setLoadingStats(false);
+  };
 
   const handleRegister = async () => {
     try {
@@ -54,6 +154,19 @@ export default function WhatsAppSettings() {
     { key: "automations", label: "Automations" },
     { key: "logs", label: "Webhook Logs" },
   ];
+
+  const qualityColors: Record<string, string> = {
+    GREEN: "text-green-400 bg-green-400/10",
+    YELLOW: "text-yellow-400 bg-yellow-400/10",
+    RED: "text-red-400 bg-red-400/10",
+  };
+
+  const qualityLabel: Record<string, string> = {
+    GREEN: "Hoog",
+    YELLOW: "Gemiddeld",
+    RED: "Laag",
+    UNKNOWN: "Onbekend",
+  };
 
   return (
     <div className="space-y-4">
@@ -98,6 +211,7 @@ export default function WhatsAppSettings() {
           <>
             {isConnected ? (
               <div className="space-y-4">
+                {/* Connection details */}
                 <div className="bg-erp-bg2 rounded-lg border border-erp-border0 p-4">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-lg" style={{ background: "hsl(142, 70%, 45%)" }}>
@@ -143,6 +257,98 @@ export default function WhatsAppSettings() {
                       <span className="text-erp-text0">{new Date(account.created_at).toLocaleDateString("nl-NL")}</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Phone Quality */}
+                <div className="bg-erp-bg2 rounded-lg border border-erp-border0 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-erp-text2" />
+                      <span className="text-[13px] font-medium text-erp-text0">Telefoonnummer Kwaliteit</span>
+                    </div>
+                    <button onClick={fetchPhoneQuality} disabled={loadingQuality} className="text-[11px] text-primary hover:underline flex items-center gap-1">
+                      {loadingQuality ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                      Vernieuwen
+                    </button>
+                  </div>
+                  {phoneQuality ? (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-[10px] text-erp-text3 mb-1">Kwaliteit</p>
+                        <span className={cn("text-[12px] font-semibold px-2 py-0.5 rounded-full", qualityColors[phoneQuality.quality_rating] || "text-erp-text3 bg-erp-bg3")}>
+                          {qualityLabel[phoneQuality.quality_rating] || phoneQuality.quality_rating}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-erp-text3 mb-1">Geverifieerde naam</p>
+                        <p className="text-[12px] text-erp-text0 font-medium">{phoneQuality.verified_name || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-erp-text3 mb-1">Verificatie</p>
+                        <span className={cn("text-[11px] font-medium", phoneQuality.code_verification_status === "VERIFIED" ? "text-green-400" : "text-erp-text2")}>
+                          {phoneQuality.code_verification_status === "VERIFIED" ? "✓ Geverifieerd" : phoneQuality.code_verification_status}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-erp-text3">Klik op Vernieuwen om kwaliteitsdata op te halen</p>
+                  )}
+                </div>
+
+                {/* Message Statistics */}
+                <div className="bg-erp-bg2 rounded-lg border border-erp-border0 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="w-4 h-4 text-erp-text2" />
+                      <span className="text-[13px] font-medium text-erp-text0">Berichtstatistieken</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {[7, 30, 90].map(d => (
+                        <button
+                          key={d}
+                          onClick={() => setStatsPeriod(d)}
+                          className={cn("px-2 py-0.5 rounded text-[10px] font-medium", statsPeriod === d ? "bg-primary text-white" : "bg-erp-bg3 text-erp-text3")}
+                        >
+                          {d}d
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {loadingStats ? (
+                    <div className="flex justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-erp-text3" /></div>
+                  ) : stats ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { label: "Verzonden", value: stats.total_sent, color: "hsl(142, 70%, 45%)" },
+                          { label: "Ontvangen", value: stats.total_received, color: "hsl(221, 83%, 53%)" },
+                          { label: "Afgeleverd", value: stats.total_delivered, color: "hsl(45, 90%, 50%)" },
+                          { label: "Gelezen", value: stats.total_read, color: "hsl(180, 70%, 45%)" },
+                        ].map(s => (
+                          <div key={s.label} className="bg-erp-bg3 rounded-lg p-2 text-center">
+                            <p className="text-[16px] font-bold text-erp-text0">{s.value}</p>
+                            <p className="text-[10px] text-erp-text3">{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {stats.per_day.length > 0 && (
+                        <div className="h-[160px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={stats.per_day}>
+                              <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
+                              <XAxis dataKey="date" tick={{ fontSize: 9, fill: "hsl(var(--erp-text-3))" }} />
+                              <YAxis tick={{ fontSize: 9, fill: "hsl(var(--erp-text-3))" }} allowDecimals={false} />
+                              <Tooltip contentStyle={{ fontSize: 11, background: "hsl(var(--erp-bg-2))", border: "1px solid hsl(var(--erp-border-0))", borderRadius: 8 }} />
+                              <Bar dataKey="sent" fill="hsl(142, 71%, 45%)" name="Verzonden" radius={[2, 2, 0, 0]} />
+                              <Bar dataKey="received" fill="hsl(221, 83%, 53%)" name="Ontvangen" radius={[2, 2, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
 
                 <button
@@ -227,76 +433,9 @@ export default function WhatsAppSettings() {
         {/* Automations tab */}
         {isConnected && subTab === "automations" && <AutomationsPage />}
 
-        {/* Messages tab (legacy) */}
+        {/* Webhook Logs tab */}
         {isConnected && subTab === "logs" && <WebhookLogsTab />}
       </div>
-    </div>
-  );
-}
-
-function MessagesTab() {
-  const { data: messages = [], isLoading } = useWhatsAppMessages();
-  const [dirFilter, setDirFilter] = useState<"alle" | "inbound" | "outbound">("alle");
-
-  const filtered = messages.filter((m) => {
-    if (dirFilter === "alle") return true;
-    return m.direction === dirFilter;
-  });
-
-  const statusColor = (status: string | null) => {
-    switch (status) {
-      case "sent": return "hsl(var(--erp-blue))";
-      case "delivered": return "hsl(var(--erp-green))";
-      case "read": return "hsl(var(--erp-cyan))";
-      case "failed": return "hsl(var(--erp-red))";
-      case "received": return "hsl(var(--erp-green))";
-      default: return "hsl(var(--erp-text-3))";
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-1">
-        {(["alle", "inbound", "outbound"] as const).map((f) => (
-          <button
-            key={f}
-            onClick={() => setDirFilter(f)}
-            className={cn(
-              "px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors",
-              dirFilter === f ? "bg-erp-bg2 text-erp-text0" : "text-erp-text3 hover:text-erp-text1"
-            )}
-          >
-            {f === "alle" ? "Alle" : f === "inbound" ? "← Inbound" : "→ Outbound"}
-          </button>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div className="text-[12px] text-erp-text3 py-4">Laden...</div>
-      ) : filtered.length === 0 ? (
-        <div className="text-[12px] text-erp-text3 py-4 text-center">Geen berichten</div>
-      ) : (
-        <div className="space-y-0 max-h-[400px] overflow-y-auto">
-          {filtered.map((msg) => (
-            <div key={msg.id} className="flex items-center gap-2 py-2 border-b border-erp-border0 last:border-0">
-              <span className="text-[11px] text-erp-text3 w-4">
-                {msg.direction === "inbound" ? "←" : "→"}
-              </span>
-              <span className="text-[12px] text-erp-text1 font-mono w-28 truncate flex-shrink-0">{msg.phone_number}</span>
-              <span className="text-[12px] text-erp-text0 flex-1 truncate">{msg.content || `[${msg.message_type}]`}</span>
-              <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                style={{ color: statusColor(msg.status), background: `${statusColor(msg.status)}14` }}
-              >
-                {msg.status}
-              </span>
-              <span className="text-[10px] text-erp-text3 w-12 text-right flex-shrink-0">
-                {new Date(msg.created_at).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

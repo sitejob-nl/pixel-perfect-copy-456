@@ -53,3 +53,18 @@ verify_jwt = false
 
 [functions.whatsapp-templates]
 verify_jwt = false
+
+[functions.whatsapp-business-profile]
+verify_jwt = false
+
+[functions.whatsapp-phone-quality]
+verify_jwt = false
+
+[functions.whatsapp-mark-read]
+verify_jwt = false
+
+[functions.run-scraper]
+verify_jwt = false
+
+[functions.create-organization]
+verify_jwt = false
