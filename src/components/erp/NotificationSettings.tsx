@@ -54,15 +54,32 @@ export default function NotificationSettings() {
     setPrefs((prev) => ({ ...prev, [key]: newVal }));
     setSaving(true);
 
-    const updateData: Record<string, unknown> = {
-      user_id: user.id,
-      organization_id: orgId,
-      [key]: newVal,
-    };
+    const updateData: Record<string, string> = {};
+    updateData[key] = newVal;
 
-    const { error } = await supabase
+    // Check if row exists
+    const { data: existing } = await supabase
       .from("notification_preferences")
-      .upsert(updateData, { onConflict: "user_id,organization_id" } as never);
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("organization_id", orgId)
+      .maybeSingle();
+
+    let error;
+    if (existing) {
+      ({ error } = await supabase
+        .from("notification_preferences")
+        .update(updateData)
+        .eq("id", existing.id));
+    } else {
+      ({ error } = await supabase
+        .from("notification_preferences")
+        .insert({
+          user_id: user.id,
+          organization_id: orgId,
+          ...updateData,
+        }));
+    }
 
     if (error) {
       toast.error("Fout bij opslaan voorkeur");
