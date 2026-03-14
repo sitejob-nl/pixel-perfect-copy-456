@@ -24,7 +24,10 @@ interface NavSection {
 }
 
 const nav: NavSection[] = [
-  { l: "Overzicht", items: [{ k: "dashboard", l: "Dashboard", i: "Home" }] },
+  { l: "Overzicht", items: [
+    { k: "dashboard", l: "Dashboard", i: "Home" },
+    { k: "tasks", l: "Taken", i: "CheckSquare" },
+  ] },
   {
     l: "CRM", items: [
       { k: "contacts", l: "Contacten", i: "Users", b: "8" },
