@@ -174,6 +174,7 @@ const App = () => (
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="scrapers" element={<ScrapersPage />} />
               <Route path="reports" element={<ReportingPage />} />
+              <Route path="ai" element={<AiAssistantPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="demos" element={<DemosPage />} />
               <Route path="content" element={<ContentPage />} />
