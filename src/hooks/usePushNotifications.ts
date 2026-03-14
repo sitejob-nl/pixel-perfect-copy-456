@@ -39,8 +39,10 @@ export function usePushNotifications() {
     });
   }, [supported, user]);
 
+  const orgId = org?.organization_id;
+
   const subscribe = useCallback(async () => {
-    if (!supported || !user || !org?.id) return false;
+    if (!supported || !user || !orgId) return false;
     setLoading(true);
 
     try {
