@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "hsl(var(--erp-text-2))",
@@ -41,6 +42,22 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Geannuleerd",
 };
 
+const AUDIT_TRANSLATIONS: Record<string, string> = {
+  contract_viewed: "Contract bekeken",
+  verification_code_sent: "Verificatiecode verzonden",
+  email_verified: "E-mail geverifieerd",
+  verification_failed: "Verificatie mislukt",
+  contract_signed: "Contract ondertekend",
+  pdf_generated: "PDF gegenereerd",
+  pdf_downloaded: "PDF gedownload",
+  contract_cancelled: "Contract geannuleerd",
+  contract_sent: "Contract verzonden",
+  reminder_sent: "Herinnering verstuurd",
+  sms_sent: "SMS verzonden",
+  sms_verified: "SMS geverifieerd",
+  consent_accepted: "Akkoord gegeven",
+};
+
 function fmtDate(d: string | null) {
   if (!d) return "—";
   try { return format(new Date(d), "dd MMM yyyy", { locale: nl }); } catch { return "—"; }
@@ -51,11 +68,47 @@ function fmtDateTime(d: string | null) {
   try { return format(new Date(d), "dd-MM-yyyy HH:mm", { locale: nl }); } catch { return "—"; }
 }
 
+function fmtRelative(d: string | null) {
+  if (!d) return "—";
+  try {
+    const diff = Date.now() - new Date(d).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days === 0) return "Vandaag";
+    if (days === 1) return "Gisteren";
+    if (days < 7) return `${days} dagen geleden`;
+    if (days < 30) return `${Math.floor(days / 7)} weken geleden`;
+    return format(new Date(d), "dd MMM yyyy", { locale: nl });
+  } catch { return "—"; }
+}
+
 // ─── Contracts List ────────────────────────────────────────────
+
+const FILTER_TABS = [
+  { key: "all", label: "Alle" },
+  { key: "draft", label: "Concept" },
+  { key: "sent", label: "Verzonden" },
+  { key: "signed", label: "Ondertekend" },
+  { key: "cancelled", label: "Geannuleerd" },
+];
 
 function ContractsList({ onSelect }: { onSelect: (id: string) => void }) {
   const { data: contracts, isLoading } = useContracts();
   const [showCreate, setShowCreate] = useState(false);
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    if (!contracts) return [];
+    let list = contracts;
+    if (filter !== "all") list = list.filter((c: any) => c.status === filter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((c: any) =>
+        c.title?.toLowerCase().includes(q) || c.contract_number?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [contracts, filter, search]);
 
   return (
     <>
@@ -65,48 +118,82 @@ function ContractsList({ onSelect }: { onSelect: (id: string) => void }) {
         </ErpButton>
       </PageHeader>
 
+      {/* Filter tabs + search */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex gap-1 bg-erp-bg2 rounded-lg p-0.5 border border-erp-border0">
+          {FILTER_TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setFilter(t.key)}
+              className={cn(
+                "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
+                filter === t.key
+                  ? "bg-erp-bg4 text-erp-text0 shadow-sm"
+                  : "text-erp-text3 hover:text-erp-text1"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1" />
+        <div className="relative">
+          <Icons.Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-erp-text3" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Zoek op titel of nummer..."
+            className="bg-erp-bg3 border border-erp-border0 rounded-lg pl-8 pr-3 py-1.5 text-xs text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue w-[220px]"
+          />
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="text-erp-text3 text-sm py-8 text-center">Laden...</div>
-      ) : !contracts?.length ? (
-        <EmptyState onAction={() => setShowCreate(true)} />
+      ) : !filtered.length ? (
+        filter !== "all" || search ? (
+          <div className="text-erp-text3 text-sm py-12 text-center">Geen contracten gevonden</div>
+        ) : (
+          <EmptyState onAction={() => setShowCreate(true)} />
+        )
       ) : (
         <ErpCard>
           <table className="w-full">
             <thead>
               <tr>
-                <TH>Nummer</TH>
                 <TH>Titel</TH>
-                <TH>Klant</TH>
-                <TH>Template</TH>
+                <TH>Nummer</TH>
+                <TH>Bedrijf</TH>
                 <TH>Status</TH>
                 <TH>Ondertekenaars</TH>
                 <TH>Aangemaakt</TH>
-                <TH>Vervalt</TH>
               </tr>
             </thead>
             <tbody>
-              {contracts.map((c: any) => (
-                <TR key={c.id} onClick={() => onSelect(c.id)}>
-                  <TD className="font-mono text-erp-text2">{c.contract_number || "—"}</TD>
-                  <TD className="font-medium text-erp-text0">{c.title}</TD>
-                  <TD>
-                    {c.contacts
-                      ? `${c.contacts.first_name} ${c.contacts.last_name || ""}`
-                      : c.companies?.name || "—"}
-                  </TD>
-                  <TD className="text-erp-text2">{c.contract_templates?.name || "Geen"}</TD>
-                  <TD>
-                    <Badge color={STATUS_COLORS[c.status] || STATUS_COLORS.draft}>
-                      {STATUS_LABELS[c.status] || c.status}
-                    </Badge>
-                  </TD>
-                  <TD>
-                    <SignerIcons sessions={c.contract_signing_sessions || []} />
-                  </TD>
-                  <TD className="text-erp-text2">{fmtDate(c.created_at)}</TD>
-                  <TD className="text-erp-text2">{fmtDate(c.expires_at)}</TD>
-                </TR>
-              ))}
+              {filtered.map((c: any) => {
+                const sessions = c.contract_signing_sessions || [];
+                const signedCount = sessions.filter((s: any) => s.status === "signed").length;
+                return (
+                  <TR key={c.id} onClick={() => onSelect(c.id)}>
+                    <TD className="font-medium text-erp-text0">{c.title}</TD>
+                    <TD className="font-mono text-erp-text2 text-xs">{c.contract_number || "—"}</TD>
+                    <TD>{c.companies?.name || "—"}</TD>
+                    <TD>
+                      <Badge color={STATUS_COLORS[c.status] || STATUS_COLORS.draft}>
+                        {STATUS_LABELS[c.status] || c.status}
+                      </Badge>
+                    </TD>
+                    <TD>
+                      {sessions.length > 0 ? (
+                        <span className="text-xs text-erp-text2">{signedCount}/{sessions.length} getekend</span>
+                      ) : (
+                        <span className="text-xs text-erp-text3">—</span>
+                      )}
+                    </TD>
+                    <TD className="text-erp-text2 text-xs">{fmtRelative(c.created_at)}</TD>
+                  </TR>
+                );
+              })}
             </tbody>
           </table>
         </ErpCard>
@@ -114,28 +201,6 @@ function ContractsList({ onSelect }: { onSelect: (id: string) => void }) {
 
       {showCreate && <CreateContractDialog open={showCreate} onClose={() => setShowCreate(false)} onCreated={onSelect} />}
     </>
-  );
-}
-
-function SignerIcons({ sessions }: { sessions: any[] }) {
-  if (!sessions.length) return <span className="text-erp-text3 text-xs">—</span>;
-  return (
-    <div className="flex gap-1">
-      {sessions.map((s: any) => (
-        <span
-          key={s.id}
-          title={`${s.signer_name} (${s.signer_role}) — ${s.status === "signed" ? "Getekend" : "Wacht"}`}
-          className={cn(
-            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold",
-            s.status === "signed"
-              ? "bg-erp-green/20 text-erp-green"
-              : "bg-erp-bg4 text-erp-text3"
-          )}
-        >
-          {s.signer_name?.[0]?.toUpperCase() || "?"}
-        </span>
-      ))}
-    </div>
   );
 }
 
@@ -197,30 +262,25 @@ function CreateContractDialog({ open, onClose, onCreated }: {
 
   const selectedTemplate = templates?.find((t: any) => t.id === templateId);
 
-  // Extract variables from template
   const templateVars: string[] = useMemo(() => {
     if (!selectedTemplate?.content_html) return [];
     const matches = (selectedTemplate.content_html as string).match(/\{\{(\w+)\}\}/g) || [];
     return [...new Set(matches.map((m: string) => m.replace(/\{\{|\}\}/g, "")))] as string[];
   }, [selectedTemplate]);
 
-  // Auto-fill variables from resolved data
   useEffect(() => {
     if (resolvedVars && typeof resolvedVars === "object") {
       setVariableValues((prev) => {
         const next = { ...prev };
         for (const [key, value] of Object.entries(resolvedVars)) {
           const varName = key.split(".").pop() || key;
-          if (value && !next[varName]) {
-            next[varName] = value as string;
-          }
+          if (value && !next[varName]) next[varName] = value as string;
         }
         return next;
       });
     }
   }, [resolvedVars]);
 
-  // Auto-fill first signer from linked contact
   useEffect(() => {
     if (linkedRecords.contact_id && contacts) {
       const contact = contacts.find((c: any) => c.id === linkedRecords.contact_id);
@@ -253,7 +313,6 @@ function CreateContractDialog({ open, onClose, onCreated }: {
     return html;
   }, [contractMode, selectedTemplate, templateVars, variableValues, emptyContent]);
 
-  // PDF upload handler
   const handlePdfUpload = async (file: File) => {
     setPdfUploading(true);
     try {
@@ -264,7 +323,6 @@ function CreateContractDialog({ open, onClose, onCreated }: {
       const { data: urlData } = supabase.storage.from("org-assets").getPublicUrl(path);
       setUploadedPdfUrl(urlData.publicUrl);
 
-      // Render PDF pages to images using pdfjs-dist
       const pdfjsLib = await import("pdfjs-dist");
       pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
       const arrayBuffer = await file.arrayBuffer();
@@ -306,7 +364,6 @@ function CreateContractDialog({ open, onClose, onCreated }: {
         status: "draft",
       });
 
-      // Create signing sessions
       for (let i = 0; i < signers.length; i++) {
         const s = signers[i];
         if (s.name && s.email && s.phone) {
@@ -329,7 +386,6 @@ function CreateContractDialog({ open, onClose, onCreated }: {
     }
   };
 
-  // Determine step labels based on mode
   const stepLabels = contractMode === "pdf"
     ? ["Bron kiezen", "PDF uploaden", "Velden & Ondertekenaars"]
     : contractMode === "empty"
@@ -343,95 +399,37 @@ function CreateContractDialog({ open, onClose, onCreated }: {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-erp-bg2 border-erp-border0">
         <DialogHeader>
-          <DialogTitle className="text-erp-text0">
-            Nieuw contract — Stap {step} van 3
-          </DialogTitle>
+          <DialogTitle className="text-erp-text0">Nieuw contract — Stap {step} van 3</DialogTitle>
         </DialogHeader>
-
-        {/* Step indicators */}
         <div className="flex gap-2 mb-4">
-          {stepLabels.map((label, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex-1 h-1 rounded-full",
-                i + 1 <= step ? "bg-erp-blue" : "bg-erp-bg4"
-              )}
-            />
+          {stepLabels.map((_, i) => (
+            <div key={i} className={cn("flex-1 h-1 rounded-full", i + 1 <= step ? "bg-erp-blue" : "bg-erp-bg4")} />
           ))}
         </div>
 
         {step === 1 && (
-          <Step1Templates
-            templates={templates || []}
-            selected={templateId}
-            contractMode={contractMode}
-            onSelect={(id) => {
-              setTemplateId(id);
-              if (id) {
-                setContractMode("template");
-                const tmpl = templates?.find((t: any) => t.id === id);
-                if (tmpl) setTitle(tmpl.name);
-              }
-            }}
-            onModeChange={(mode) => {
-              setContractMode(mode);
-              setTemplateId(null);
-            }}
-            title={title}
-            onTitleChange={setTitle}
-          />
+          <Step1Templates templates={templates || []} selected={templateId} contractMode={contractMode}
+            onSelect={(id) => { setTemplateId(id); if (id) { setContractMode("template"); const tmpl = templates?.find((t: any) => t.id === id); if (tmpl) setTitle(tmpl.name); } }}
+            onModeChange={(mode) => { setContractMode(mode); setTemplateId(null); }}
+            title={title} onTitleChange={setTitle} />
         )}
-
-        {step === 2 && contractMode === "empty" && (
-          <Step2Empty content={emptyContent} onContentChange={setEmptyContent} />
-        )}
-
-        {step === 2 && contractMode === "pdf" && (
-          <Step2PdfUpload
-            pdfPageImages={pdfPageImages}
-            uploading={pdfUploading}
-            onUpload={handlePdfUpload}
-          />
-        )}
-
+        {step === 2 && contractMode === "empty" && <Step2Empty content={emptyContent} onContentChange={setEmptyContent} />}
+        {step === 2 && contractMode === "pdf" && <Step2PdfUpload pdfPageImages={pdfPageImages} uploading={pdfUploading} onUpload={handlePdfUpload} />}
         {step === 2 && contractMode === "template" && (
-          <Step2Variables
-            contacts={contacts || []}
-            companies={companies || []}
-            deals={deals || []}
-            projects={projects || []}
-            quotes={quotes || []}
-            linkedRecords={linkedRecords}
-            onLinkRecord={(k, v) => setLinkedRecords((p) => ({ ...p, [k]: v }))}
-            templateVars={templateVars}
-            variableValues={variableValues}
-            onVarChange={(k, v) => setVariableValues((p) => ({ ...p, [k]: v }))}
-            resolvedVars={resolvedVars}
-          />
+          <Step2Variables contacts={contacts || []} companies={companies || []} deals={deals || []} projects={projects || []} quotes={quotes || []}
+            linkedRecords={linkedRecords} onLinkRecord={(k, v) => setLinkedRecords((p) => ({ ...p, [k]: v }))}
+            templateVars={templateVars} variableValues={variableValues} onVarChange={(k, v) => setVariableValues((p) => ({ ...p, [k]: v }))}
+            resolvedVars={resolvedVars} />
         )}
-
         {step === 3 && (
-          <Step3Preview
-            renderHtml={renderHtml}
-            signers={signers}
-            onSignersChange={setSigners}
-            members={members || []}
-            contractMode={contractMode}
-            pdfPageImages={pdfPageImages}
-            signatureFields={signatureFields}
-            onSignatureFieldsChange={setSignatureFields}
-          />
+          <Step3Preview renderHtml={renderHtml} signers={signers} onSignersChange={setSigners} members={members || []}
+            contractMode={contractMode} pdfPageImages={pdfPageImages} signatureFields={signatureFields} onSignatureFieldsChange={setSignatureFields} />
         )}
 
         <div className="flex justify-between mt-4 pt-4 border-t border-erp-border0">
-          <ErpButton onClick={() => step > 1 ? setStep(step - 1) : onClose()}>
-            {step === 1 ? "Annuleren" : "Vorige"}
-          </ErpButton>
+          <ErpButton onClick={() => step > 1 ? setStep(step - 1) : onClose()}>{step === 1 ? "Annuleren" : "Vorige"}</ErpButton>
           {step < 3 ? (
-            <ErpButton primary onClick={() => setStep(step + 1)} disabled={step === 1 ? !canProceedStep1 : !canProceedStep2}>
-              Volgende
-            </ErpButton>
+            <ErpButton primary onClick={() => setStep(step + 1)} disabled={step === 1 ? !canProceedStep1 : !canProceedStep2}>Volgende</ErpButton>
           ) : (
             <ErpButton primary onClick={handleCreate} disabled={createContract.isPending}>
               {createContract.isPending ? "Aanmaken..." : "Contract aanmaken"}
@@ -443,6 +441,8 @@ function CreateContractDialog({ open, onClose, onCreated }: {
   );
 }
 
+// ─── Step Components ───────────────────────────────────────────
+
 function Step1Templates({ templates, selected, contractMode, onSelect, onModeChange, title, onTitleChange }: {
   templates: any[]; selected: string | null; contractMode: "template" | "empty" | "pdf";
   onSelect: (id: string | null) => void; onModeChange: (mode: "template" | "empty" | "pdf") => void;
@@ -452,84 +452,29 @@ function Step1Templates({ templates, selected, contractMode, onSelect, onModeCha
     <div className="space-y-4">
       <div>
         <label className="block text-xs font-medium text-erp-text2 mb-1.5">Contracttitel</label>
-        <input
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="Bijv. Dienstverleningsovereenkomst Klant X"
-          className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-        />
+        <input value={title} onChange={(e) => onTitleChange(e.target.value)} placeholder="Bijv. Dienstverleningsovereenkomst Klant X"
+          className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
       </div>
-
       <div>
         <label className="block text-xs font-medium text-erp-text2 mb-2">Hoe wil je het contract aanmaken?</label>
         <div className="grid grid-cols-3 gap-3 mb-4">
-          {/* Empty contract */}
-          <div
-            onClick={() => onModeChange("empty")}
-            className={cn(
-              "p-4 rounded-xl border-2 cursor-pointer transition-all",
-              contractMode === "empty"
-                ? "border-erp-blue bg-erp-blue/5"
-                : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
-            )}
-          >
-            <Icons.Pen className="w-5 h-5 text-erp-text2 mb-2" />
-            <div className="text-sm font-medium text-erp-text0">Leeg contract</div>
-            <div className="text-xs text-erp-text3 mt-1">Schrijf zelf de inhoud</div>
-          </div>
-
-          {/* PDF upload */}
-          <div
-            onClick={() => onModeChange("pdf")}
-            className={cn(
-              "p-4 rounded-xl border-2 cursor-pointer transition-all",
-              contractMode === "pdf"
-                ? "border-erp-blue bg-erp-blue/5"
-                : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
-            )}
-          >
-            <Icons.File className="w-5 h-5 text-erp-text2 mb-2" />
-            <div className="text-sm font-medium text-erp-text0">PDF uploaden</div>
-            <div className="text-xs text-erp-text3 mt-1">Upload een bestaand PDF-bestand</div>
-          </div>
-
-          {/* Template */}
-          <div
-            onClick={() => onModeChange("template")}
-            className={cn(
-              "p-4 rounded-xl border-2 cursor-pointer transition-all",
-              contractMode === "template"
-                ? "border-erp-blue bg-erp-blue/5"
-                : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
-            )}
-          >
-            <Icons.Portal className="w-5 h-5 text-erp-text2 mb-2" />
-            <div className="text-sm font-medium text-erp-text0">Template</div>
-            <div className="text-xs text-erp-text3 mt-1">Gebruik een bestaande template</div>
-          </div>
+          {([["empty", "Pen", "Leeg contract", "Schrijf zelf de inhoud"], ["pdf", "File", "PDF uploaden", "Upload een bestaand PDF-bestand"], ["template", "Portal", "Template", "Gebruik een bestaande template"]] as const).map(([mode, icon, label, desc]) => (
+            <div key={mode} onClick={() => onModeChange(mode as any)}
+              className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all", contractMode === mode ? "border-erp-blue bg-erp-blue/5" : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1")}>
+              {(Icons as any)[icon] && (() => { const I = (Icons as any)[icon]; return <I className="w-5 h-5 text-erp-text2 mb-2" />; })()}
+              <div className="text-sm font-medium text-erp-text0">{label}</div>
+              <div className="text-xs text-erp-text3 mt-1">{desc}</div>
+            </div>
+          ))}
         </div>
-
-        {/* Template list (only when template mode) */}
         {contractMode === "template" && templates.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             {templates.map((t: any) => (
-              <div
-                key={t.id}
-                onClick={() => onSelect(t.id)}
-                className={cn(
-                  "p-4 rounded-xl border-2 cursor-pointer transition-all",
-                  selected === t.id
-                    ? "border-erp-blue bg-erp-blue/5"
-                    : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1"
-                )}
-              >
+              <div key={t.id} onClick={() => onSelect(t.id)}
+                className={cn("p-4 rounded-xl border-2 cursor-pointer transition-all", selected === t.id ? "border-erp-blue bg-erp-blue/5" : "border-erp-border0 bg-erp-bg3 hover:border-erp-border1")}>
                 <div className="text-sm font-medium text-erp-text0">{t.name}</div>
                 <div className="text-xs text-erp-text3 mt-1">{t.description || t.category || "Template"}</div>
-                {t.variables?.length > 0 && (
-                  <div className="text-[10px] text-erp-text3 mt-2">
-                    {t.variables.length} variabelen
-                  </div>
-                )}
+                {Array.isArray(t.signers) && t.signers.length > 0 && <div className="text-[10px] text-erp-text3 mt-2">{t.signers.length} ondertekenaars</div>}
               </div>
             ))}
           </div>
@@ -539,73 +484,40 @@ function Step1Templates({ templates, selected, contractMode, onSelect, onModeCha
   );
 }
 
-function Step2Empty({ content, onContentChange }: {
-  content: string; onContentChange: (v: string) => void;
-}) {
+function Step2Empty({ content, onContentChange }: { content: string; onContentChange: (v: string) => void }) {
   return (
     <div className="space-y-3">
       <h4 className="text-sm font-semibold text-erp-text0">Contractinhoud schrijven</h4>
       <p className="text-xs text-erp-text3">Schrijf de contracttekst hieronder. Je kunt HTML gebruiken voor opmaak.</p>
-      <textarea
-        value={content}
-        onChange={(e) => onContentChange(e.target.value)}
-        placeholder="Typ hier de contractinhoud..."
-        rows={16}
-        className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue font-mono resize-y"
-      />
+      <textarea value={content} onChange={(e) => onContentChange(e.target.value)} placeholder="Typ hier de contractinhoud..." rows={16}
+        className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue font-mono resize-y" />
     </div>
   );
 }
 
-function Step2PdfUpload({ pdfPageImages, uploading, onUpload }: {
-  pdfPageImages: string[]; uploading: boolean; onUpload: (file: File) => void;
-}) {
+function Step2PdfUpload({ pdfPageImages, uploading, onUpload }: { pdfPageImages: string[]; uploading: boolean; onUpload: (file: File) => void }) {
   const fileRef = useRef<HTMLInputElement>(null);
   return (
     <div className="space-y-4">
       <h4 className="text-sm font-semibold text-erp-text0">PDF uploaden</h4>
-      <p className="text-xs text-erp-text3">Upload een PDF-bestand. In de volgende stap kun je handtekeningvelden op de juiste plek slepen.</p>
-
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".pdf,application/pdf"
-        className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); }}
-      />
-
+      <input ref={fileRef} type="file" accept=".pdf,application/pdf" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); }} />
       {pdfPageImages.length === 0 ? (
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-          className="w-full border-2 border-dashed border-erp-border1 rounded-xl py-12 flex flex-col items-center gap-2 text-erp-text2 hover:bg-erp-bg3 transition-colors disabled:opacity-50"
-        >
-          {uploading ? (
-            <span className="text-sm">PDF wordt verwerkt...</span>
-          ) : (
-            <>
-              <Icons.File className="w-8 h-8 text-erp-text3" />
-              <span className="text-sm font-medium">Klik om een PDF te uploaden</span>
-              <span className="text-xs text-erp-text3">of sleep het bestand hierheen</span>
-            </>
+        <button onClick={() => fileRef.current?.click()} disabled={uploading}
+          className="w-full border-2 border-dashed border-erp-border1 rounded-xl py-12 flex flex-col items-center gap-2 text-erp-text2 hover:bg-erp-bg3 transition-colors disabled:opacity-50">
+          {uploading ? <span className="text-sm">PDF wordt verwerkt...</span> : (
+            <><Icons.File className="w-8 h-8 text-erp-text3" /><span className="text-sm font-medium">Klik om een PDF te uploaden</span></>
           )}
         </button>
       ) : (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs text-erp-text2 font-medium">{pdfPageImages.length} pagina('s) geladen</span>
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="text-xs text-erp-blue hover:underline font-medium"
-            >
-              Ander bestand kiezen
-            </button>
+            <button onClick={() => fileRef.current?.click()} className="text-xs text-erp-blue hover:underline font-medium">Ander bestand kiezen</button>
           </div>
           <div className="grid grid-cols-3 gap-2 max-h-[350px] overflow-y-auto">
             {pdfPageImages.map((img, i) => (
               <div key={i} className="border border-erp-border0 rounded-lg overflow-hidden">
                 <img src={img} alt={`Pagina ${i + 1}`} className="w-full" />
-                <div className="text-[10px] text-erp-text3 text-center py-1">p{i + 1}</div>
               </div>
             ))}
           </div>
@@ -622,15 +534,10 @@ function SelectField({ label, value, onChange, options, placeholder }: {
   return (
     <div>
       <label className="block text-xs font-medium text-erp-text2 mb-1">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-      >
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue">
         <option value="">{placeholder || "— Selecteer —"}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
   );
@@ -638,11 +545,8 @@ function SelectField({ label, value, onChange, options, placeholder }: {
 
 function Step2Variables({ contacts, companies, deals, projects, quotes, linkedRecords, onLinkRecord, templateVars, variableValues, onVarChange, resolvedVars }: {
   contacts: any[]; companies: any[]; deals: any[]; projects: any[]; quotes: any[];
-  linkedRecords: Record<string, string>;
-  onLinkRecord: (key: string, value: string) => void;
-  templateVars: string[];
-  variableValues: Record<string, string>;
-  onVarChange: (key: string, value: string) => void;
+  linkedRecords: Record<string, string>; onLinkRecord: (key: string, value: string) => void;
+  templateVars: string[]; variableValues: Record<string, string>; onVarChange: (key: string, value: string) => void;
   resolvedVars: Record<string, string> | undefined;
 }) {
   return (
@@ -650,62 +554,32 @@ function Step2Variables({ contacts, companies, deals, projects, quotes, linkedRe
       <div>
         <h4 className="text-sm font-semibold text-erp-text0 mb-3">Records koppelen</h4>
         <div className="grid grid-cols-2 gap-3">
-          <SelectField
-            label="Contact"
-            value={linkedRecords.contact_id || ""}
-            onChange={(v) => onLinkRecord("contact_id", v)}
-            options={contacts.map((c: any) => ({ value: c.id, label: `${c.first_name} ${c.last_name || ""}` }))}
-          />
-          <SelectField
-            label="Bedrijf"
-            value={linkedRecords.company_id || ""}
-            onChange={(v) => onLinkRecord("company_id", v)}
-            options={companies.map((c: any) => ({ value: c.id, label: c.name }))}
-          />
-          <SelectField
-            label="Deal"
-            value={linkedRecords.deal_id || ""}
-            onChange={(v) => onLinkRecord("deal_id", v)}
-            options={deals.map((d: any) => ({ value: d.id, label: d.title }))}
-          />
-          <SelectField
-            label="Project"
-            value={linkedRecords.project_id || ""}
-            onChange={(v) => onLinkRecord("project_id", v)}
-            options={projects.map((p: any) => ({ value: p.id, label: p.name }))}
-          />
-          <SelectField
-            label="Offerte"
-            value={linkedRecords.quote_id || ""}
-            onChange={(v) => onLinkRecord("quote_id", v)}
-            options={quotes.map((q: any) => ({ value: q.id, label: `${q.quote_number} — ${q.customer_name || ""}` }))}
-          />
+          <SelectField label="Contact" value={linkedRecords.contact_id || ""} onChange={(v) => onLinkRecord("contact_id", v)}
+            options={contacts.map((c: any) => ({ value: c.id, label: `${c.first_name} ${c.last_name || ""}` }))} />
+          <SelectField label="Bedrijf" value={linkedRecords.company_id || ""} onChange={(v) => onLinkRecord("company_id", v)}
+            options={companies.map((c: any) => ({ value: c.id, label: c.name }))} />
+          <SelectField label="Deal" value={linkedRecords.deal_id || ""} onChange={(v) => onLinkRecord("deal_id", v)}
+            options={deals.map((d: any) => ({ value: d.id, label: d.title }))} />
+          <SelectField label="Project" value={linkedRecords.project_id || ""} onChange={(v) => onLinkRecord("project_id", v)}
+            options={projects.map((p: any) => ({ value: p.id, label: p.name }))} />
+          <SelectField label="Offerte" value={linkedRecords.quote_id || ""} onChange={(v) => onLinkRecord("quote_id", v)}
+            options={quotes.map((q: any) => ({ value: q.id, label: `${q.quote_number} — ${q.customer_name || ""}` }))} />
         </div>
       </div>
-
       {templateVars.length > 0 && (
         <div>
           <h4 className="text-sm font-semibold text-erp-text0 mb-3">Variabelen</h4>
           <div className="grid grid-cols-2 gap-3">
             {templateVars.map((varName) => {
-              const isAutoFilled = resolvedVars && Object.entries(resolvedVars).some(
-                ([k, v]) => k.split(".").pop() === varName && v
-              );
+              const isAutoFilled = resolvedVars && Object.entries(resolvedVars).some(([k, v]) => k.split(".").pop() === varName && v);
               return (
                 <div key={varName}>
                   <label className="flex items-center gap-1.5 text-xs font-medium text-erp-text2 mb-1">
                     {varName.replace(/_/g, " ")}
-                    {isAutoFilled && (
-                      <span className="text-[9px] bg-erp-green/10 text-erp-green px-1.5 py-0.5 rounded-full font-semibold">
-                        auto
-                      </span>
-                    )}
+                    {isAutoFilled && <span className="text-[9px] bg-erp-green/10 text-erp-green px-1.5 py-0.5 rounded-full font-semibold">auto</span>}
                   </label>
-                  <input
-                    value={variableValues[varName] || ""}
-                    onChange={(e) => onVarChange(varName, e.target.value)}
-                    className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-                  />
+                  <input value={variableValues[varName] || ""} onChange={(e) => onVarChange(varName, e.target.value)}
+                    className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
                 </div>
               );
             })}
@@ -717,68 +591,39 @@ function Step2Variables({ contacts, companies, deals, projects, quotes, linkedRe
 }
 
 function Step3Preview({ renderHtml, signers, onSignersChange, members, contractMode, pdfPageImages, signatureFields, onSignatureFieldsChange }: {
-  renderHtml: string;
-  signers: Array<{ name: string; email: string; phone: string; role: string }>;
+  renderHtml: string; signers: Array<{ name: string; email: string; phone: string; role: string }>;
   onSignersChange: (s: Array<{ name: string; email: string; phone: string; role: string }>) => void;
-  members: import("@/hooks/useTeam").OrgMember[];
-  contractMode: "template" | "empty" | "pdf";
-  pdfPageImages: string[];
-  signatureFields: SignatureField[];
-  onSignatureFieldsChange: (fields: SignatureField[]) => void;
+  members: import("@/hooks/useTeam").OrgMember[]; contractMode: string; pdfPageImages: string[];
+  signatureFields: SignatureField[]; onSignatureFieldsChange: (fields: SignatureField[]) => void;
 }) {
   const updateSigner = (i: number, field: string, value: string) => {
-    const next = [...signers];
-    next[i] = { ...next[i], [field]: value };
-    onSignersChange(next);
+    const next = [...signers]; next[i] = { ...next[i], [field]: value }; onSignersChange(next);
   };
-
   const fillFromMember = (i: number, userId: string) => {
     const member = members.find((m) => m.user_id === userId);
     if (!member) return;
     const next = [...signers];
-    next[i] = {
-      ...next[i],
-      name: member.profiles?.full_name || "",
-      email: member.profiles?.email || "",
-      phone: member.profiles?.phone || "",
-      role: "Medewerker",
-    };
+    next[i] = { ...next[i], name: member.profiles?.full_name || "", email: member.profiles?.email || "", phone: member.profiles?.phone || "", role: "Medewerker" };
     onSignersChange(next);
   };
-
   const activeMembers = members.filter((m) => m.is_active);
-
   const showFieldEditor = contractMode === "pdf" && pdfPageImages.length > 0;
 
   return (
     <div className="space-y-4">
-      {/* PDF field editor */}
       {showFieldEditor && (
         <div>
           <h4 className="text-sm font-semibold text-erp-text0 mb-2">Velden positioneren op de PDF</h4>
-          <div className="h-[70vh]">
-            <PDFFieldEditor
-              pages={pdfPageImages}
-              fields={signatureFields}
-              onChange={onSignatureFieldsChange}
-              signerCount={signers.length}
-            />
-          </div>
+          <div className="h-[70vh]"><PDFFieldEditor pages={pdfPageImages} fields={signatureFields} onChange={onSignatureFieldsChange} signerCount={signers.length} /></div>
         </div>
       )}
-
-      {/* HTML preview for non-PDF modes */}
       {!showFieldEditor && (
         <div>
           <h4 className="text-sm font-semibold text-erp-text0 mb-2">Preview</h4>
-          <div
-            className="bg-white text-gray-900 rounded-lg p-6 max-h-[300px] overflow-y-auto text-sm shadow-inner border border-erp-border0"
-            dangerouslySetInnerHTML={{ __html: renderHtml || "<p>Geen content</p>" }}
-          />
+          <div className="bg-white text-gray-900 rounded-lg p-6 max-h-[300px] overflow-y-auto text-sm shadow-inner border border-erp-border0"
+            dangerouslySetInnerHTML={{ __html: renderHtml || "<p>Geen content</p>" }} />
         </div>
       )}
-
-      {/* Signers */}
       <div>
         <h4 className="text-sm font-semibold text-erp-text0 mb-2">Ondertekenaars</h4>
         <div className="grid grid-cols-2 gap-3">
@@ -786,27 +631,13 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members, contractM
             <div key={i} className="bg-erp-bg3 rounded-xl p-3 border border-erp-border0 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-erp-text2">Ondertekenaar {i + 1}</span>
-                {signers.length > 1 && (
-                  <button
-                    onClick={() => onSignersChange(signers.filter((_, j) => j !== i))}
-                    className="text-xs text-erp-red hover:underline"
-                  >
-                    Verwijderen
-                  </button>
-                )}
+                {signers.length > 1 && <button onClick={() => onSignersChange(signers.filter((_, j) => j !== i))} className="text-xs text-erp-red hover:underline">Verwijderen</button>}
               </div>
               {activeMembers.length > 0 && (
-                <select
-                  defaultValue=""
-                  onChange={(e) => { if (e.target.value) fillFromMember(i, e.target.value); }}
-                  className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-                >
+                <select defaultValue="" onChange={(e) => { if (e.target.value) fillFromMember(i, e.target.value); }}
+                  className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue">
                   <option value="">— Selecteer teamlid —</option>
-                  {activeMembers.map((m) => (
-                    <option key={m.user_id} value={m.user_id}>
-                      {m.profiles?.full_name || "Onbekend"} ({m.role})
-                    </option>
-                  ))}
+                  {activeMembers.map((m) => <option key={m.user_id} value={m.user_id}>{m.profiles?.full_name || "Onbekend"} ({m.role})</option>)}
                 </select>
               )}
               <input value={s.role} onChange={(e) => updateSigner(i, "role", e.target.value)} placeholder="Rol (bijv. Klant)" className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2.5 py-1.5 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
@@ -816,65 +647,79 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members, contractM
             </div>
           ))}
         </div>
-        <button
-          onClick={() => onSignersChange([...signers, { name: "", email: "", phone: "", role: "Ondertekenaar" }])}
-          className="text-xs text-erp-blue hover:underline font-medium mt-2"
-        >
-          + Ondertekenaar toevoegen
-        </button>
+        <button onClick={() => onSignersChange([...signers, { name: "", email: "", phone: "", role: "Ondertekenaar" }])}
+          className="text-xs text-erp-blue hover:underline font-medium mt-2">+ Ondertekenaar toevoegen</button>
       </div>
     </div>
   );
 }
 
-function SendContractEmailDialog({ open, onClose, contract }: { open: boolean; onClose: () => void; contract: any }) {
-  const sessions = contract.contract_signing_sessions || [];
-  const contactEmail = contract.contacts?.email || "";
-  const [to, setTo] = useState(contactEmail);
-  const [subject, setSubject] = useState(`Contract ter ondertekening: ${contract.title}`);
-  const [message, setMessage] = useState("Hierbij ontvangt u een contract ter ondertekening. Klik op de link hieronder om het contract te bekijken en te ondertekenen.");
+// ─── Send Contract Dialog (improved with expiry + per-signer emails) ───
+
+function SendContractDialog({ open, onClose, contract }: { open: boolean; onClose: () => void; contract: any }) {
+  const sessions = (contract.contract_signing_sessions || []).filter((s: any) => s.status !== "signed");
+  const [message, setMessage] = useState("");
+  const [expiryDays, setExpiryDays] = useState(30);
+  const [sendEmails, setSendEmails] = useState(true);
   const [sending, setSending] = useState(false);
   const updateContract = useUpdateContract();
+  const qc = useQueryClient();
+
+  const noFields = !contract.signature_fields || (Array.isArray(contract.signature_fields) && contract.signature_fields.length === 0);
 
   const handleSend = async () => {
-    if (!to) { toast.error("Vul een e-mailadres in"); return; }
     setSending(true);
     try {
-      const origin = window.location.origin;
-      const signerLinksHtml = sessions
-        .filter((s: any) => s.status !== "signed")
-        .map((s: any) => `<p style="margin:8px 0"><a href="${origin}/sign?token=${s.session_token}" style="display:inline-block;padding:10px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">${s.signer_name} — Onderteken nu</a></p>`)
-        .join("");
+      const expiryDate = new Date(Date.now() + expiryDays * 86400000);
 
-      const htmlContent = `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
-          <h2 style="color:#1a1a2e;margin-bottom:8px">${contract.title}</h2>
-          ${contract.contract_number ? `<p style="color:#666;font-size:13px;margin-top:0">Nummer: ${contract.contract_number}</p>` : ""}
-          <p style="color:#333;font-size:14px;line-height:1.6">${message}</p>
-          <div style="margin:24px 0">${signerLinksHtml}</div>
-          <p style="color:#999;font-size:12px;margin-top:32px">Dit is een automatisch gegenereerd bericht.</p>
-        </div>`;
-
-      const { data, error } = await supabase.functions.invoke("send-email", {
-        body: {
-          action: "send",
-          to,
-          subject,
-          html_content: htmlContent,
-          contact_id: contract.contact_id || null,
-          send_type: "contract",
-        },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
+      // Update contract status
       await updateContract.mutateAsync({
         id: contract.id,
         status: "sent",
         sent_at: new Date().toISOString(),
+        signing_message: message || null,
+        expires_at: expiryDate.toISOString(),
       });
 
-      toast.success("Contract per e-mail verzonden");
+      // Update sessions expiry
+      await (supabase as any).from("contract_signing_sessions")
+        .update({ expires_at: expiryDate.toISOString() })
+        .eq("contract_id", contract.id);
+
+      // Send emails per signer
+      if (sendEmails) {
+        const origin = window.location.origin;
+        for (const s of sessions) {
+          const htmlContent = `
+            <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+              <h2 style="color:#1a1a2e;margin-bottom:8px">U bent uitgenodigd om een contract te ondertekenen</h2>
+              <p style="color:#666;font-size:13px">Contract: <strong>${contract.title}</strong></p>
+              ${contract.contract_number ? `<p style="color:#666;font-size:13px">Nummer: ${contract.contract_number}</p>` : ""}
+              <p style="color:#333;font-size:14px">Beste ${s.signer_name} (${s.signer_role || "Ondertekenaar"}),</p>
+              ${message ? `<p style="color:#333;font-size:14px;line-height:1.6">${message}</p>` : ""}
+              <div style="margin:24px 0;text-align:center">
+                <a href="${origin}/sign?token=${s.session_token}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">Bekijk & Onderteken</a>
+              </div>
+              <p style="color:#999;font-size:12px">Vervaldatum: ${format(expiryDate, "dd MMMM yyyy", { locale: nl })}</p>
+              <hr style="border:none;border-top:1px solid #eee;margin:24px 0" />
+              <p style="color:#aaa;font-size:11px;text-align:center">Elektronisch ondertekend conform eIDAS en artikel 3:15a BW</p>
+            </div>`;
+
+          await supabase.functions.invoke("send-email", {
+            body: {
+              action: "send",
+              to: s.signer_email,
+              subject: `Uitnodiging: contract "${contract.title}" ondertekenen`,
+              html_content: htmlContent,
+              send_type: "contract",
+            },
+          });
+        }
+      }
+
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      qc.invalidateQueries({ queryKey: ["contract"] });
+      toast.success(`Contract verzonden naar ${sessions.length} ondertekenaar(s)`);
       onClose();
     } catch (e: any) {
       toast.error(e.message || "Verzenden mislukt");
@@ -885,44 +730,186 @@ function SendContractEmailDialog({ open, onClose, contract }: { open: boolean; o
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-md bg-erp-bg2 border-erp-border0">
-        <DialogHeader>
-          <DialogTitle className="text-erp-text0">Contract versturen via e-mail</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <label className="block text-xs font-medium text-erp-text2 mb-1">Aan</label>
-            <input value={to} onChange={(e) => setTo(e.target.value)} placeholder="email@voorbeeld.nl"
-              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
+        <DialogHeader><DialogTitle className="text-erp-text0">Contract versturen</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="bg-erp-bg3 rounded-lg p-3 space-y-1">
+            <div className="text-sm font-medium text-erp-text0">{contract.title}</div>
+            <div className="text-xs text-erp-text3">{sessions.length} ondertekenaar(s): {sessions.map((s: any) => s.signer_name).join(", ")}</div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-erp-text2 mb-1">Onderwerp</label>
-            <input value={subject} onChange={(e) => setSubject(e.target.value)}
-              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-erp-text2 mb-1">Bericht</label>
-            <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3}
-              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue resize-none" />
-          </div>
-          {sessions.filter((s: any) => s.status !== "signed").length > 0 && (
-            <div className="bg-erp-bg3 rounded-lg p-3">
-              <div className="text-xs font-medium text-erp-text2 mb-1.5">Ondertekeningslinks in e-mail:</div>
-              {sessions.filter((s: any) => s.status !== "signed").map((s: any) => (
-                <div key={s.id} className="text-xs text-erp-text1">• {s.signer_name} ({s.signer_role})</div>
-              ))}
+
+          {noFields && (
+            <div className="bg-erp-amber/10 border border-erp-amber/30 rounded-lg p-3 text-xs text-erp-amber">
+              ⚠️ Er zijn nog geen handtekeningvelden gepositioneerd. Handtekeningen worden onderaan het document geplaatst.
             </div>
           )}
+
+          <div>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Optioneel bericht</label>
+            <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3} placeholder="Persoonlijk bericht voor de ondertekenaars..."
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 focus:outline-none focus:ring-1 focus:ring-erp-blue resize-none" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Vervaldatum</label>
+            <select value={expiryDays} onChange={(e) => setExpiryDays(Number(e.target.value))}
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue">
+              <option value={7}>7 dagen</option>
+              <option value={14}>14 dagen</option>
+              <option value={30}>30 dagen</option>
+              <option value={60}>60 dagen</option>
+              <option value={90}>90 dagen</option>
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={sendEmails} onChange={(e) => setSendEmails(e.target.checked)}
+              className="w-4 h-4 rounded border-erp-border0 text-erp-blue focus:ring-erp-blue" />
+            <span className="text-xs text-erp-text1">Stuur uitnodigingsmail naar ondertekenaars</span>
+          </label>
         </div>
         <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-erp-border0">
           <ErpButton onClick={onClose}>Annuleren</ErpButton>
-          <ErpButton primary onClick={handleSend} disabled={sending || !to}>
-            {sending ? "Verzenden..." : "Verstuur e-mail"}
+          <ErpButton primary onClick={handleSend} disabled={sending}>
+            {sending ? "Verzenden..." : "Verstuur contract"}
           </ErpButton>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+
+// ─── Reminder Dialog ───────────────────────────────────────────
+
+function ReminderDialog({ open, onClose, contract }: { open: boolean; onClose: () => void; contract: any }) {
+  const unsignedSessions = (contract.contract_signing_sessions || []).filter((s: any) => s.status !== "signed");
+  const [selected, setSelected] = useState<Set<string>>(new Set(unsignedSessions.map((s: any) => s.id)));
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const updateContract = useUpdateContract();
+
+  const toggle = (id: string) => {
+    setSelected((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  };
+
+  const handleSend = async () => {
+    setSending(true);
+    try {
+      const origin = window.location.origin;
+      const toSend = unsignedSessions.filter((s: any) => selected.has(s.id));
+      for (const s of toSend) {
+        const htmlContent = `
+          <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+            <h2 style="color:#1a1a2e">Herinnering: contract wacht op uw ondertekening</h2>
+            <p style="color:#333;font-size:14px">Beste ${s.signer_name},</p>
+            <p style="color:#333;font-size:14px">Het contract <strong>"${contract.title}"</strong> wacht nog op uw ondertekening.</p>
+            ${message ? `<p style="color:#333;font-size:14px">${message}</p>` : ""}
+            <div style="margin:24px 0;text-align:center">
+              <a href="${origin}/sign?token=${s.session_token}" style="display:inline-block;padding:12px 32px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Onderteken nu</a>
+            </div>
+            ${contract.expires_at ? `<p style="color:#999;font-size:12px">Vervaldatum: ${fmtDate(contract.expires_at)}</p>` : ""}
+          </div>`;
+        await supabase.functions.invoke("send-email", {
+          body: { action: "send", to: s.signer_email, subject: `Herinnering: contract "${contract.title}" wacht op uw ondertekening`, html_content: htmlContent, send_type: "contract" },
+        });
+      }
+      await updateContract.mutateAsync({ id: contract.id, reminder_sent_at: new Date().toISOString() });
+      toast.success(`Herinnering verzonden naar ${toSend.length} ondertekenaar(s)`);
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Verzenden mislukt");
+    }
+    setSending(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md bg-erp-bg2 border-erp-border0">
+        <DialogHeader><DialogTitle className="text-erp-text0">Herinnering sturen</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-erp-text2">Selecteer de ondertekenaars die een herinnering ontvangen:</p>
+          {unsignedSessions.map((s: any) => (
+            <label key={s.id} className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={selected.has(s.id)} onChange={() => toggle(s.id)} className="w-4 h-4 rounded border-erp-border0 text-erp-blue" />
+              <span className="text-sm text-erp-text0">{s.signer_name} <span className="text-erp-text3">({s.signer_email})</span></span>
+            </label>
+          ))}
+          <div>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Extra bericht (optioneel)</label>
+            <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2}
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue resize-none" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-erp-border0">
+          <ErpButton onClick={onClose}>Annuleren</ErpButton>
+          <ErpButton primary onClick={handleSend} disabled={sending || selected.size === 0}>
+            {sending ? "Verzenden..." : "Herinnering sturen"}
+          </ErpButton>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Cancel Dialog ─────────────────────────────────────────────
+
+function CancelDialog({ open, onClose, contract }: { open: boolean; onClose: () => void; contract: any }) {
+  const [reason, setReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const updateContract = useUpdateContract();
+  const qc = useQueryClient();
+
+  const handleCancel = async () => {
+    if (!reason.trim()) { toast.error("Vul een reden in"); return; }
+    setCancelling(true);
+    try {
+      await updateContract.mutateAsync({
+        id: contract.id,
+        status: "cancelled",
+        cancelled_at: new Date().toISOString(),
+        cancelled_reason: reason,
+      });
+      // Expire unsigned sessions
+      await (supabase as any).from("contract_signing_sessions")
+        .update({ status: "expired" })
+        .eq("contract_id", contract.id)
+        .neq("status", "signed");
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      qc.invalidateQueries({ queryKey: ["contract"] });
+      toast.success("Contract geannuleerd");
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message || "Annuleren mislukt");
+    }
+    setCancelling(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md bg-erp-bg2 border-erp-border0">
+        <DialogHeader><DialogTitle className="text-erp-text0">Contract annuleren</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="bg-erp-red/10 border border-erp-red/30 rounded-lg p-3 text-xs text-erp-red">
+            ⚠️ Dit contract wordt geannuleerd. Ondertekenaars die nog niet hebben getekend verliezen hun toegang.
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Reden voor annulering *</label>
+            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder="Waarom wordt dit contract geannuleerd?"
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue resize-none" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-erp-border0">
+          <ErpButton onClick={onClose}>Terug</ErpButton>
+          <button onClick={handleCancel} disabled={cancelling || !reason.trim()}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-erp-red text-white disabled:opacity-50 hover:opacity-90 transition-opacity">
+            {cancelling ? "Annuleren..." : "Definitief annuleren"}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── PDF Viewer ────────────────────────────────────────────────
 
 function PdfViewer({ url }: { url: string }) {
   const [pages, setPages] = useState<string[]>([]);
@@ -942,48 +929,42 @@ function PdfViewer({ url }: { url: string }) {
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: 1.5 });
           const canvas = document.createElement("canvas");
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
+          canvas.width = viewport.width; canvas.height = viewport.height;
           const ctx = canvas.getContext("2d")!;
           await page.render({ canvasContext: ctx, viewport }).promise;
           imgs.push(canvas.toDataURL("image/png"));
         }
         if (!cancelled) setPages(imgs);
-      } catch (e) {
-        console.error("PDF render error:", e);
-      }
+      } catch (e) { console.error("PDF render error:", e); }
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [url]);
 
-  if (loading) return (
-    <div className="text-center py-12 text-erp-text3 text-sm">
-      <div className="w-6 h-6 border-2 border-erp-blue border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-      PDF laden...
-    </div>
-  );
-
+  if (loading) return <div className="text-center py-12 text-erp-text3 text-sm"><div className="w-6 h-6 border-2 border-erp-blue border-t-transparent rounded-full animate-spin mx-auto mb-2" />PDF laden...</div>;
   if (!pages.length) return <div className="text-center py-12 text-erp-text3 text-sm">PDF kon niet worden geladen</div>;
-
   return (
     <div className="space-y-4 max-h-[700px] overflow-y-auto">
-      {pages.map((src, i) => (
-        <img key={i} src={src} alt={`Pagina ${i + 1}`} className="w-full rounded shadow-sm border border-erp-border0" />
-      ))}
+      {pages.map((src, i) => <img key={i} src={src} alt={`Pagina ${i + 1}`} className="w-full rounded shadow-sm border border-erp-border0" />)}
     </div>
   );
 }
 
+// ─── Contract Detail ───────────────────────────────────────────
+
 function ContractDetail({ contractId, onBack }: { contractId: string; onBack: () => void }) {
   const { data: contract, isLoading } = useContract(contractId);
-  const [tab, setTab] = useState("content");
+  const [tab, setTab] = useState("overview");
   const [sigFields, setSigFields] = useState<SignatureField[]>([]);
   const [generatingPdf, setGeneratingPdf] = useState(false);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const updateContract = useUpdateContract();
+  const createContract = useCreateContract();
+  const createSession = useCreateSigningSession();
+  const qc = useQueryClient();
 
-  // Load existing signature fields from contract
   useEffect(() => {
     if (contract?.signature_fields && Array.isArray(contract.signature_fields)) {
       setSigFields(contract.signature_fields as SignatureField[]);
@@ -994,143 +975,213 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
     try {
       await updateContract.mutateAsync({ id: contractId, signature_fields: sigFields });
       toast.success("Velden opgeslagen");
-    } catch (e: any) {
-      toast.error(e.message || "Opslaan mislukt");
-    }
+    } catch (e: any) { toast.error(e.message || "Opslaan mislukt"); }
   };
 
   const generatePdf = async () => {
     setGeneratingPdf(true);
     try {
       const baseUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://fuvpmxxihmpustftzvgk.supabase.co"}/functions/v1/sign-pdf`;
-      const res = await fetch(baseUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contract_id: contractId }),
-      });
+      const res = await fetch(baseUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contract_id: contractId }) });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       toast.success("PDF gegenereerd");
       if (data.pdf_url) window.open(data.pdf_url, "_blank");
-    } catch (e: any) {
-      toast.error(e.message || "PDF generatie mislukt");
-    }
+    } catch (e: any) { toast.error(e.message || "PDF generatie mislukt"); }
     setGeneratingPdf(false);
+  };
+
+  const handleCopyAsNew = async () => {
+    if (!contract) return;
+    try {
+      const newContract = await createContract.mutateAsync({
+        title: contract.title,
+        template_id: contract.template_id,
+        contact_id: contract.contact_id,
+        company_id: contract.company_id,
+        deal_id: contract.deal_id,
+        project_id: contract.project_id,
+        quote_id: contract.quote_id,
+        variable_values: contract.variable_values,
+        rendered_html: contract.rendered_html,
+        content: contract.content,
+        pdf_url: contract.pdf_url,
+        signature_fields: contract.signature_fields,
+        signing_order: contract.signing_order,
+        status: "draft",
+      });
+
+      // Copy signing sessions
+      const sessions = contract.contract_signing_sessions || [];
+      for (const s of sessions) {
+        await createSession.mutateAsync({
+          contract_id: newContract.id,
+          signer_name: s.signer_name,
+          signer_email: s.signer_email,
+          signer_phone: s.signer_phone || "",
+          signer_role: s.signer_role,
+          signing_order: s.signing_order || 1,
+        });
+      }
+
+      qc.invalidateQueries({ queryKey: ["contracts"] });
+      toast.success("Contract gekopieerd als nieuw concept");
+      onBack();
+    } catch (e: any) { toast.error(e.message || "Kopiëren mislukt"); }
+  };
+
+  const togglePortal = async () => {
+    try {
+      await updateContract.mutateAsync({ id: contract.id, visible_in_portal: !contract.visible_in_portal });
+      toast.success(contract.visible_in_portal ? "Verwijderd uit portaal" : "Zichtbaar in portaal");
+    } catch (e: any) { toast.error(e.message || "Fout bij wijzigen"); }
+  };
+
+  const copyLink = (token: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/sign?token=${token}`);
+    toast.success("Signing link gekopieerd");
   };
 
   if (isLoading) return <div className="text-erp-text3 text-sm py-8 text-center">Laden...</div>;
   if (!contract) return <div className="text-erp-text3 text-sm py-8 text-center">Contract niet gevonden</div>;
 
-  const signingBaseUrl = `${import.meta.env.VITE_SUPABASE_URL || "https://fuvpmxxihmpustftzvgk.supabase.co"}/functions/v1/contract-signing`;
-
-  const handleSend = async () => {
-    try {
-      await updateContract.mutateAsync({
-        id: contract.id,
-        status: "sent",
-        sent_at: new Date().toISOString(),
-      });
-      toast.success("Contract verzonden");
-    } catch (e: any) {
-      toast.error(e.message || "Fout bij verzenden");
-    }
-  };
-
-  const togglePortal = async () => {
-    try {
-      await updateContract.mutateAsync({
-        id: contract.id,
-        visible_in_portal: !contract.visible_in_portal,
-      });
-      toast.success(contract.visible_in_portal ? "Verwijderd uit portaal" : "Zichtbaar in portaal");
-    } catch (e: any) {
-      toast.error(e.message || "Fout bij wijzigen");
-    }
-  };
-
-  const copyLink = (token: string) => {
-    const origin = window.location.origin;
-    navigator.clipboard.writeText(`${origin}/sign?token=${token}`);
-    toast.success("Signing link gekopieerd");
-  };
-
   const hasSigned = (contract.contract_signing_sessions || []).some((s: any) => s.status === "signed");
+  const status = contract.status;
 
   return (
     <div>
       {/* Header */}
       <div className="flex items-center gap-3 mb-5">
-        <button onClick={onBack} className="text-erp-text2 hover:text-erp-text0">
-          <Icons.ChevDown className="w-5 h-5 rotate-90" />
-        </button>
+        <button onClick={onBack} className="text-erp-text2 hover:text-erp-text0"><Icons.ChevDown className="w-5 h-5 rotate-90" /></button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-erp-text0">{contract.title}</h1>
-            <Badge color={STATUS_COLORS[contract.status]}>{STATUS_LABELS[contract.status] || contract.status}</Badge>
-            {contract.visible_in_portal && (
-              <Badge color="hsl(var(--erp-blue))">Portaal</Badge>
-            )}
+            <Badge color={STATUS_COLORS[status]}>{STATUS_LABELS[status] || status}</Badge>
+            {contract.visible_in_portal && <Badge color="hsl(var(--erp-blue))">Portaal</Badge>}
           </div>
           <div className="text-xs text-erp-text3 mt-0.5 font-mono">{contract.contract_number}</div>
         </div>
 
-        {/* Portal toggle */}
         <div className="flex items-center gap-2">
           <label className="text-xs text-erp-text2">Portaal</label>
           <Switch checked={!!contract.visible_in_portal} onCheckedChange={togglePortal} />
         </div>
 
-        {contract.status === "draft" && (
+        {/* Actions based on status */}
+        {status === "draft" && (
           <>
-            <ErpButton onClick={() => setShowEmailDialog(true)}>
-              <Icons.Mail className="w-4 h-4" /> Via e-mail
-            </ErpButton>
-            <ErpButton primary onClick={handleSend}>
-              <Icons.Send className="w-4 h-4" /> Verzenden
-            </ErpButton>
+            {contract.pdf_url && (
+              <ErpButton onClick={() => setTab("fields")}><Icons.Pen className="w-4 h-4" /> Velden positioneren</ErpButton>
+            )}
+            <ErpButton primary onClick={() => setShowSendDialog(true)}><Icons.Send className="w-4 h-4" /> Versturen</ErpButton>
           </>
         )}
-        {contract.status === "sent" && (
-          <ErpButton onClick={() => setShowEmailDialog(true)}>
-            <Icons.Mail className="w-4 h-4" /> Opnieuw mailen
-          </ErpButton>
+        {(status === "sent" || status === "partially_signed") && (
+          <>
+            <ErpButton onClick={() => setShowReminderDialog(true)}><Icons.Mail className="w-4 h-4" /> Herinnering</ErpButton>
+            <ErpButton onClick={() => setShowCancelDialog(true)}>Annuleren</ErpButton>
+          </>
         )}
-        {hasSigned && (
-          <ErpButton onClick={generatePdf} disabled={generatingPdf}>
-            {generatingPdf ? "PDF genereren..." : "📄 Download PDF"}
-          </ErpButton>
+        {status === "signed" && hasSigned && (
+          <ErpButton onClick={generatePdf} disabled={generatingPdf}>{generatingPdf ? "PDF genereren..." : "📄 Download PDF"}</ErpButton>
         )}
-        {contract.signed_pdf_url && (
-          <a href={contract.signed_pdf_url} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-erp-blue hover:underline font-medium">
-            Bekijk PDF ↗
-          </a>
+        {(status === "cancelled" || status === "signed") && (
+          <ErpButton onClick={handleCopyAsNew}>Kopieer als nieuw</ErpButton>
         )}
       </div>
 
-      {showEmailDialog && (
-        <SendContractEmailDialog open={showEmailDialog} onClose={() => setShowEmailDialog(false)} contract={contract} />
-      )}
+      {/* Dialogs */}
+      {showSendDialog && <SendContractDialog open={showSendDialog} onClose={() => setShowSendDialog(false)} contract={contract} />}
+      {showReminderDialog && <ReminderDialog open={showReminderDialog} onClose={() => setShowReminderDialog(false)} contract={contract} />}
+      {showCancelDialog && <CancelDialog open={showCancelDialog} onClose={() => setShowCancelDialog(false)} contract={contract} />}
 
       <ErpTabs
-        items={[["content", "Contract"], ["fields", "Velden"], ["signers", "Ondertekenaars"], ["audit", "Audit Trail"]]}
-        active={tab}
-        onChange={setTab}
+        items={[["overview", "Overzicht"], ["signers", "Ondertekenaars"], ["content", "Document"], ["audit", "Audit Trail"], ...(contract.pdf_url ? [["fields", "Velden"] as [string, string]] : [])] as [string, string][]}
+        active={tab} onChange={setTab}
       />
 
-      {tab === "content" && (
-        <ErpCard className="p-6">
-          {contract.pdf_url ? (
-            <PdfViewer url={contract.pdf_url} />
-          ) : (
-            <div
-              className="bg-white text-gray-900 rounded-lg p-8 text-sm leading-relaxed shadow-inner"
-              dangerouslySetInnerHTML={{ __html: contract.rendered_html || contract.content || "<p>Geen content</p>" }}
-            />
+      {/* Tab: Overview */}
+      {tab === "overview" && (
+        <ErpCard className="p-5">
+          <div className="grid grid-cols-2 gap-4">
+            <InfoRow label="Type" value={contract.contract_type || "—"} />
+            <InfoRow label="Nummer" value={contract.contract_number || "—"} />
+            <InfoRow label="Aangemaakt" value={fmtDateTime(contract.created_at)} />
+            <InfoRow label="Verzonden" value={fmtDateTime(contract.sent_at)} />
+            <InfoRow label="Vervaldatum" value={fmtDate(contract.expires_at)} />
+            <InfoRow label="Signing order" value={contract.signing_order || "Tegelijk"} />
+            {contract.companies && (
+              <InfoRow label="Bedrijf" value={contract.companies.name} />
+            )}
+            {contract.contacts && (
+              <InfoRow label="Contact" value={`${contract.contacts.first_name} ${contract.contacts.last_name || ""}`} />
+            )}
+          </div>
+          {contract.signing_message && (
+            <div className="mt-4 p-3 bg-erp-bg3 rounded-lg">
+              <div className="text-xs font-medium text-erp-text2 mb-1">Bericht bij verzending</div>
+              <p className="text-sm text-erp-text1">{contract.signing_message}</p>
+            </div>
+          )}
+          {contract.cancelled_reason && (
+            <div className="mt-4 p-3 bg-erp-red/10 rounded-lg">
+              <div className="text-xs font-medium text-erp-red mb-1">Reden annulering</div>
+              <p className="text-sm text-erp-text1">{contract.cancelled_reason}</p>
+            </div>
           )}
         </ErpCard>
       )}
 
+      {/* Tab: Signers */}
+      {tab === "signers" && (
+        <ErpCard>
+          <table className="w-full">
+            <thead><tr><TH>Naam</TH><TH>E-mail</TH><TH>Rol</TH><TH>Volgorde</TH><TH>Status</TH><TH>Getekend op</TH><TH>Acties</TH></tr></thead>
+            <tbody>
+              {(contract.contract_signing_sessions || []).map((s: any) => (
+                <TR key={s.id}>
+                  <TD className="font-medium text-erp-text0">{s.signer_name}</TD>
+                  <TD className="text-erp-text2 text-xs">{s.signer_email}</TD>
+                  <TD className="text-erp-text2">{s.signer_role}</TD>
+                  <TD className="text-erp-text2">{s.signing_order || "—"}</TD>
+                  <TD>
+                    {s.status === "signed" ? <Badge color="hsl(var(--erp-green))">Getekend</Badge>
+                      : s.status === "verified" ? <Badge color="hsl(var(--erp-blue))">Geverifieerd</Badge>
+                      : s.status === "expired" ? <Badge color="hsl(var(--erp-red))">Verlopen</Badge>
+                      : <Badge color="hsl(var(--erp-text-2))">Wacht</Badge>}
+                  </TD>
+                  <TD className="text-erp-text2 text-xs">{fmtDateTime(s.signed_at)}</TD>
+                  <TD>
+                    {s.status !== "signed" && (
+                      <button onClick={() => copyLink(s.session_token)} className="text-xs text-erp-blue hover:underline font-medium">Kopieer link</button>
+                    )}
+                  </TD>
+                </TR>
+              ))}
+            </tbody>
+          </table>
+        </ErpCard>
+      )}
+
+      {/* Tab: Document */}
+      {tab === "content" && (
+        <ErpCard className="p-6">
+          {contract.pdf_url ? <PdfViewer url={contract.pdf_url} /> : (
+            <div className="bg-white text-gray-900 rounded-lg p-8 text-sm leading-relaxed shadow-inner"
+              dangerouslySetInnerHTML={{ __html: contract.rendered_html || contract.content || "<p>Geen content</p>" }} />
+          )}
+          {contract.signed_pdf_url && (
+            <div className="mt-4 text-center">
+              <a href={contract.signed_pdf_url} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-erp-green/10 text-erp-green text-sm font-medium hover:bg-erp-green/20 transition-colors">
+                📄 Download getekend contract
+              </a>
+            </div>
+          )}
+        </ErpCard>
+      )}
+
+      {/* Tab: Fields */}
       {tab === "fields" && (
         <ErpCard className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -1144,75 +1195,38 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
           </div>
           <div className="h-[500px]">
             <PDFFieldEditor
-              pages={[contract.rendered_html || contract.content || "<p>Geen content</p>"]}
-              fields={sigFields}
-              onChange={setSigFields}
+              pages={contract.pdf_url ? [] : [contract.rendered_html || contract.content || "<p>Geen content</p>"]}
+              fields={sigFields} onChange={setSigFields}
               signerCount={(contract.contract_signing_sessions || []).length || 1}
-              readOnly={contract.status === "signed"}
-            />
+              readOnly={contract.status === "signed"} />
           </div>
         </ErpCard>
       )}
 
-      {tab === "signers" && (
-        <ErpCard>
-          <table className="w-full">
-            <thead>
-              <tr>
-                <TH>Naam</TH>
-                <TH>Rol</TH>
-                <TH>Status</TH>
-                <TH>Getekend op</TH>
-                <TH>Link</TH>
-              </tr>
-            </thead>
-            <tbody>
-              {(contract.contract_signing_sessions || []).map((s: any) => (
-                <TR key={s.id}>
-                  <TD className="font-medium text-erp-text0">{s.signer_name}</TD>
-                  <TD className="text-erp-text2">{s.signer_role}</TD>
-                  <TD>
-                    {s.status === "signed" ? (
-                      <Badge color="hsl(var(--erp-green))">✅ Getekend</Badge>
-                    ) : (
-                      <Badge color="hsl(var(--erp-amber))">⏳ Wacht</Badge>
-                    )}
-                  </TD>
-                  <TD className="text-erp-text2">{fmtDateTime(s.signed_at)}</TD>
-                  <TD>
-                    {s.status !== "signed" && (
-                      <button
-                        onClick={() => copyLink(s.session_token)}
-                        className="text-xs text-erp-blue hover:underline font-medium"
-                      >
-                        Kopieer link
-                      </button>
-                    )}
-                  </TD>
-                </TR>
-              ))}
-            </tbody>
-          </table>
-        </ErpCard>
-      )}
-
+      {/* Tab: Audit Trail */}
       {tab === "audit" && (
         <ErpCard className="p-5">
           {(contract.contract_audit_logs || []).length === 0 ? (
             <div className="text-erp-text3 text-sm text-center py-8">Nog geen audit events</div>
           ) : (
-            <div className="space-y-3">
+            <div className="relative pl-6 space-y-0">
               {(contract.contract_audit_logs || [])
                 .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-                .map((log: any) => (
-                  <div key={log.id} className="flex gap-3 text-xs">
-                    <span className="text-erp-text3 font-mono whitespace-nowrap">{fmtDateTime(log.created_at)}</span>
-                    <div className="text-erp-text1">
-                      <span className="font-medium">{log.action}</span>
+                .map((log: any, i: number, arr: any[]) => (
+                  <div key={log.id} className="relative pb-4">
+                    {/* Timeline line */}
+                    {i < arr.length - 1 && <div className="absolute left-[-18px] top-3 bottom-0 w-px bg-erp-border0" />}
+                    {/* Timeline dot */}
+                    <div className="absolute left-[-22px] top-1 w-2 h-2 rounded-full bg-erp-blue" />
+                    <div className="text-xs">
+                      <span className="text-erp-text3 font-mono">{fmtDateTime(log.created_at)}</span>
+                      <span className="font-medium text-erp-text0 ml-2">
+                        {AUDIT_TRANSLATIONS[log.action] || AUDIT_TRANSLATIONS[log.event_type] || log.action}
+                      </span>
                       {log.signer_name && <span className="text-erp-text2"> — {log.signer_name}</span>}
-                      {log.ip_address && <span className="text-erp-text3"> (IP: {log.ip_address})</span>}
+                      {log.ip_address && <span className="text-erp-text3 ml-2">(IP: {log.ip_address})</span>}
                       {log.document_hash && (
-                        <div className="text-erp-text3 font-mono mt-0.5">Hash: {log.document_hash?.slice(0, 16)}...</div>
+                        <div className="text-erp-text3 font-mono mt-0.5 text-[10px]">Hash: {log.document_hash?.slice(0, 24)}...</div>
                       )}
                     </div>
                   </div>
@@ -1225,19 +1239,34 @@ function ContractDetail({ contractId, onBack }: { contractId: string; onBack: ()
   );
 }
 
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-erp-text3 mb-0.5">{label}</div>
+      <div className="text-sm text-erp-text0">{value}</div>
+    </div>
+  );
+}
+
 // ─── Templates Tab ─────────────────────────────────────────────
 
 function TemplatesTab() {
   const { data: templates, isLoading } = useContractTemplates();
   const [editing, setEditing] = useState<any | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const updateTemplate = useUpdateTemplate();
+
+  const handleToggleActive = async (id: string, active: boolean) => {
+    try {
+      await updateTemplate.mutateAsync({ id, is_active: active });
+      toast.success(active ? "Template geactiveerd" : "Template gedeactiveerd");
+    } catch (e: any) { toast.error(e.message); }
+  };
 
   return (
     <>
       <PageHeader title="Templates" desc="Beheer contract templates">
-        <ErpButton primary onClick={() => setShowCreate(true)}>
-          <Icons.Plus className="w-4 h-4" /> Nieuwe template
-        </ErpButton>
+        <ErpButton primary onClick={() => setShowCreate(true)}><Icons.Plus className="w-4 h-4" /> Nieuwe template</ErpButton>
       </PageHeader>
 
       {isLoading ? (
@@ -1248,6 +1277,7 @@ function TemplatesTab() {
         <div className="grid grid-cols-2 gap-4">
           {templates.map((t: any) => {
             const varCount = (t.content_html?.match(/\{\{/g) || []).length;
+            const signerCount = Array.isArray(t.signers) ? t.signers.length : 0;
             return (
               <ErpCard key={t.id} hover className="p-4" onClick={() => setEditing(t)}>
                 <div className="flex items-start justify-between">
@@ -1255,23 +1285,23 @@ function TemplatesTab() {
                     <div className="text-sm font-semibold text-erp-text0">{t.name}</div>
                     <div className="text-xs text-erp-text3 mt-0.5">{t.category || "Algemeen"}</div>
                   </div>
-                  <Badge color="hsl(var(--erp-text-2))">{varCount} vars</Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge color="hsl(var(--erp-text-2))">{varCount} vars</Badge>
+                    {signerCount > 0 && <Badge color="hsl(var(--erp-blue))">{signerCount} ondertekenaars</Badge>}
+                  </div>
                 </div>
-                {t.description && (
-                  <div className="text-xs text-erp-text2 mt-2 line-clamp-2">{t.description}</div>
-                )}
+                {t.description && <div className="text-xs text-erp-text2 mt-2 line-clamp-2">{t.description}</div>}
+                <div className="flex items-center justify-between mt-3 pt-2 border-t border-erp-border0" onClick={(e) => e.stopPropagation()}>
+                  <span className="text-[10px] text-erp-text3">Actief</span>
+                  <Switch checked={t.is_active !== false} onCheckedChange={(v) => handleToggleActive(t.id, v)} />
+                </div>
               </ErpCard>
             );
           })}
         </div>
       )}
 
-      {(showCreate || editing) && (
-        <TemplateEditor
-          template={editing}
-          onClose={() => { setEditing(null); setShowCreate(false); }}
-        />
-      )}
+      {(showCreate || editing) && <TemplateEditor template={editing} onClose={() => { setEditing(null); setShowCreate(false); }} />}
     </>
   );
 }
@@ -1283,13 +1313,16 @@ function TemplateEditor({ template, onClose }: { template: any | null; onClose: 
 
   const [name, setName] = useState(template?.name || "");
   const [description, setDescription] = useState(template?.description || "");
-  const [category, setCategory] = useState(template?.category || "general");
+  const [category, setCategory] = useState(template?.category || "dienstverlening");
   const [contentHtml, setContentHtml] = useState(template?.content_html || "");
-  const [variables, setVariables] = useState<any[]>(template?.variables || []);
+  const [signers, setSigners] = useState<Array<{ role: string; order: number }>>(
+    Array.isArray(template?.signers) ? template.signers : [{ role: "Klant", order: 1 }]
+  );
+  const [defaultExpiryDays, setDefaultExpiryDays] = useState(template?.default_expiry_days || 30);
+  const [requireSms, setRequireSms] = useState(template?.require_sms_verification ?? true);
 
-  // Auto-detect variables from HTML
   const detectedVars: string[] = useMemo(() => {
-    const matches = contentHtml.match(/\{\{(\w+)\}\}/g) || [];
+    const matches = contentHtml.match(/\{\{([^}]+)\}\}/g) || [];
     return [...new Set(matches.map((m: string) => m.replace(/\{\{|\}\}/g, "")))] as string[];
   }, [contentHtml]);
 
@@ -1301,20 +1334,28 @@ function TemplateEditor({ template, onClose }: { template: any | null; onClose: 
     return html;
   }, [contentHtml, detectedVars]);
 
+  // Group variable sources by category
+  const groupedSources = useMemo(() => {
+    if (!varSources) return {};
+    return varSources.reduce((acc: Record<string, any[]>, vs: any) => {
+      (acc[vs.category] = acc[vs.category] || []).push(vs);
+      return acc;
+    }, {});
+  }, [varSources]);
+
+  const insertVariable = (key: string) => {
+    setContentHtml((prev: string) => prev + `{{${key}}}`);
+  };
+
   const handleSave = async () => {
     try {
       const payload = {
-        name,
-        description,
-        category,
-        content_html: contentHtml,
-        variables: variables.length ? variables : detectedVars.map((v) => ({
-          key: v,
-          label: v.replace(/_/g, " "),
-          required: false,
-        })),
+        name, description, category, content_html: contentHtml,
+        signers,
+        default_expiry_days: defaultExpiryDays,
+        require_sms_verification: requireSms,
+        variables: detectedVars.map((v) => ({ key: v, label: v.replace(/_/g, " "), required: false })),
       };
-
       if (template?.id) {
         await updateTemplate.mutateAsync({ id: template.id, ...payload });
       } else {
@@ -1322,29 +1363,32 @@ function TemplateEditor({ template, onClose }: { template: any | null; onClose: 
       }
       toast.success("Template opgeslagen");
       onClose();
-    } catch (e: any) {
-      toast.error(e.message || "Opslaan mislukt");
-    }
+    } catch (e: any) { toast.error(e.message || "Opslaan mislukt"); }
   };
+
+  const CATEGORIES = ["dienstverlening", "arbeidsovereenkomst", "freelance", "nda", "overig"];
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto bg-erp-bg2 border-erp-border0">
-        <DialogHeader>
-          <DialogTitle className="text-erp-text0">
-            {template ? "Template bewerken" : "Nieuwe template"}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto bg-erp-bg2 border-erp-border0">
+        <DialogHeader><DialogTitle className="text-erp-text0">{template ? "Template bewerken" : "Nieuwe template"}</DialogTitle></DialogHeader>
 
-        <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="block text-xs font-medium text-erp-text2 mb-1">Naam</label>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Naam *</label>
             <input value={name} onChange={(e) => setName(e.target.value)}
               className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
           </div>
           <div>
             <label className="block text-xs font-medium text-erp-text2 mb-1">Categorie</label>
-            <input value={category} onChange={(e) => setCategory(e.target.value)}
+            <select value={category} onChange={(e) => setCategory(e.target.value)}
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue">
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Vervaldagen</label>
+            <input type="number" value={defaultExpiryDays} onChange={(e) => setDefaultExpiryDays(Number(e.target.value))}
               className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
           </div>
           <div className="col-span-2">
@@ -1352,38 +1396,73 @@ function TemplateEditor({ template, onClose }: { template: any | null; onClose: 
             <input value={description} onChange={(e) => setDescription(e.target.value)}
               className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue" />
           </div>
+          <div>
+            <label className="flex items-center gap-2 text-xs font-medium text-erp-text2 mt-5">
+              <input type="checkbox" checked={requireSms} onChange={(e) => setRequireSms(e.target.checked)} className="w-4 h-4 rounded border-erp-border0 text-erp-blue" />
+              SMS verificatie vereist
+            </label>
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        {/* Signers */}
+        <div className="mb-4">
+          <h4 className="text-xs font-semibold text-erp-text2 mb-2">Ondertekenaars</h4>
+          <div className="flex flex-wrap gap-2">
+            {signers.map((s, i) => (
+              <div key={i} className="flex items-center gap-2 bg-erp-bg3 rounded-lg px-3 py-1.5 border border-erp-border0">
+                <input value={s.role} onChange={(e) => { const next = [...signers]; next[i] = { ...next[i], role: e.target.value }; setSigners(next); }}
+                  placeholder="Rol" className="bg-transparent text-xs text-erp-text0 w-24 focus:outline-none" />
+                <span className="text-[10px] text-erp-text3">#{s.order}</span>
+                {signers.length > 1 && <button onClick={() => setSigners(signers.filter((_, j) => j !== i))} className="text-erp-red text-xs">×</button>}
+              </div>
+            ))}
+            <button onClick={() => setSigners([...signers, { role: "", order: signers.length + 1 }])}
+              className="text-xs text-erp-blue hover:underline font-medium px-2">+ Toevoegen</button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
           {/* HTML Editor */}
-          <div>
-            <label className="block text-xs font-medium text-erp-text2 mb-1">
-              HTML Content <span className="text-erp-text3">(gebruik {"{{variabele}}"} voor placeholders)</span>
-            </label>
-            <textarea
-              value={contentHtml}
-              onChange={(e) => setContentHtml(e.target.value)}
-              rows={20}
-              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-xs text-erp-text0 font-mono focus:outline-none focus:ring-1 focus:ring-erp-blue resize-none"
-            />
+          <div className="col-span-1">
+            <label className="block text-xs font-medium text-erp-text2 mb-1">HTML Content</label>
+            <textarea value={contentHtml} onChange={(e) => setContentHtml(e.target.value)} rows={20}
+              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-xs text-erp-text0 font-mono focus:outline-none focus:ring-1 focus:ring-erp-blue resize-none" />
             {detectedVars.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {detectedVars.map((v) => (
-                  <span key={v} className="text-[10px] bg-erp-amber/10 text-erp-amber px-2 py-0.5 rounded-full font-mono">
-                    {`{{${v}}}`}
-                  </span>
+                  <span key={v} className="text-[10px] bg-erp-amber/10 text-erp-amber px-2 py-0.5 rounded-full font-mono">{`{{${v}}}`}</span>
                 ))}
               </div>
             )}
           </div>
 
+          {/* Variable sources panel */}
+          <div className="col-span-1">
+            <label className="block text-xs font-medium text-erp-text2 mb-1">Beschikbare variabelen</label>
+            <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3 max-h-[500px] overflow-y-auto space-y-3">
+              {Object.entries(groupedSources).map(([cat, sources]) => (
+                <div key={cat}>
+                  <div className="text-[10px] font-bold text-erp-text3 uppercase tracking-wider mb-1">{cat}</div>
+                  {(sources as any[]).map((vs: any) => (
+                    <button key={vs.id} onClick={() => insertVariable(`${vs.source_table}.${vs.field_path}`)}
+                      className="block w-full text-left px-2 py-1 text-xs text-erp-text1 hover:bg-erp-bg4 rounded transition-colors">
+                      <span className="font-mono text-erp-blue">{`{{${vs.source_table}.${vs.field_path}}}`}</span>
+                      <span className="text-erp-text3 ml-2">{vs.display_label}</span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+              {Object.keys(groupedSources).length === 0 && (
+                <p className="text-xs text-erp-text3">Geen variabele-bronnen geconfigureerd</p>
+              )}
+            </div>
+          </div>
+
           {/* Preview */}
-          <div>
+          <div className="col-span-1">
             <label className="block text-xs font-medium text-erp-text2 mb-1">Preview</label>
-            <div
-              className="bg-white text-gray-900 rounded-lg p-6 text-sm shadow-inner border border-erp-border0 max-h-[500px] overflow-y-auto"
-              dangerouslySetInnerHTML={{ __html: previewHtml || "<p>Typ HTML aan de linkerkant...</p>" }}
-            />
+            <div className="bg-white text-gray-900 rounded-lg p-6 text-sm shadow-inner border border-erp-border0 max-h-[500px] overflow-y-auto"
+              dangerouslySetInnerHTML={{ __html: previewHtml || "<p>Typ HTML aan de linkerkant...</p>" }} />
           </div>
         </div>
 
@@ -1410,12 +1489,7 @@ export default function ContractsPage() {
 
   return (
     <div>
-      <ErpTabs
-        items={[["contracts", "Contracten"], ["templates", "Templates"]]}
-        active={tab}
-        onChange={setTab}
-      />
-
+      <ErpTabs items={[["contracts", "Contracten"], ["templates", "Templates"]]} active={tab} onChange={setTab} />
       {tab === "contracts" && <ContractsList onSelect={setSelectedContract} />}
       {tab === "templates" && <TemplatesTab />}
     </div>
