@@ -388,9 +388,12 @@ export function TemplateSheet({ open, onOpenChange, phone, contactId, onSending,
     } catch {}
   };
 
+  useEffect(() => {
+    if (open) { loadTemplates(); loadContactData(); setSelected(null); setVarMappings({}); setSearch(""); }
+  }, [open]);
+
   const handleOpen = (isOpen: boolean) => {
     onOpenChange(isOpen);
-    if (isOpen) { loadTemplates(); loadContactData(); setSelected(null); setVarMappings({}); setSearch(""); }
   };
 
   const extractVars = (tpl: any): string[] => {
