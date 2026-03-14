@@ -230,7 +230,7 @@ function TimeGrid({
                       <div className="flex-1 h-[2px] bg-erp-red" />
                     </div>
                   </div>
-                )}>
+                )}
 
                 {/* Events */}
                 {dayEvents.map((ev: any, i: number) => {
