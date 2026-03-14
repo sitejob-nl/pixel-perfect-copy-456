@@ -19,6 +19,7 @@ const allTabs = [
   { key: "team", label: "Team", icon: "👥", adminOnly: true },
   { key: "api-keys", label: "API Keys", icon: "🔑", adminOnly: true },
   { key: "integraties", label: "Integraties", icon: "🔌", adminOnly: true },
+  { key: "mcp", label: "MCP/API", icon: "🔗", adminOnly: true },
   { key: "email", label: "E-mail", icon: "✉️", adminOnly: true },
   { key: "snelstart", label: "Snelstart", icon: "🔗", adminOnly: true },
   { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
