@@ -11,11 +11,13 @@ import LinkedInSettings from "@/components/erp/LinkedInSettings";
 import WhatsAppSettings from "@/components/erp/WhatsAppSettings";
 import NotificationSettings from "@/components/erp/NotificationSettings";
 import GoogleSettings from "@/components/erp/GoogleSettings";
+import IntegrationSettings from "@/components/erp/IntegrationSettings";
 
 const allTabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
   { key: "team", label: "Team", icon: "👥", adminOnly: true },
   { key: "api-keys", label: "API Keys", icon: "🔑", adminOnly: true },
+  { key: "integraties", label: "Integraties", icon: "🔌", adminOnly: true },
   { key: "email", label: "E-mail", icon: "✉️", adminOnly: true },
   { key: "snelstart", label: "Snelstart", icon: "🔗", adminOnly: true },
   { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
@@ -83,6 +85,7 @@ export default function SettingsPage() {
       {isAdmin && safeTab === "api-keys" && <ApiKeysSettings />}
       {isAdmin && safeTab === "email" && <ResendSettings />}
       {isAdmin && safeTab === "snelstart" && <SnelstartSettings />}
+      {isAdmin && safeTab === "integraties" && <IntegrationSettings />}
 
       {safeTab === "linkedin" && <LinkedInSettings />}
       {safeTab === "google" && <GoogleSettings />}
