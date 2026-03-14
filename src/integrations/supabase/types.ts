@@ -6416,6 +6416,69 @@ export type Database = {
           },
         ]
       }
+      whatsapp_automations: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          name: string
+          organization_id: string
+          template_language: string | null
+          template_name: string | null
+          trigger_config: Json | null
+          trigger_count: number | null
+          trigger_type: string
+          updated_at: string | null
+          variable_mappings: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name: string
+          organization_id: string
+          template_language?: string | null
+          template_name?: string | null
+          trigger_config?: Json | null
+          trigger_count?: number | null
+          trigger_type: string
+          updated_at?: string | null
+          variable_mappings?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          name?: string
+          organization_id?: string
+          template_language?: string | null
+          template_name?: string | null
+          trigger_config?: Json | null
+          trigger_count?: number | null
+          trigger_type?: string
+          updated_at?: string | null
+          variable_mappings?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_automations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_automations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_messages: {
         Row: {
           account_id: string
