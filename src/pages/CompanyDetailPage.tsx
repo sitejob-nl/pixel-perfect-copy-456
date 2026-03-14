@@ -25,7 +25,9 @@ export default function CompanyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [tab, setTab] = useState("overview");
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
   const qc = useQueryClient();
 
   const { data: company, isLoading } = useQuery({
