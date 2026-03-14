@@ -7,10 +7,11 @@ import { Icons } from "@/components/erp/ErpIcons";
 import { format, formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
-import { Loader2, PhoneIncoming, PhoneOutgoing, PhoneMissed, Mic, FileText, X } from "lucide-react";
+import { Loader2, PhoneIncoming, PhoneOutgoing, PhoneMissed, Mic, FileText, X, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 
 const sb = supabase as any;
 
