@@ -49,7 +49,9 @@ export default function WhatsAppSettings() {
 
   const tabs: { key: SubTab; label: string }[] = [
     { key: "verbinding", label: "Verbinding" },
-    { key: "berichten", label: "Berichten" },
+    { key: "profiel", label: "Profiel" },
+    { key: "templates", label: "Templates" },
+    { key: "automations", label: "Automations" },
     { key: "logs", label: "Webhook Logs" },
   ];
 
