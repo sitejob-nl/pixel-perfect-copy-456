@@ -157,7 +157,7 @@ const App = () => (
             <Route path="/sign" element={<ContractSigningPage />} />
             <Route path="/book/:slug" element={<BookingPage />} />
             <Route path="/portal" element={<ClientPortalPage />} />
-            <Route path="/demo/:slug" element={<DemoViewPage />} />
+            <Route path="/demo/:slug" element={<PublicDemoPage />} />
             <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
 
             {/* Protected layout with sidebar */}
