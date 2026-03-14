@@ -520,6 +520,110 @@ function GoogleCard({ orgId, integration }: { orgId: string; integration: any })
   );
 }
 
+// ─── Voys Card ────────────────────────────────────────────────
+function VoysCard({ orgId, integration }: { orgId: string; integration: any }) {
+  const qc = useQueryClient();
+  const config = integration?.config ?? {};
+  const [active, setActive] = useState(integration?.is_active ?? false);
+  const [autoLog, setAutoLog] = useState(config.auto_create_activity ?? true);
+  const [autoMatch, setAutoMatch] = useState(config.auto_match_contacts ?? true);
+  const [autoAi, setAutoAi] = useState(config.auto_ai_summary ?? false);
+  const [saving, setSaving] = useState(false);
+
+  const webhookSecret = config.webhook_secret || crypto.randomUUID?.() || Math.random().toString(36).slice(2);
+  const webhookUrl = `https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/voys-webhook?org_id=${orgId}&secret=${webhookSecret}`;
+
+  useEffect(() => {
+    setActive(integration?.is_active ?? false);
+    const c = integration?.config ?? {};
+    setAutoLog(c.auto_create_activity ?? true);
+    setAutoMatch(c.auto_match_contacts ?? true);
+    setAutoAi(c.auto_ai_summary ?? false);
+  }, [integration]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      await sb.from("organization_integrations").upsert({
+        organization_id: orgId,
+        provider: "voys",
+        is_active: active,
+        config: {
+          webhook_secret: webhookSecret,
+          auto_create_activity: autoLog,
+          auto_match_contacts: autoMatch,
+          auto_ai_summary: autoAi,
+        },
+      }, { onConflict: "organization_id,provider" });
+      qc.invalidateQueries({ queryKey: ["integrations"] });
+      toast.success("Voys instellingen opgeslagen");
+    } catch (e: any) {
+      toast.error("Fout bij opslaan: " + (e.message ?? "Onbekend"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ErpCard className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <span className="text-lg">📞</span>
+          <h3 className="text-[15px] font-semibold text-erp-text0">Voys Telefonie</h3>
+          <Dot color={active ? "hsl(var(--erp-green))" : "hsl(var(--erp-text-3))"} size={8} />
+        </div>
+        <Switch checked={active} onCheckedChange={setActive} />
+      </div>
+      <p className="text-[12px] text-erp-text3 mb-4">Gesprekken automatisch loggen, opnames en transcripties</p>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Webhook URL</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              readOnly
+              value={webhookUrl}
+              className="flex-1 bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[11px] text-erp-text1 font-mono"
+            />
+            <button
+              onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("Webhook URL gekopieerd"); }}
+              className="p-2 rounded-lg bg-erp-bg3 border border-erp-border0 text-erp-text2 hover:text-erp-text0"
+            >
+              <Pencil size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <label className="text-[12px] font-medium text-erp-text2">Automatisch gesprekken loggen</label>
+          <Switch checked={autoLog} onCheckedChange={setAutoLog} />
+        </div>
+        <div className="flex items-center justify-between">
+          <label className="text-[12px] font-medium text-erp-text2">Contact matching</label>
+          <Switch checked={autoMatch} onCheckedChange={setAutoMatch} />
+        </div>
+        <div className="flex items-center justify-between">
+          <label className="text-[12px] font-medium text-erp-text2">AI samenvatting</label>
+          <Switch checked={autoAi} onCheckedChange={setAutoAi} />
+        </div>
+
+        <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3">
+          <p className="text-[11px] text-erp-text3 leading-relaxed">
+            Configureer deze webhook URL in je Voys Freedom onder Gespreksnotificaties. Alle inkomende en uitgaande gesprekken worden automatisch gelogd.
+          </p>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <ErpButton primary onClick={save} disabled={saving}>
+            {saving && <Loader2 size={14} className="animate-spin" />} Opslaan
+          </ErpButton>
+        </div>
+      </div>
+    </ErpCard>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────
 export default function IntegrationSettings() {
   const { data: org } = useOrganization();
@@ -538,6 +642,7 @@ export default function IntegrationSettings() {
   const slackInt = getIntegration(integrations ?? [], "slack");
   const kvkInt = getIntegration(integrations ?? [], "kvk");
   const googleInt = getIntegration(integrations ?? [], "google");
+  const voysInt = getIntegration(integrations ?? [], "voys");
   const slackWebhook = getSecret(secrets ?? [], "slack", "webhook_url");
   const kvkApiKey = getSecret(secrets ?? [], "kvk", "api_key");
 
@@ -546,6 +651,7 @@ export default function IntegrationSettings() {
       <SlackCard orgId={orgId!} integration={slackInt} secret={slackWebhook} />
       <KvkCard orgId={orgId!} integration={kvkInt} secret={kvkApiKey} />
       <GoogleCard orgId={orgId!} integration={googleInt} />
+      <VoysCard orgId={orgId!} integration={voysInt} />
     </div>
   );
 }
