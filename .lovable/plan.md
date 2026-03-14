@@ -1,19 +1,53 @@
 
 
-## Gemini Model Labels Updaten
+# ✅ LinkedIn Integratie: Posts Plaatsen
 
-De GeminiCard in IntegrationSettings.tsx toont verouderde model-namen ("Gemini 2.5 Pro · Generatie" en "Gemini 2.0 Flash · Analyse"). Deze moeten worden bijgewerkt.
+## Wat is gebouwd
 
-### Wijzigingen
+### Database
+- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
 
-**`src/components/erp/IntegrationSettings.tsx`** (regels 852-857):
-- "Gemini 2.5 Pro · Generatie" → "Gemini 3.1 Pro · Generatie"
-- "Gemini 2.0 Flash · Analyse" → "Gemini 3 Flash · Analyse"
+### Edge Functions
+- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
+- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
 
-**`src/components/erp/IntegrationSettings.tsx`** (regel 808) — Test endpoint:
-- Update de test-URL van `gemini-2.0-flash:generateContent` naar `gemini-3-flash-preview:generateContent` zodat de test het actuele model verifieert.
+### Frontend
+- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
+- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
 
-**Optioneel** — als je ook de daadwerkelijke AI-modellen wilt upgraden:
-- `supabase/functions/ask-sitejob/index.ts`: al up-to-date (`google/gemini-3-flash-preview`)
-- `supabase/functions/ai-agent/index.ts`: gebruikt Anthropic Claude, niet Gemini — geen wijziging nodig
+### Secrets
+- `LINKEDIN_CLIENT_ID` — opgeslagen
+- `LINKEDIN_CLIENT_SECRET` — opgeslagen
 
+## ⚠️ Actie vereist
+
+Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
+```
+
+---
+
+# ✅ LinkedIn Webhooks: Real-time Notificaties
+
+## Wat is gebouwd
+
+### Database
+- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
+
+### Edge Function
+- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
+
+### Frontend
+- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
+
+### Webhook URL
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
+```
+
+## ⚠️ Actie vereist
+
+1. Vraag een webhook use case aan in je LinkedIn Developer Portal
+2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
+3. LinkedIn valideert automatisch via de challenge-response flow

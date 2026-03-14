@@ -805,7 +805,7 @@ function GeminiCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
     setTesting(true);
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -850,10 +850,10 @@ function GeminiCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] font-medium text-erp-text2">Modellen:</span>
           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-erp-bg4 border border-erp-border0 text-[10px] text-erp-text1">
-            Gemini 2.5 Pro · Generatie
+            Gemini 3.1 Pro · Generatie
           </span>
           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-erp-bg4 border border-erp-border0 text-[10px] text-erp-text1">
-            Gemini 2.0 Flash · Analyse
+            Gemini 3 Flash · Analyse
           </span>
         </div>
 
