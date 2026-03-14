@@ -607,6 +607,7 @@ export default function ContactDetailPage() {
           </ErpCard>
         </div>
       </div>
+      )}
     </div>
   );
 }
