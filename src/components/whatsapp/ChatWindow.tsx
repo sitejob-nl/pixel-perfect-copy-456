@@ -38,10 +38,22 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
   const bottomRef = useRef<HTMLDivElement>(null);
   const [linkSheetOpen, setLinkSheetOpen] = useState(false);
   const navigate = useNavigate();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Listen for emoji insert events from ChatToolbar
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const emoji = (e as CustomEvent).detail;
+      setText(prev => prev + emoji);
+      textareaRef.current?.focus();
+    };
+    window.addEventListener("wa-insert-emoji", handler);
+    return () => window.removeEventListener("wa-insert-emoji", handler);
+  }, []);
 
   const handleSend = async () => {
     if (!text.trim() || !phoneNumber) return;
