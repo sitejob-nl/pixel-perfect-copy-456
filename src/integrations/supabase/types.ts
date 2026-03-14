@@ -441,6 +441,78 @@ export type Database = {
           },
         ]
       }
+      ai_suggestions: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          created_entity_id: string | null
+          created_entity_type: string | null
+          description: string | null
+          expires_at: string | null
+          id: string
+          organization_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_id: string
+          source_type: string
+          status: string
+          suggested_data: Json | null
+          suggestion_type: string
+          title: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          created_entity_id?: string | null
+          created_entity_type?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          organization_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_id: string
+          source_type: string
+          status?: string
+          suggested_data?: Json | null
+          suggestion_type: string
+          title: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          created_entity_id?: string | null
+          created_entity_type?: string | null
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          organization_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_id?: string
+          source_type?: string
+          status?: string
+          suggested_data?: Json | null
+          suggestion_type?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_suggestions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_summaries: {
         Row: {
           activities_count: number | null
@@ -3992,67 +4064,91 @@ export type Database = {
       }
       google_emails: {
         Row: {
+          ai_processed: boolean | null
+          ai_summary: string | null
           body_html: string | null
           body_preview: string | null
+          category: string | null
           cc_emails: string[] | null
           company_id: string | null
           connection_id: string
           contact_id: string | null
           created_at: string
+          direction: string | null
           from_email: string | null
           from_name: string | null
           gmail_message_id: string
+          has_attachments: boolean | null
           id: string
+          importance: string | null
           is_read: boolean | null
           labels: string[] | null
           organization_id: string
+          project_id: string | null
           received_at: string
           snippet: string | null
           subject: string | null
           thread_id: string | null
           to_emails: string[] | null
+          user_id: string | null
         }
         Insert: {
+          ai_processed?: boolean | null
+          ai_summary?: string | null
           body_html?: string | null
           body_preview?: string | null
+          category?: string | null
           cc_emails?: string[] | null
           company_id?: string | null
           connection_id: string
           contact_id?: string | null
           created_at?: string
+          direction?: string | null
           from_email?: string | null
           from_name?: string | null
           gmail_message_id: string
+          has_attachments?: boolean | null
           id?: string
+          importance?: string | null
           is_read?: boolean | null
           labels?: string[] | null
           organization_id: string
+          project_id?: string | null
           received_at: string
           snippet?: string | null
           subject?: string | null
           thread_id?: string | null
           to_emails?: string[] | null
+          user_id?: string | null
         }
         Update: {
+          ai_processed?: boolean | null
+          ai_summary?: string | null
           body_html?: string | null
           body_preview?: string | null
+          category?: string | null
           cc_emails?: string[] | null
           company_id?: string | null
           connection_id?: string
           contact_id?: string | null
           created_at?: string
+          direction?: string | null
           from_email?: string | null
           from_name?: string | null
           gmail_message_id?: string
+          has_attachments?: boolean | null
           id?: string
+          importance?: string | null
           is_read?: boolean | null
           labels?: string[] | null
           organization_id?: string
+          project_id?: string | null
           received_at?: string
           snippet?: string | null
           subject?: string | null
           thread_id?: string | null
           to_emails?: string[] | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -4116,6 +4212,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
             referencedColumns: ["id"]
           },
         ]
@@ -9561,12 +9671,12 @@ export type Database = {
         Row: {
           company_id: string | null
           company_name: string | null
-          days_since_last_email: number | null
-          emails_received: number | null
-          emails_sent: number | null
-          first_email_at: string | null
           last_email_at: string | null
           organization_id: string | null
+          received: number | null
+          sent: number | null
+          support_count: number | null
+          this_week: number | null
           total_emails: number | null
         }
         Relationships: [
@@ -9675,6 +9785,39 @@ export type Database = {
           },
           {
             foreignKeyName: "deals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_email_threads: {
+        Row: {
+          category: string | null
+          company_id: string | null
+          contact_id: string | null
+          has_unread: boolean | null
+          last_message_at: string | null
+          last_sender: string | null
+          last_snippet: string | null
+          message_count: number | null
+          organization_id: string | null
+          project_id: string | null
+          started_at: string | null
+          subject: string | null
+          thread_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_emails_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -10055,6 +10198,32 @@ export type Database = {
           },
         ]
       }
+      v_suggestion_counts: {
+        Row: {
+          approved: number | null
+          organization_id: string | null
+          pending: number | null
+          rejected: number | null
+          source_type: string | null
+          total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_suggestions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_upcoming_bookings: {
         Row: {
           cancel_token: string | null
@@ -10163,11 +10332,19 @@ export type Database = {
         Args: { p_org_id: string; p_user_id: string }
         Returns: Json
       }
+      fn_approve_suggestion: {
+        Args: { p_suggestion_id: string; p_user_id: string }
+        Returns: Json
+      }
       fn_create_project_checklist: {
         Args: { p_project_id: string; p_template_id?: string }
         Returns: undefined
       }
       fn_daily_digest: { Args: { p_org_id: string }; Returns: Json }
+      fn_email_generate_suggestions: {
+        Args: { p_email_id: string }
+        Returns: undefined
+      }
       fn_get_available_slots: {
         Args: { p_date: string; p_event_type_slug: string; p_page_slug: string }
         Returns: {
@@ -10268,6 +10445,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      fn_reject_suggestion: {
+        Args: { p_suggestion_id: string; p_user_id: string }
+        Returns: undefined
       }
       fn_send_daily_digest_all: { Args: never; Returns: undefined }
       fn_send_slack_message: {
@@ -10427,6 +10608,19 @@ export type Database = {
       mcp_dashboard:
         | { Args: never; Returns: Json }
         | { Args: { p_api_key: string }; Returns: Json }
+      mcp_email_search: {
+        Args: { p_api_key: string; p_limit?: number; p_query: string }
+        Returns: {
+          bedrijf: string
+          categorie: string
+          datum: string
+          naar: string
+          onderwerp: string
+          richting: string
+          snippet: string
+          van: string
+        }[]
+      }
       mcp_log_activity:
         | {
             Args: {
