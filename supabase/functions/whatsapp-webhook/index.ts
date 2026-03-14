@@ -125,6 +125,27 @@ Deno.serve(async (req) => {
               timestamp: msg.timestamp,
             },
           });
+
+          // Send push notification
+          try {
+            const senderName = contact?.profile?.name || fromNumber;
+            await fetch(`${supabaseUrl}/functions/v1/send-push`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${serviceKey}`,
+              },
+              body: JSON.stringify({
+                organization_id: account.organization_id,
+                event_type: "whatsapp_message",
+                title: `💬 ${senderName}`,
+                body: content || "[media]",
+                url: "/whatsapp",
+              }),
+            });
+          } catch (pushErr) {
+            console.error("Push notification failed:", pushErr);
+          }
         }
       }
 
