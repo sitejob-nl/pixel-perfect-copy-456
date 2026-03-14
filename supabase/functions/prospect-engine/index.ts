@@ -58,7 +58,7 @@ async function getUserOrgId(authHeader: string): Promise<{ userId: string; orgId
 }
 
 // ── Google Maps search via Apify ─────────────────────────────────────
-const GOOGLE_PLACES_ACTOR = "compass/crawler-google-places";
+const GOOGLE_PLACES_ACTOR = "compass~crawler-google-places";
 
 async function handleSearch(
   orgId: string,
