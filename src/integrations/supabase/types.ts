@@ -6236,12 +6236,14 @@ export type Database = {
         Row: {
           access_token: string
           business_name: string | null
+          connect_webhook_secret: string | null
           created_at: string
           display_phone: string | null
           id: string
           is_active: boolean | null
           organization_id: string
           phone_number_id: string
+          tenant_id: string | null
           updated_at: string
           waba_id: string
           webhook_verify_token: string
@@ -6249,12 +6251,14 @@ export type Database = {
         Insert: {
           access_token: string
           business_name?: string | null
+          connect_webhook_secret?: string | null
           created_at?: string
           display_phone?: string | null
           id?: string
           is_active?: boolean | null
           organization_id: string
           phone_number_id: string
+          tenant_id?: string | null
           updated_at?: string
           waba_id: string
           webhook_verify_token?: string
@@ -6262,12 +6266,14 @@ export type Database = {
         Update: {
           access_token?: string
           business_name?: string | null
+          connect_webhook_secret?: string | null
           created_at?: string
           display_phone?: string | null
           id?: string
           is_active?: boolean | null
           organization_id?: string
           phone_number_id?: string
+          tenant_id?: string | null
           updated_at?: string
           waba_id?: string
           webhook_verify_token?: string
