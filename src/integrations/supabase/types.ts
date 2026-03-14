@@ -1268,6 +1268,7 @@ export type Database = {
           direction: string
           duration_seconds: number | null
           ended_at: string | null
+          ended_reason: string | null
           has_recording: boolean | null
           has_transcription: boolean | null
           id: string
@@ -1309,6 +1310,7 @@ export type Database = {
           direction: string
           duration_seconds?: number | null
           ended_at?: string | null
+          ended_reason?: string | null
           has_recording?: boolean | null
           has_transcription?: boolean | null
           id?: string
@@ -1350,6 +1352,7 @@ export type Database = {
           direction?: string
           duration_seconds?: number | null
           ended_at?: string | null
+          ended_reason?: string | null
           has_recording?: boolean | null
           has_transcription?: boolean | null
           id?: string
@@ -10349,6 +10352,10 @@ export type Database = {
         Returns: undefined
       }
       is_super_admin: { Args: never; Returns: boolean }
+      jsonb_append_to_call_log: {
+        Args: { p_id: string; p_payload: Json }
+        Returns: undefined
+      }
       mcp_add_comment:
         | {
             Args: {
