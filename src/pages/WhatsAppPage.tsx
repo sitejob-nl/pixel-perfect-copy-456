@@ -4,9 +4,10 @@ import ConversationList from "@/components/whatsapp/ConversationList";
 import ChatWindow from "@/components/whatsapp/ChatWindow";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { TemplateSheet } from "@/components/whatsapp/ChatToolbar";
 
 export default function WhatsAppPage() {
   const { data: account } = useWhatsAppAccount();
@@ -59,9 +60,7 @@ export default function WhatsAppPage() {
 
   const handleNewChat = () => setNewChatOpen(true);
 
-  const startNewChat = () => {
-    if (!newPhone.trim()) return;
-    const phone = newPhone.trim().replace(/\s/g, "");
+  const startNewChat = (phone: string) => {
     setActivePhone(phone);
     setActiveName(null);
     setActiveContactId(null);
@@ -69,7 +68,6 @@ export default function WhatsAppPage() {
     setNewChatOpen(false);
   };
 
-  // Mobile: show either list or chat
   if (isMobile) {
     return (
       <div className="flex flex-col h-[calc(100dvh-52px)] bg-erp-bg0">
@@ -120,34 +118,81 @@ export default function WhatsAppPage() {
 }
 
 function NewChatDialog({ open, onOpenChange, phone, setPhone, onStart }: {
-  open: boolean; onOpenChange: (v: boolean) => void; phone: string; setPhone: (v: string) => void; onStart: () => void;
+  open: boolean; onOpenChange: (v: boolean) => void; phone: string; setPhone: (v: string) => void; onStart: (phone: string) => void;
 }) {
+  const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
+  const normalizedPhone = phone.trim().replace(/\s/g, "");
+  const hasPhone = !!normalizedPhone;
+
+  const handleStartFreeText = () => {
+    if (!hasPhone) return;
+    onStart(normalizedPhone);
+  };
+
+  const handleStartTemplate = () => {
+    if (!hasPhone) return;
+    setTemplateSheetOpen(true);
+  };
+
+  const handleTemplateSent = () => {
+    setTemplateSheetOpen(false);
+    onStart(normalizedPhone);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-erp-bg2 border-erp-border0 max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="text-erp-text0 text-[15px]">Nieuw gesprek</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-3">
-          <Input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+31612345678"
-            className="bg-erp-bg3 border-erp-border0 text-[13px]"
-            onKeyDown={(e) => e.key === "Enter" && onStart()}
-          />
-          <p className="text-[11px] text-erp-text3">
-            Voer het telefoonnummer in met landcode (bijv. +31612345678)
-          </p>
-          <button
-            onClick={onStart}
-            disabled={!phone.trim()}
-            className="w-full h-9 rounded-lg text-[13px] font-medium text-primary-foreground bg-primary disabled:opacity-40 transition-colors"
-          >
-            Start gesprek
-          </button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="bg-erp-bg2 border-erp-border0 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-erp-text0 text-[15px]">Nieuw gesprek</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+31612345678"
+              className="bg-erp-bg3 border-erp-border0 text-[13px]"
+              onKeyDown={(e) => e.key === "Enter" && handleStartFreeText()}
+            />
+            <p className="text-[11px] text-erp-text3">
+              Voer het telefoonnummer in met landcode (bijv. +31612345678)
+            </p>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                onClick={handleStartTemplate}
+                disabled={!hasPhone}
+                className="w-full h-9 rounded-lg text-[13px] font-medium text-primary-foreground bg-primary disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
+              >
+                <FileText className="w-4 h-4" />
+                Template kiezen & versturen
+              </button>
+              <button
+                onClick={handleStartFreeText}
+                disabled={!hasPhone}
+                className="w-full h-9 rounded-lg text-[13px] font-medium text-erp-text1 bg-erp-bg3 hover:bg-erp-bg4 disabled:opacity-40 transition-colors"
+              >
+                Direct chatten
+              </button>
+            </div>
+
+            <p className="text-[10px] text-erp-text3 border-t border-erp-border0 pt-2">
+              💡 Bij een nieuw gesprek buiten het 24-uurs servicevenster moet je eerst een goedgekeurd template versturen.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Template browser sheet — rendered outside dialog to avoid z-index issues */}
+      {hasPhone && (
+        <TemplateSheet
+          open={templateSheetOpen}
+          onOpenChange={setTemplateSheetOpen}
+          phone={normalizedPhone}
+          contactId={null}
+          onSent={handleTemplateSent}
+        />
+      )}
+    </>
   );
 }
