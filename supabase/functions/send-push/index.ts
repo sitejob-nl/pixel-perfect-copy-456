@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   generatePushHTTPRequest,
-  ApplicationServerKeys,
+  importVapidKeys,
 } from "jsr:@negrel/webpush@0.5";
 
 const corsHeaders = {
@@ -36,7 +36,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get all push subscriptions for org members who want this notification
     const { data: subscriptions, error: subErr } = await supabase
       .from("push_subscriptions")
       .select("*")
@@ -54,12 +53,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Filter by user preference and exclude triggering user
     const filteredSubs = [];
     for (const sub of subscriptions) {
       if (exclude_user_id && sub.user_id === exclude_user_id) continue;
 
-      // Check preference
       const { data: wantsPush } = await supabase.rpc("user_wants_push", {
         p_user_id: sub.user_id,
         p_org_id: organization_id,
@@ -78,11 +75,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Load VAPID keys
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
 
-    const applicationServerKeys = await ApplicationServerKeys.fromJSON({
+    const applicationServerKeys = await importVapidKeys({
       publicKey: vapidPublicKey,
       privateKey: vapidPrivateKey,
     });
@@ -113,7 +109,7 @@ Deno.serve(async (req) => {
             payload: new TextEncoder().encode(payload),
             target: pushSubscription,
             adminContact: "mailto:info@sitejob.nl",
-            ttl: 60 * 60, // 1 hour
+            ttl: 60 * 60,
           });
 
         const resp = await fetch(endpoint, {
@@ -125,7 +121,6 @@ Deno.serve(async (req) => {
         if (resp.status === 201 || resp.status === 200) {
           sent++;
         } else if (resp.status === 404 || resp.status === 410) {
-          // Subscription expired/invalid, remove it
           await supabase
             .from("push_subscriptions")
             .delete()

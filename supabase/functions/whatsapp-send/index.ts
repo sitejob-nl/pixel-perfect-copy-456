@@ -361,6 +361,42 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === "send_buttons") {
+      // Convenience wrapper: convert send_buttons into send_message with interactive buttons
+      const { to: rawTo, body_text, buttons, contact_id } = body;
+      const reformatted = {
+        action: "send_message",
+        to: rawTo,
+        message_type: "interactive",
+        contact_id,
+        interactive: {
+          interactive_type: "button",
+          body: body_text,
+          buttons: (buttons || []).map((b: { id?: string; title: string }, i: number) => ({
+            id: b.id || `btn_${i}`,
+            title: b.title,
+          })),
+        },
+      };
+
+      // Re-invoke ourselves with the reformatted payload
+      const selfUrl = `${supabaseUrl}/functions/v1/whatsapp-send`;
+      const proxyRes = await fetch(selfUrl, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+          apikey: anonKey,
+        },
+        body: JSON.stringify(reformatted),
+      });
+      const proxyData = await proxyRes.json();
+      return new Response(JSON.stringify(proxyData), {
+        status: proxyRes.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
