@@ -1,7 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  generatePushHTTPRequest,
+  ApplicationServer,
   importVapidKeys,
+  PushMessageError,
 } from "jsr:@negrel/webpush@0.5";
 
 const corsHeaders = {
@@ -78,9 +79,16 @@ Deno.serve(async (req) => {
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY")!;
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY")!;
 
-    const applicationServerKeys = await importVapidKeys({
+    // Import VAPID keys as CryptoKeyPair
+    const vapidKeys = await importVapidKeys({
       publicKey: vapidPublicKey,
       privateKey: vapidPrivateKey,
+    });
+
+    // Create ApplicationServer instance
+    const appServer = await ApplicationServer.new({
+      contactInformation: "mailto:info@sitejob.nl",
+      vapidKeys,
     });
 
     const payload = JSON.stringify({
@@ -95,6 +103,7 @@ Deno.serve(async (req) => {
 
     for (const sub of filteredSubs) {
       try {
+        // Create a PushSubscription-like object
         const pushSubscription = {
           endpoint: sub.endpoint,
           keys: {
@@ -103,36 +112,18 @@ Deno.serve(async (req) => {
           },
         };
 
-        const { headers, body: reqBody, endpoint } =
-          await generatePushHTTPRequest({
-            applicationServerKeys,
-            payload: new TextEncoder().encode(payload),
-            target: pushSubscription,
-            adminContact: "mailto:info@sitejob.nl",
-            ttl: 60 * 60,
-          });
-
-        const resp = await fetch(endpoint, {
-          method: "POST",
-          headers,
-          body: reqBody,
-        });
-
-        if (resp.status === 201 || resp.status === 200) {
-          sent++;
-        } else if (resp.status === 404 || resp.status === 410) {
+        // Subscribe and send message
+        const subscriber = appServer.subscribe(pushSubscription);
+        await subscriber.pushTextMessage(payload, { ttl: 3600 });
+        sent++;
+      } catch (err) {
+        if (err instanceof PushMessageError && err.isGone()) {
+          // Subscription expired, clean up
           await supabase
             .from("push_subscriptions")
             .delete()
             .eq("id", sub.id);
-          failed.push(sub.id);
-        } else {
-          console.error(
-            `Push failed for ${sub.id}: ${resp.status} ${await resp.text()}`
-          );
-          failed.push(sub.id);
         }
-      } catch (err) {
         console.error(`Push error for ${sub.id}:`, err);
         failed.push(sub.id);
       }
