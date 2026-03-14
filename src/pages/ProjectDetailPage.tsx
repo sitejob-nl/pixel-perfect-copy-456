@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
 import CommentsSection from "@/components/erp/CommentsSection";
+import AiSummaryCard from "@/components/erp/AiSummaryCard";
 import { projStatus } from "@/data/mockData";
 
 export default function ProjectDetailPage() {
