@@ -95,8 +95,8 @@ const moduleMap: Record<string, string> = {
 
 const entityRouteMap: Record<string, string> = {
   projects: "/projects",
-  companies: "/companies",
-  contacts: "/contacts",
+  companies: "/klanten",
+  contacts: "/klanten",
   deals: "/pipeline",
   invoices: "/invoices",
   quotes: "/quotes",
