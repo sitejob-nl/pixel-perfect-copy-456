@@ -96,7 +96,7 @@ export function usePushNotifications() {
       setLoading(false);
       return false;
     }
-  }, [supported, user, org?.id]);
+  }, [supported, user, orgId]);
 
   const unsubscribe = useCallback(async () => {
     if (!supported || !user) return;
