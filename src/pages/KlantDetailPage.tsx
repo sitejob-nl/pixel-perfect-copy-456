@@ -231,7 +231,7 @@ export default function KlantDetailPage() {
                       <div>
                         <div className="text-[13px] font-medium text-erp-text0">
                           {c.first_name} {c.last_name ?? ""}
-                          {c.function_title && <span className="text-erp-text3 font-normal ml-2">· {c.function_title}</span>}
+                          {c.job_title && <span className="text-erp-text3 font-normal ml-2">· {c.job_title}</span>}
                         </div>
                         <div className="text-[11px] text-erp-text3 mt-0.5">
                           {c.email ?? ""}{c.phone ? ` · ${c.phone}` : ""}
