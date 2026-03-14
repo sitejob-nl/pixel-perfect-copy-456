@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { FileText, Plus, Eye, Pencil, Trash2, Search, Globe, X } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { FileText, Plus, Eye, Trash2, Search, Globe } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +25,6 @@ export default function TemplateManager() {
   const [search, setSearch] = useState("");
   const [viewSheet, setViewSheet] = useState<any>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [libraryOpen, setLibraryOpen] = useState(false);
   const [subTab, setSubTab] = useState<"templates" | "library">("templates");
 
   useEffect(() => { loadTemplates(); }, []);
@@ -39,7 +38,7 @@ export default function TemplateManager() {
   };
 
   const handleDelete = async (tpl: any) => {
-    if (!confirm(`Template "${tpl.name}" verwijderen? Dit kan niet ongedaan worden gemaakt en je kunt 30 dagen lang geen template met dezelfde naam aanmaken.`)) return;
+    if (!confirm(`Template "${tpl.name}" verwijderen?`)) return;
     try {
       await invokeTemplates("delete", { name: tpl.name, template_id: tpl.id });
       toast.success("Template verwijderd");
@@ -75,7 +74,6 @@ export default function TemplateManager() {
 
   return (
     <div className="space-y-4">
-      {/* Sub-tabs */}
       <div className="flex gap-1">
         {tabs.map(tab => (
           <button key={tab.key} onClick={() => setSubTab(tab.key)} className={cn(
@@ -87,14 +85,13 @@ export default function TemplateManager() {
 
       {subTab === "templates" ? (
         <>
-          {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex gap-1">
               <button onClick={() => setFilter("all")} className={cn("px-2.5 py-1 rounded-md text-[11px] font-medium", filter === "all" ? "bg-erp-bg2 text-erp-text0" : "text-erp-text3")}>Alle ({templates.length})</button>
               <button onClick={() => setFilter("APPROVED")} className={cn("px-2.5 py-1 rounded-md text-[11px] font-medium", filter === "APPROVED" ? "bg-erp-bg2 text-erp-text0" : "text-erp-text3")}>Goedgekeurd ({statusCounts.APPROVED})</button>
               <button onClick={() => setFilter("PENDING")} className={cn("px-2.5 py-1 rounded-md text-[11px] font-medium", filter === "PENDING" ? "bg-erp-bg2 text-erp-text0" : "text-erp-text3")}>In review ({statusCounts.PENDING})</button>
             </div>
-            <button onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-[12px] font-medium text-white" style={{ background: "hsl(var(--primary))" }}>
+            <button onClick={() => setCreateOpen(true)} className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-[12px] font-medium text-white bg-primary">
               <Plus className="w-3.5 h-3.5" /> Template aanmaken
             </button>
           </div>
@@ -125,7 +122,7 @@ export default function TemplateManager() {
                   <span className="text-[11px] text-erp-text3 flex items-center gap-1"><Globe className="w-3 h-3" />{tpl.language}</span>
                   <div className="flex items-center gap-1">
                     <button onClick={() => setViewSheet(tpl)} className="w-7 h-7 rounded hover:bg-erp-bg3 flex items-center justify-center text-erp-text2"><Eye className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleDelete(tpl)} className="w-7 h-7 rounded hover:bg-erp-bg3 flex items-center justify-center text-erp-red"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDelete(tpl)} className="w-7 h-7 rounded hover:bg-erp-bg3 flex items-center justify-center text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               ))}
@@ -133,7 +130,7 @@ export default function TemplateManager() {
           )}
         </>
       ) : (
-        <TemplateLibrary onUse={(tpl) => { setCreateOpen(true); setSubTab("templates"); }} />
+        <TemplateLibrary onUse={() => { setCreateOpen(true); setSubTab("templates"); }} />
       )}
 
       {/* View Sheet */}
@@ -162,17 +159,17 @@ export default function TemplateManager() {
         </SheetContent>
       </Sheet>
 
-      {/* Create Sheet */}
       <CreateTemplateSheet open={createOpen} onOpenChange={setCreateOpen} onCreated={loadTemplates} />
     </div>
   );
 }
 
-// ─── Create Template Sheet ──────────────────
+// ─── Create Template Sheet with Variable Examples ──────────────────
 function CreateTemplateSheet({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (v: boolean) => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("MARKETING");
   const [language, setLanguage] = useState("nl");
+  const [paramFormat, setParamFormat] = useState<"positional" | "named">("positional");
   const [bodyText, setBodyText] = useState("");
   const [headerText, setHeaderText] = useState("");
   const [footerText, setFooterText] = useState("");
@@ -180,33 +177,102 @@ function CreateTemplateSheet({ open, onOpenChange, onCreated }: { open: boolean;
   const [useFooter, setUseFooter] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Example values for variables
+  const [bodyExamples, setBodyExamples] = useState<Record<string, string>>({});
+  const [headerExamples, setHeaderExamples] = useState<Record<string, string>>({});
+
+  // Extract variables from text
+  const extractVars = (text: string): string[] => {
+    const matches = text.match(/\{\{([^}]+)\}\}/g) || [];
+    return [...new Set(matches.map(m => m.replace(/\{\{|\}\}/g, "").trim()))];
+  };
+
+  const bodyVars = useMemo(() => extractVars(bodyText), [bodyText]);
+  const headerVars = useMemo(() => extractVars(headerText), [headerText]);
+
+  const allExamplesFilled = () => {
+    for (const v of bodyVars) if (!bodyExamples[v]?.trim()) return false;
+    for (const v of headerVars) if (!headerExamples[v]?.trim()) return false;
+    return true;
+  };
+
   const handleCreate = async () => {
     if (!name.trim() || !bodyText.trim()) return;
+    if ((bodyVars.length > 0 || headerVars.length > 0) && !allExamplesFilled()) {
+      toast.error("Vul voorbeeldwaarden in voor alle variabelen");
+      return;
+    }
     setSaving(true);
     try {
       const components: any[] = [];
+
+      // Header
       if (useHeader && headerText.trim()) {
-        components.push({ type: "HEADER", format: "TEXT", text: headerText.trim() });
+        const headerComp: any = { type: "HEADER", format: "TEXT", text: headerText.trim() };
+        if (headerVars.length > 0) {
+          if (paramFormat === "named") {
+            headerComp.example = {
+              header_text_named_params: headerVars.map(v => ({
+                param_name: v,
+                example: headerExamples[v] || "",
+              })),
+            };
+          } else {
+            headerComp.example = {
+              header_text: headerVars.map(v => headerExamples[v] || ""),
+            };
+          }
+        }
+        components.push(headerComp);
       }
-      components.push({ type: "BODY", text: bodyText.trim() });
+
+      // Body
+      const bodyComp: any = { type: "BODY", text: bodyText.trim() };
+      if (bodyVars.length > 0) {
+        if (paramFormat === "named") {
+          bodyComp.example = {
+            body_text_named_params: bodyVars.map(v => ({
+              param_name: v,
+              example: bodyExamples[v] || "",
+            })),
+          };
+        } else {
+          bodyComp.example = {
+            body_text: [bodyVars.map(v => bodyExamples[v] || "")],
+          };
+        }
+      }
+      components.push(bodyComp);
+
+      // Footer
       if (useFooter && footerText.trim()) {
         components.push({ type: "FOOTER", text: footerText.trim() });
       }
 
       await invokeTemplates("create", {
         name: name.trim().toLowerCase().replace(/\s+/g, "_"),
-        category, language, parameter_format: "positional", components,
+        category,
+        language,
+        parameter_format: paramFormat,
+        components,
       });
       toast.success("Template ingediend voor review");
       onOpenChange(false);
       onCreated();
       setName(""); setBodyText(""); setHeaderText(""); setFooterText("");
+      setBodyExamples({}); setHeaderExamples({});
     } catch (err: any) { toast.error(err.message || "Aanmaken mislukt"); }
     finally { setSaving(false); }
   };
 
-  const insertVariable = (v: string) => {
-    setBodyText(prev => prev + `{{${v}}}`);
+  const insertVariable = () => {
+    if (paramFormat === "positional") {
+      const nextNum = bodyVars.filter(v => /^\d+$/.test(v)).length + 1;
+      setBodyText(prev => prev + `{{${nextNum}}}`);
+    } else {
+      const varName = prompt("Variabele naam (bijv. first_name):");
+      if (varName) setBodyText(prev => prev + `{{${varName.trim().toLowerCase().replace(/\s+/g, "_")}}}`);
+    }
   };
 
   return (
@@ -214,13 +280,16 @@ function CreateTemplateSheet({ open, onOpenChange, onCreated }: { open: boolean;
       <SheetContent className="bg-erp-bg2 border-erp-border0 w-[500px] overflow-y-auto">
         <SheetHeader><SheetTitle className="text-erp-text0 text-[15px]">Template aanmaken</SheetTitle></SheetHeader>
         <div className="mt-4 space-y-4">
+          {/* Name */}
           <div className="space-y-1">
             <Label className="text-erp-text2 text-[12px]">Naam *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="bijv. welkom_bericht" className="text-[13px] bg-erp-bg3 border-erp-border0" />
             <span className="text-[10px] text-erp-text3">Alleen kleine letters en underscores</span>
           </div>
-          <div className="flex gap-4">
-            <div className="space-y-1 flex-1">
+
+          {/* Category + Language + Format */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
               <Label className="text-erp-text2 text-[12px]">Categorie</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="bg-erp-bg3 border-erp-border0 text-[13px]"><SelectValue /></SelectTrigger>
@@ -230,7 +299,7 @@ function CreateTemplateSheet({ open, onOpenChange, onCreated }: { open: boolean;
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1 flex-1">
+            <div className="space-y-1">
               <Label className="text-erp-text2 text-[12px]">Taal</Label>
               <Select value={language} onValueChange={setLanguage}>
                 <SelectTrigger className="bg-erp-bg3 border-erp-border0 text-[13px]"><SelectValue /></SelectTrigger>
@@ -242,6 +311,16 @@ function CreateTemplateSheet({ open, onOpenChange, onCreated }: { open: boolean;
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1">
+              <Label className="text-erp-text2 text-[12px]">Variabelen</Label>
+              <Select value={paramFormat} onValueChange={(v) => setParamFormat(v as any)}>
+                <SelectTrigger className="bg-erp-bg3 border-erp-border0 text-[13px]"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-erp-bg2 border-erp-border0">
+                  <SelectItem value="positional">Positioneel ({"{{1}}"})</SelectItem>
+                  <SelectItem value="named">Benoemd ({"{{name}}"})</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Header */}
@@ -250,20 +329,30 @@ function CreateTemplateSheet({ open, onOpenChange, onCreated }: { open: boolean;
             <Label className="text-erp-text2 text-[12px]">Header (optioneel)</Label>
           </div>
           {useHeader && (
-            <Input value={headerText} onChange={(e) => setHeaderText(e.target.value)} maxLength={60} placeholder="Header tekst" className="text-[13px] bg-erp-bg3 border-erp-border0" />
+            <div className="space-y-2">
+              <Input value={headerText} onChange={(e) => setHeaderText(e.target.value)} maxLength={60} placeholder="Header tekst, bijv. Hoi {{1}}!" className="text-[13px] bg-erp-bg3 border-erp-border0" />
+              {headerVars.length > 0 && (
+                <VariableExamples vars={headerVars} examples={headerExamples} onChange={setHeaderExamples} label="Header" />
+              )}
+            </div>
           )}
 
           {/* Body */}
           <div className="space-y-1">
-            <Label className="text-erp-text2 text-[12px]">Body *</Label>
-            <div className="flex flex-wrap gap-1 mb-1">
-              {["1", "2", "3"].map(v => (
-                <button key={v} onClick={() => insertVariable(v)} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20">{`{{${v}}}`}</button>
-              ))}
+            <div className="flex items-center justify-between">
+              <Label className="text-erp-text2 text-[12px]">Body *</Label>
+              <button onClick={insertVariable} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium hover:bg-primary/20">
+                + Variabele toevoegen
+              </button>
             </div>
-            <Textarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} maxLength={1024} rows={5} placeholder="Typ je template body..." className="text-[13px] bg-erp-bg3 border-erp-border0" />
+            <Textarea value={bodyText} onChange={(e) => setBodyText(e.target.value)} maxLength={1024} rows={5} placeholder="Typ je template body... Gebruik {{1}} of {{naam}} voor variabelen" className="text-[13px] bg-erp-bg3 border-erp-border0" />
             <span className="text-[10px] text-erp-text3">{bodyText.length}/1024</span>
           </div>
+
+          {/* Body variable examples */}
+          {bodyVars.length > 0 && (
+            <VariableExamples vars={bodyVars} examples={bodyExamples} onChange={setBodyExamples} label="Body" />
+          )}
 
           {/* Footer */}
           <div className="flex items-center gap-2">
@@ -274,12 +363,66 @@ function CreateTemplateSheet({ open, onOpenChange, onCreated }: { open: boolean;
             <Input value={footerText} onChange={(e) => setFooterText(e.target.value)} maxLength={60} placeholder="Footer tekst" className="text-[13px] bg-erp-bg3 border-erp-border0" />
           )}
 
-          <button onClick={handleCreate} disabled={saving || !name.trim() || !bodyText.trim()} className="w-full h-9 rounded-lg text-[13px] font-medium text-white disabled:opacity-40" style={{ background: "hsl(var(--primary))" }}>
+          {/* Preview */}
+          {bodyText.trim() && (
+            <div className="space-y-1">
+              <Label className="text-erp-text2 text-[12px]">Voorbeeld</Label>
+              <div className="bg-erp-bg3 rounded-lg p-3 border border-erp-border0">
+                {useHeader && headerText && (
+                  <p className="text-[12px] font-semibold text-erp-text0 mb-1">
+                    {replaceVarsWithExamples(headerText, headerVars, headerExamples)}
+                  </p>
+                )}
+                <p className="text-[13px] text-erp-text0 whitespace-pre-wrap">
+                  {replaceVarsWithExamples(bodyText, bodyVars, bodyExamples)}
+                </p>
+                {useFooter && footerText && (
+                  <p className="text-[11px] text-erp-text3 mt-1">{footerText}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <button onClick={handleCreate} disabled={saving || !name.trim() || !bodyText.trim()} className="w-full h-9 rounded-lg text-[13px] font-medium text-white disabled:opacity-40 bg-primary">
             {saving ? "Aanmaken..." : "Template aanmaken"}
           </button>
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function replaceVarsWithExamples(text: string, vars: string[], examples: Record<string, string>): string {
+  let result = text;
+  for (const v of vars) {
+    const example = examples[v]?.trim();
+    result = result.replace(`{{${v}}}`, example ? `[${example}]` : `{{${v}}}`);
+  }
+  return result;
+}
+
+// ─── Variable Examples Component ──────────────────
+function VariableExamples({ vars, examples, onChange, label }: {
+  vars: string[];
+  examples: Record<string, string>;
+  onChange: (v: Record<string, string>) => void;
+  label: string;
+}) {
+  return (
+    <div className="bg-erp-bg3/50 rounded-lg p-3 border border-erp-border0 space-y-2">
+      <p className="text-[11px] text-erp-text3 font-medium">{label} voorbeeldwaarden (vereist door Meta)</p>
+      {vars.map(v => (
+        <div key={v} className="flex items-center gap-2">
+          <span className="text-[11px] text-erp-text2 font-mono min-w-[70px]">{`{{${v}}}`}</span>
+          <Input
+            value={examples[v] || ""}
+            onChange={(e) => onChange({ ...examples, [v]: e.target.value })}
+            placeholder={`Voorbeeld voor ${v}`}
+            className="h-7 text-[12px] bg-erp-bg3 border-erp-border0 flex-1"
+          />
+        </div>
+      ))}
+    </div>
   );
 }
 

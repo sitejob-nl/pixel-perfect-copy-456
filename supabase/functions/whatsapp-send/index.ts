@@ -250,6 +250,159 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ─── GET PROFILE ───
+    if (action === "get_profile") {
+      const { data: account } = await serviceClient
+        .from("whatsapp_accounts")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("is_active", true)
+        .single();
+
+      if (!account) {
+        return new Response(JSON.stringify({ error: "No active WhatsApp account" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const res = await fetch(
+        `${META_API}/${account.phone_number_id}/whatsapp_business_profile?fields=about,address,description,email,profile_picture_url,websites,vertical`,
+        { headers: { Authorization: `Bearer ${account.access_token}` } }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to get profile");
+
+      return new Response(JSON.stringify({ profile: data?.data?.[0] || {} }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── UPDATE PROFILE ───
+    if (action === "update_profile") {
+      const { data: account } = await serviceClient
+        .from("whatsapp_accounts")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("is_active", true)
+        .single();
+
+      if (!account) {
+        return new Response(JSON.stringify({ error: "No active WhatsApp account" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const profilePayload: Record<string, unknown> = { messaging_product: "whatsapp" };
+      if (body.about) profilePayload.about = body.about;
+      if (body.address) profilePayload.address = body.address;
+      if (body.description) profilePayload.description = body.description;
+      if (body.email) profilePayload.email = body.email;
+      if (body.vertical) profilePayload.vertical = body.vertical;
+      if (body.websites) profilePayload.websites = JSON.stringify(body.websites);
+
+      const res = await fetch(
+        `${META_API}/${account.phone_number_id}/whatsapp_business_profile`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${account.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(profilePayload),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || "Failed to update profile");
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ─── UPLOAD PROFILE PHOTO ───
+    if (action === "upload_profile_photo") {
+      const { file_base64, file_type, file_size } = body;
+      if (!file_base64 || !file_type || !file_size) {
+        return new Response(JSON.stringify({ error: "Missing file data" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: account } = await serviceClient
+        .from("whatsapp_accounts")
+        .select("*")
+        .eq("organization_id", orgId)
+        .eq("is_active", true)
+        .single();
+
+      if (!account) {
+        return new Response(JSON.stringify({ error: "No active WhatsApp account" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const accessToken = account.access_token;
+
+      // Step 1: Create upload session
+      const appId = account.waba_id; // Use app ID from WABA
+      const createRes = await fetch(
+        `${META_API}/app/uploads?file_length=${file_size}&file_type=${encodeURIComponent(file_type)}&access_token=${accessToken}`,
+        { method: "POST" }
+      );
+      const createData = await createRes.json();
+      if (!createRes.ok) throw new Error(createData?.error?.message || "Failed to create upload session");
+
+      const uploadSessionId = createData.id;
+
+      // Step 2: Upload the file bytes
+      const binaryStr = atob(file_base64);
+      const bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+      const uploadRes = await fetch(
+        `${META_API}/${uploadSessionId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `OAuth ${accessToken}`,
+            "file_offset": "0",
+            "Content-Type": file_type,
+          },
+          body: bytes,
+        }
+      );
+      const uploadData = await uploadRes.json();
+      if (!uploadRes.ok) throw new Error(uploadData?.error?.message || "Failed to upload file");
+
+      const handle = uploadData.h;
+
+      // Step 3: Set profile picture using the handle
+      const profileRes = await fetch(
+        `${META_API}/${account.phone_number_id}/whatsapp_business_profile`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            profile_picture_handle: handle,
+          }),
+        }
+      );
+      const profileData = await profileRes.json();
+      if (!profileRes.ok) throw new Error(profileData?.error?.message || "Failed to set profile picture");
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
