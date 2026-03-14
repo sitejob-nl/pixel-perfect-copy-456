@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useIsMobile } from "@/hooks/use-mobile";
 import MobileNav from "./MobileNav";
+import NotificationBell from "./NotificationBell";
 
 export default function ErpHeader() {
   const { user, signOut } = useAuth();
@@ -27,10 +28,7 @@ export default function ErpHeader() {
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <button className="w-[34px] h-[34px] rounded-lg flex items-center justify-center cursor-pointer text-erp-text2 bg-transparent border-none relative">
-          <Icons.Bell className="w-[18px] h-[18px]" />
-          <span className="absolute top-[5px] right-[5px] w-[7px] h-[7px] rounded-full bg-erp-red border-2 border-erp-bg1" />
-        </button>
+        <NotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-erp-blue to-erp-purple flex items-center justify-center text-xs font-semibold text-white ml-[6px] cursor-pointer">

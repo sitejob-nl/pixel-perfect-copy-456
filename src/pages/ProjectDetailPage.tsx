@@ -10,6 +10,7 @@ import { nl } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
+import CommentsSection from "@/components/erp/CommentsSection";
 import { projStatus } from "@/data/mockData";
 
 export default function ProjectDetailPage() {
@@ -133,7 +134,7 @@ export default function ProjectDetailPage() {
       </div>
 
       <ErpTabs
-        items={[["overview", "Overzicht"], ["timeline", "Timeline"], ["checklist", "Checklist"]]}
+        items={[["overview", "Overzicht"], ["timeline", "Timeline"], ["checklist", "Checklist"], ["comments", "Comments"]]}
         active={tab}
         onChange={setTab}
       />
@@ -253,6 +254,10 @@ export default function ProjectDetailPage() {
             </form>
           </ErpCard>
         </div>
+      )}
+
+      {tab === "comments" && (
+        <CommentsSection entityType="project" entityId={id!} />
       )}
 
       <CreateActivityDialog open={activityOpen} onOpenChange={setActivityOpen} defaultProjectId={id} />

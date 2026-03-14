@@ -37,6 +37,7 @@ import ClientPortalPage from "./pages/ClientPortalPage";
 import EmailPage from "./pages/EmailPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
+import TasksPage from "./pages/TasksPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -149,6 +150,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>}>
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="tasks" element={<TasksPage />} />
               <Route path="contacts" element={<ContactsPage />} />
               <Route path="contacts/:id" element={<ContactDetailPage />} />
               <Route path="companies" element={<CompaniesPage />} />
