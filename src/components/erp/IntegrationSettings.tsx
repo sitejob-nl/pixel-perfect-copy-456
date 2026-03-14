@@ -719,12 +719,12 @@ function CloudflareCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
   const testConnection = async () => {
     setTesting(true);
     try {
-      const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, {
-        headers: { Authorization: `Bearer ${apiToken}` },
+      const { data, error } = await sb.functions.invoke("test-cloudflare", {
+        body: { organization_id: orgId },
       });
-      const data = await res.json();
+      if (error) throw error;
       if (data.success) toast.success("Cloudflare verbinding werkt");
-      else toast.error("Ongeldige credentials");
+      else toast.error(data.error || "Ongeldige credentials");
     } catch (e: any) {
       toast.error("Test mislukt: " + e.message);
     } finally {

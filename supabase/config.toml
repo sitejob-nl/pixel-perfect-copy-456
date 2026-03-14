@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.ask-sitejob]
 verify_jwt = false
+
+[functions.test-cloudflare]
+verify_jwt = false
