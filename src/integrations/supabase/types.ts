@@ -4055,6 +4055,119 @@ export type Database = {
           },
         ]
       }
+      mcp_api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          last_used_ip: string | null
+          name: string
+          organization_id: string
+          rate_limit_per_minute: number | null
+          scopes: string[]
+          usage_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          last_used_ip?: string | null
+          name: string
+          organization_id: string
+          rate_limit_per_minute?: number | null
+          scopes?: string[]
+          usage_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          last_used_ip?: string | null
+          name?: string
+          organization_id?: string
+          rate_limit_per_minute?: number | null
+          scopes?: string[]
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_audit_log: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          error_message: string | null
+          execution_ms: number | null
+          function_name: string
+          id: string
+          organization_id: string
+          parameters: Json | null
+          result_summary: string | null
+          success: boolean | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_ms?: number | null
+          function_name: string
+          id?: string
+          organization_id: string
+          parameters?: Json | null
+          result_summary?: string | null
+          success?: boolean | null
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_ms?: number | null
+          function_name?: string
+          id?: string
+          organization_id?: string
+          parameters?: Json | null
+          result_summary?: string | null
+          success?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_audit_log_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_module_overrides: {
         Row: {
           created_at: string
@@ -9090,6 +9203,39 @@ export type Database = {
         Args: { p_email: string; p_org_id: string }
         Returns: string
       }
+      fn_mcp_auth: {
+        Args: { p_api_key: string }
+        Returns: {
+          key_id: string
+          org_id: string
+          scopes: string[]
+        }[]
+      }
+      fn_mcp_check_scope: {
+        Args: { p_required: string; p_scopes: string[] }
+        Returns: boolean
+      }
+      fn_mcp_generate_key: {
+        Args: {
+          p_expires_days?: number
+          p_name: string
+          p_org_id: string
+          p_scopes?: string[]
+        }
+        Returns: Json
+      }
+      fn_mcp_log: {
+        Args: {
+          p_error?: string
+          p_function: string
+          p_key_id: string
+          p_org_id: string
+          p_params: Json
+          p_success: boolean
+        }
+        Returns: undefined
+      }
+      fn_my_org_id: { Args: never; Returns: string }
       fn_notify: {
         Args: {
           p_action_url?: string
@@ -9182,6 +9328,148 @@ export type Database = {
         Returns: undefined
       }
       is_super_admin: { Args: never; Returns: boolean }
+      mcp_add_comment:
+        | {
+            Args: {
+              p_api_key: string
+              p_content?: string
+              p_entity_name: string
+              p_entity_type?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_content?: string
+              p_entity_name: string
+              p_entity_type?: string
+            }
+            Returns: Json
+          }
+      mcp_client_health:
+        | {
+            Args: never
+            Returns: {
+              bedrijf: string
+              dagen_stil: number
+              mrr: number
+              projecten: number
+              status: string
+            }[]
+          }
+        | {
+            Args: { p_api_key: string }
+            Returns: {
+              bedrijf: string
+              dagen_stil: number
+              mrr: number
+              projecten: number
+              status: string
+            }[]
+          }
+      mcp_company_info:
+        | { Args: { p_api_key: string; p_name: string }; Returns: Json }
+        | { Args: { p_name: string }; Returns: Json }
+      mcp_create_task:
+        | {
+            Args: {
+              p_api_key: string
+              p_assigned_to_name?: string
+              p_company_name?: string
+              p_description?: string
+              p_due_date?: string
+              p_priority?: string
+              p_project_name?: string
+              p_title: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_assigned_to_name?: string
+              p_company_name?: string
+              p_description?: string
+              p_due_date?: string
+              p_priority?: string
+              p_project_name?: string
+              p_title: string
+            }
+            Returns: Json
+          }
+      mcp_dashboard:
+        | { Args: never; Returns: Json }
+        | { Args: { p_api_key: string }; Returns: Json }
+      mcp_log_activity:
+        | {
+            Args: {
+              p_api_key: string
+              p_company_name?: string
+              p_description?: string
+              p_project_name?: string
+              p_subject: string
+              p_type?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_company_name?: string
+              p_description?: string
+              p_project_name?: string
+              p_subject: string
+              p_type?: string
+            }
+            Returns: Json
+          }
+      mcp_my_tasks:
+        | {
+            Args: { p_api_key: string; p_user_name?: string }
+            Returns: {
+              bedrijf: string
+              deadline: string
+              prioriteit: string
+              project: string
+              status: string
+              titel: string
+              urgentie: string
+            }[]
+          }
+        | {
+            Args: { p_user_name?: string }
+            Returns: {
+              bedrijf: string
+              deadline: string
+              prioriteit: string
+              project: string
+              status: string
+              titel: string
+              urgentie: string
+            }[]
+          }
+      mcp_project_status:
+        | { Args: { p_api_key: string; p_name: string }; Returns: Json }
+        | { Args: { p_name: string }; Returns: Json }
+      mcp_search:
+        | {
+            Args: { p_api_key: string; p_query: string }
+            Returns: {
+              entity_type: string
+              extra: string
+              id: string
+              name: string
+              status: string
+            }[]
+          }
+        | {
+            Args: { p_query: string }
+            Returns: {
+              entity_type: string
+              extra: string
+              id: string
+              name: string
+              status: string
+            }[]
+          }
       org_module_enabled: {
         Args: { p_module: string; p_org_id: string }
         Returns: boolean
