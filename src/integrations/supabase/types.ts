@@ -2667,6 +2667,318 @@ export type Database = {
           },
         ]
       }
+      google_calendar_events: {
+        Row: {
+          all_day: boolean | null
+          attendees: Json | null
+          calendar_id: string
+          company_id: string | null
+          connection_id: string
+          contact_id: string | null
+          created_at: string
+          description: string | null
+          end_time: string
+          google_event_id: string
+          html_link: string | null
+          id: string
+          location: string | null
+          organization_id: string
+          start_time: string
+          status: string | null
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          all_day?: boolean | null
+          attendees?: Json | null
+          calendar_id?: string
+          company_id?: string | null
+          connection_id: string
+          contact_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_time: string
+          google_event_id: string
+          html_link?: string | null
+          id?: string
+          location?: string | null
+          organization_id: string
+          start_time: string
+          status?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          all_day?: boolean | null
+          attendees?: Json | null
+          calendar_id?: string
+          company_id?: string | null
+          connection_id?: string
+          contact_id?: string | null
+          created_at?: string
+          description?: string | null
+          end_time?: string
+          google_event_id?: string
+          html_link?: string | null
+          id?: string
+          location?: string | null
+          organization_id?: string
+          start_time?: string
+          status?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_calendar_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_calendar_events_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "google_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_calendar_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_calendar_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_calendar_events_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_calendar_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_calendar_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_connections: {
+        Row: {
+          access_token: string
+          connected_at: string
+          connection_level: string
+          created_at: string
+          display_name: string | null
+          email: string
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          organization_id: string
+          refresh_token: string
+          scopes: string[]
+          token_expires_at: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string
+          connection_level: string
+          created_at?: string
+          display_name?: string | null
+          email: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          organization_id: string
+          refresh_token: string
+          scopes?: string[]
+          token_expires_at: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string
+          connection_level?: string
+          created_at?: string
+          display_name?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          organization_id?: string
+          refresh_token?: string
+          scopes?: string[]
+          token_expires_at?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_emails: {
+        Row: {
+          body_html: string | null
+          body_preview: string | null
+          cc_emails: string[] | null
+          company_id: string | null
+          connection_id: string
+          contact_id: string | null
+          created_at: string
+          from_email: string | null
+          from_name: string | null
+          gmail_message_id: string
+          id: string
+          is_read: boolean | null
+          labels: string[] | null
+          organization_id: string
+          received_at: string
+          snippet: string | null
+          subject: string | null
+          thread_id: string | null
+          to_emails: string[] | null
+        }
+        Insert: {
+          body_html?: string | null
+          body_preview?: string | null
+          cc_emails?: string[] | null
+          company_id?: string | null
+          connection_id: string
+          contact_id?: string | null
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          gmail_message_id: string
+          id?: string
+          is_read?: boolean | null
+          labels?: string[] | null
+          organization_id: string
+          received_at: string
+          snippet?: string | null
+          subject?: string | null
+          thread_id?: string | null
+          to_emails?: string[] | null
+        }
+        Update: {
+          body_html?: string | null
+          body_preview?: string | null
+          cc_emails?: string[] | null
+          company_id?: string | null
+          connection_id?: string
+          contact_id?: string | null
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          gmail_message_id?: string
+          id?: string
+          is_read?: boolean | null
+          labels?: string[] | null
+          organization_id?: string
+          received_at?: string
+          snippet?: string | null
+          subject?: string | null
+          thread_id?: string | null
+          to_emails?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_emails_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "google_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_lines: {
         Row: {
           created_at: string
