@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const META_API = "https://graph.facebook.com/v25.0";
@@ -82,10 +82,9 @@ Deno.serve(async (req) => {
 
     // ─── LIST templates ───
     if (action === "list") {
-      const res = await fetch(
-        `${META_API}/${account.waba_id}/message_templates?limit=100`,
-        { headers: metaHeaders }
-      );
+      let url = `${META_API}/${account.waba_id}/message_templates?limit=100`;
+      if (body.status) url += `&status=${body.status.toLowerCase()}`;
+      const res = await fetch(url, { headers: metaHeaders });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Failed to list templates");
       return new Response(JSON.stringify({ templates: data.data || [] }), {

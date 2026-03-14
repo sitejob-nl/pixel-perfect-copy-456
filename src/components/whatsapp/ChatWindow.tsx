@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, MessageSquare, Phone, User, MoreVertical, ArrowLeft, Copy, Link2, AlertTriangle } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Send, MessageSquare, Phone, User, MoreVertical, ArrowLeft, Copy, Link2, AlertTriangle, FileText } from "lucide-react";
 import { useWhatsAppChatMessages, useWhatsAppSend } from "@/hooks/useWhatsApp";
 import { Textarea } from "@/components/ui/textarea";
 import MessageBubble from "./MessageBubble";
 import ContactLinkSheet from "./ContactLinkSheet";
-import ChatToolbar from "./ChatToolbar";
+import ChatToolbar, { TemplateSheet } from "./ChatToolbar";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +21,7 @@ function DateSeparator({ date }: { date: string }) {
   const today = new Date().toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
   const yesterday = new Date(Date.now() - 86400000).toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
   const label = date === today ? "Vandaag" : date === yesterday ? "Gisteren" : date;
-  
+
   return (
     <div className="flex items-center gap-3 my-3">
       <div className="flex-1 h-px bg-erp-border0" />
@@ -37,6 +37,7 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const [linkSheetOpen, setLinkSheetOpen] = useState(false);
+  const [templateSheetOpen, setTemplateSheetOpen] = useState(false);
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -44,7 +45,6 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Listen for emoji insert events from ChatToolbar
   useEffect(() => {
     const handler = (e: Event) => {
       const emoji = (e as CustomEvent).detail;
@@ -54,6 +54,21 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
     window.addEventListener("wa-insert-emoji", handler);
     return () => window.removeEventListener("wa-insert-emoji", handler);
   }, []);
+
+  // Determine if this is a new conversation (no messages yet or no outbound messages)
+  const hasOutboundMessage = messages && messages.some(m => m.direction === "outbound");
+  const isNewConversation = !isLoading && (!messages || messages.length === 0 || !hasOutboundMessage);
+
+  // Check if last inbound message is within 24h (customer service window)
+  const hasActiveWindow = (() => {
+    if (!messages || messages.length === 0) return false;
+    const lastInbound = [...messages].reverse().find(m => m.direction === "inbound");
+    if (!lastInbound) return false;
+    const diff = Date.now() - new Date(lastInbound.created_at).getTime();
+    return diff < 24 * 60 * 60 * 1000;
+  })();
+
+  const requiresTemplate = isNewConversation && !hasActiveWindow;
 
   const handleSend = async () => {
     if (!text.trim() || !phoneNumber) return;
@@ -91,8 +106,6 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
   }
 
   const hue = (phoneNumber.charCodeAt(phoneNumber.length - 1) * 47) % 360;
-
-  // Group messages by date
   let lastDate = "";
 
   return (
@@ -151,8 +164,8 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
 
       {/* Contact linking banner */}
       {!contactId && (
-        <div className="px-4 py-2 bg-erp-amber/10 border-b border-erp-amber/20 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" style={{ color: "hsl(var(--erp-amber))" }} />
+        <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-500" />
           <span className="text-[12px] text-erp-text1 flex-1">
             Dit nummer is niet gekoppeld aan een contact.
           </span>
@@ -170,8 +183,18 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
         {isLoading ? (
           <div className="text-[13px] text-erp-text3 text-center py-8">Laden...</div>
         ) : !messages || messages.length === 0 ? (
-          <div className="text-[13px] text-erp-text3 text-center py-8">
-            Geen berichten. Stuur een bericht om te beginnen.
+          <div className="text-center py-12">
+            <MessageSquare className="w-10 h-10 mx-auto mb-3 text-erp-text3 opacity-20" />
+            <p className="text-[13px] text-erp-text2 mb-1">Nieuw gesprek</p>
+            <p className="text-[11px] text-erp-text3 mb-4">
+              Stuur eerst een template bericht om het gesprek te starten.
+            </p>
+            <button
+              onClick={() => setTemplateSheetOpen(true)}
+              className="inline-flex items-center gap-1.5 px-4 h-9 rounded-lg text-[13px] font-medium text-white bg-primary"
+            >
+              <FileText className="w-4 h-4" /> Template kiezen
+            </button>
           </div>
         ) : (
           messages.map((msg) => {
@@ -204,31 +227,57 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      {/* Input area */}
       <div className="border-t border-erp-border0 bg-erp-bg1">
-        <div className="px-2 py-1 border-b border-erp-border0">
-          <ChatToolbar phoneNumber={phoneNumber} contactId={contactId} />
-        </div>
-        <div className="px-4 py-2 flex items-end gap-2">
-          <Textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Typ een bericht..."
-            className="flex-1 min-h-[40px] max-h-[120px] resize-none text-[13px] bg-erp-bg2 border-erp-border0 py-2.5"
-            rows={1}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!text.trim() || sendMsg.isPending}
-            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40"
-            style={{ background: "hsl(142, 50%, 30%)" }}
-          >
-            <Send className="w-4 h-4 text-white" />
-          </button>
-        </div>
+        {requiresTemplate ? (
+          /* Template-first banner */
+          <div className="px-4 py-3 flex items-center gap-3">
+            <div className="flex-1">
+              <p className="text-[12px] text-erp-text2">
+                Je kunt alleen een template bericht sturen buiten het 24-uurs servicevenster.
+              </p>
+            </div>
+            <button
+              onClick={() => setTemplateSheetOpen(true)}
+              className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-[12px] font-medium text-white bg-primary flex-shrink-0"
+            >
+              <FileText className="w-3.5 h-3.5" /> Template sturen
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="px-2 py-1 border-b border-erp-border0">
+              <ChatToolbar phoneNumber={phoneNumber} contactId={contactId} />
+            </div>
+            <div className="px-4 py-2 flex items-end gap-2">
+              <Textarea
+                ref={textareaRef}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Typ een bericht..."
+                className="flex-1 min-h-[40px] max-h-[120px] resize-none text-[13px] bg-erp-bg2 border-erp-border0 py-2.5"
+                rows={1}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!text.trim() || sendMsg.isPending}
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40 bg-primary"
+              >
+                <Send className="w-4 h-4 text-white" />
+              </button>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Template sheet for new conversations */}
+      <TemplateSheet
+        open={templateSheetOpen}
+        onOpenChange={setTemplateSheetOpen}
+        phone={phoneNumber}
+        contactId={contactId}
+      />
 
       {/* Contact link sheet */}
       <ContactLinkSheet

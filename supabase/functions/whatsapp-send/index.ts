@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const META_API = "https://graph.facebook.com/v25.0";
@@ -347,14 +347,29 @@ Deno.serve(async (req) => {
 
       const accessToken = account.access_token;
 
-      // Step 1: Create upload session
-      const appId = account.waba_id; // Use app ID from WABA
+      // Step 1: Create upload session via Resumable Upload API
+      // Using /app/uploads which resolves to the app that owns the token
       const createRes = await fetch(
-        `${META_API}/app/uploads?file_length=${file_size}&file_type=${encodeURIComponent(file_type)}&access_token=${accessToken}`,
-        { method: "POST" }
+        `${META_API}/app/uploads`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            file_length: file_size,
+            file_type: file_type,
+            access_token: accessToken,
+          }),
+        }
       );
       const createData = await createRes.json();
-      if (!createRes.ok) throw new Error(createData?.error?.message || "Failed to create upload session");
+      console.log("Upload session create response:", JSON.stringify(createData));
+      if (!createRes.ok) {
+        console.error("Upload session create failed:", createRes.status, JSON.stringify(createData));
+        throw new Error(createData?.error?.message || "Failed to create upload session");
+      }
 
       const uploadSessionId = createData.id;
 
@@ -369,16 +384,23 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: {
             Authorization: `OAuth ${accessToken}`,
-            "file_offset": "0",
+            file_offset: "0",
             "Content-Type": file_type,
           },
           body: bytes,
         }
       );
       const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error(uploadData?.error?.message || "Failed to upload file");
+      console.log("File upload response:", JSON.stringify(uploadData));
+      if (!uploadRes.ok) {
+        console.error("File upload failed:", uploadRes.status, JSON.stringify(uploadData));
+        throw new Error(uploadData?.error?.message || "Failed to upload file");
+      }
 
       const handle = uploadData.h;
+      if (!handle) {
+        throw new Error("No handle returned from upload");
+      }
 
       // Step 3: Set profile picture using the handle
       const profileRes = await fetch(
@@ -396,7 +418,11 @@ Deno.serve(async (req) => {
         }
       );
       const profileData = await profileRes.json();
-      if (!profileRes.ok) throw new Error(profileData?.error?.message || "Failed to set profile picture");
+      console.log("Set profile picture response:", JSON.stringify(profileData));
+      if (!profileRes.ok) {
+        console.error("Set profile picture failed:", profileRes.status, JSON.stringify(profileData));
+        throw new Error(profileData?.error?.message || "Failed to set profile picture");
+      }
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
