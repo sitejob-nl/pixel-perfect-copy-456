@@ -18,6 +18,7 @@ interface Props {
     defaultContactId?: string;
     defaultCompanyId?: string;
     defaultDealId?: string;
+    defaultProjectId?: string;
 }
 
 const activityTypes = [
