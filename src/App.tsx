@@ -51,6 +51,8 @@ import BookingPage from "./pages/BookingPage";
 import BookingsPage from "./pages/BookingsPage";
 import CallsPage from "./pages/CallsPage";
 import AiAssistantPage from "./pages/AiAssistantPage";
+import ProspectingPage from "./pages/ProspectingPage";
+import ProspectPoolDetailPage from "./pages/ProspectPoolDetailPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
