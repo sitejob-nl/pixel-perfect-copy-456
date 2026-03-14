@@ -132,8 +132,8 @@ export default function ProfileSettings() {
       {/* Profile Photo */}
       <div className="flex items-center gap-4">
         <div className="relative group">
-          {profile.profile_picture_url ? (
-            <img src={profile.profile_picture_url} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
+          {(localPreview || profile.profile_picture_url) ? (
+            <img src={localPreview || profile.profile_picture_url} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
           ) : (
             <div className="w-16 h-16 rounded-full bg-erp-bg3 flex items-center justify-center">
               <Camera className="w-6 h-6 text-erp-text3" />
