@@ -303,6 +303,37 @@ export default function ContactDetailPage() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 mb-4">
+        {[
+          { key: "details" as const, label: "Details" },
+          { key: "whatsapp" as const, label: "💬 WhatsApp" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "px-4 py-2 rounded-lg text-[13px] font-medium transition-colors",
+              activeTab === tab.key
+                ? "bg-erp-bg3 text-erp-text0 border border-erp-border0"
+                : "text-erp-text3 hover:text-erp-text1"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "whatsapp" ? (
+        <ErpCard className="p-0 overflow-hidden">
+          <ContactWhatsAppTab
+            contactId={contact.id}
+            contactPhone={contact.phone}
+            contactMobile={contact.mobile}
+            whatsappOptIn={contact.whatsapp_opt_in ?? false}
+          />
+        </ErpCard>
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left column: Details + Edit */}
         <div className="lg:col-span-2 space-y-4">
