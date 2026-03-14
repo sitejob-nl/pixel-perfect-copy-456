@@ -41,7 +41,7 @@ export default function ProjectDetailPage() {
     enabled: !!id && tab === "timeline",
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("v_project_timeline" as any)
+        .from("v_project_timeline")
         .select("*")
         .eq("project_id", id!)
         .order("event_at", { ascending: false });

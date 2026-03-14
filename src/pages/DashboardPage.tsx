@@ -94,7 +94,7 @@ export default function DashboardPage() {
     enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("v_company_health" as any)
+        .from("v_company_health")
         .select("*")
         .order("days_since_activity", { ascending: false })
         .limit(30);

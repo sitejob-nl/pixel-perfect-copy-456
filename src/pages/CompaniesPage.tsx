@@ -34,7 +34,7 @@ export default function CompaniesPage() {
     enabled: !!org?.organization_id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("v_company_health" as any)
+        .from("v_company_health")
         .select("*")
         .order("days_since_activity", { ascending: false });
       if (error) throw error;
