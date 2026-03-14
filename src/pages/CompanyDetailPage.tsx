@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
-import { useAuth } from "@/contexts/AuthContext";
-import { PageHeader, ErpCard, ErpButton, ErpTabs, Badge, Dot, Chip, Avatar, TH, TD, TR, fmt } from "@/components/erp/ErpPrimitives";
+import { PageHeader, ErpCard, ErpButton, ErpTabs, Badge, Dot, Chip, TH, TD, TR, fmt } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import CommentsSection from "@/components/erp/CommentsSection";
 import AiSummaryCard from "@/components/erp/AiSummaryCard";
+import InlineEditField from "@/components/erp/InlineEditField";
 import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { projStatus } from "@/data/mockData";
+import { toast } from "sonner";
 
 const healthColors: Record<string, string> = {
   green: "#22c55e", orange: "#f59e0b", red: "#ef4444", unknown: "#6b7280",
@@ -22,19 +23,15 @@ const healthLabels: Record<string, string> = {
 export default function CompanyDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [tab, setTab] = useState("projects");
+  const [tab, setTab] = useState("overview");
   const { data: org } = useOrganization();
-  const orgId = org?.organization_id;
+  const qc = useQueryClient();
 
   const { data: company, isLoading } = useQuery({
     queryKey: ["company-detail", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("companies")
-        .select("*")
-        .eq("id", id!)
-        .single();
+      const { data, error } = await supabase.from("companies").select("*").eq("id", id!).single();
       if (error) throw error;
       return data as any;
     },
@@ -44,11 +41,7 @@ export default function CompanyDetailPage() {
     queryKey: ["company-health", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("v_company_health")
-        .select("*")
-        .eq("id", id!)
-        .single();
+      const { data, error } = await supabase.from("v_company_health").select("*").eq("id", id!).single();
       if (error) return null;
       return data as any;
     },
@@ -56,13 +49,9 @@ export default function CompanyDetailPage() {
 
   const { data: projects = [] } = useQuery({
     queryKey: ["company-projects", id],
-    enabled: !!id && tab === "projects",
+    enabled: !!id && (tab === "overview" || tab === "projects"),
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("company_id", id!)
-        .order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("projects").select("*").eq("company_id", id!).order("created_at", { ascending: false });
       if (error) throw error;
       return data ?? [];
     },
@@ -72,16 +61,19 @@ export default function CompanyDetailPage() {
     queryKey: ["company-timeline", id],
     enabled: !!id && tab === "timeline",
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("activities")
-        .select("*")
-        .eq("company_id", id!)
-        .order("created_at", { ascending: false })
-        .limit(50);
+      const { data, error } = await supabase.from("activities").select("*").eq("company_id", id!).order("created_at", { ascending: false }).limit(50);
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  const saveField = async (field: string, value: any) => {
+    const { error } = await supabase.from("companies").update({ [field]: value }).eq("id", id!);
+    if (error) { toast.error("Fout bij opslaan"); throw error; }
+    qc.invalidateQueries({ queryKey: ["company-detail", id] });
+    qc.invalidateQueries({ queryKey: ["companies"] });
+    toast.success("Opgeslagen");
+  };
 
   if (isLoading) return <ErpCard className="p-8 text-center text-erp-text2 text-sm">Laden...</ErpCard>;
   if (!company) return <ErpCard className="p-8 text-center text-erp-text3 text-sm">Bedrijf niet gevonden</ErpCard>;
@@ -108,21 +100,78 @@ export default function CompanyDetailPage() {
         {company.city && <Chip>{company.city}</Chip>}
         {company.kvk_number && <Chip>KVK: {company.kvk_number}</Chip>}
         {health?.total_mrr > 0 && <Chip>MRR: €{fmt(Number(health.total_mrr))}</Chip>}
-        {company.website && (
-          <a href={company.website.startsWith("http") ? company.website : `https://${company.website}`} target="_blank" rel="noopener" className="text-[11px] text-erp-blue hover:underline">
-            {company.website.replace(/^https?:\/\//, "")}
-          </a>
-        )}
       </div>
 
-      {/* AI Summary */}
       <AiSummaryCard entityType="company" entityId={id!} />
 
       <ErpTabs
-        items={[["projects", "Projecten"], ["timeline", "Timeline"], ["comments", "Comments"]]}
+        items={[["overview", "Overzicht"], ["projects", "Projecten"], ["timeline", "Timeline"], ["comments", "Comments"]]}
         active={tab}
         onChange={setTab}
       />
+
+      {tab === "overview" && (
+        <div className="space-y-5">
+          <ErpCard className="p-5">
+            <div className="text-[14px] font-semibold mb-4">Bedrijfsgegevens</div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Bedrijfsnaam</div>
+                <InlineEditField value={company.name} field="name" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Branche</div>
+                <InlineEditField value={company.industry} field="industry" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Website</div>
+                <InlineEditField value={company.website} field="website" type="url" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">E-mail</div>
+                <InlineEditField value={company.email} field="email" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Telefoon</div>
+                <InlineEditField value={company.phone} field="phone" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Stad</div>
+                <InlineEditField value={company.city} field="city" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Postcode</div>
+                <InlineEditField value={company.postal_code} field="postal_code" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Adres</div>
+                <InlineEditField value={company.address_line1} field="address_line1" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">KVK-nummer</div>
+                <InlineEditField value={company.kvk_number} field="kvk_number" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">BTW-nummer</div>
+                <InlineEditField value={company.btw_number} field="btw_number" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Rechtsvorm</div>
+                <InlineEditField value={company.legal_form} field="legal_form" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">SBI-code</div>
+                <InlineEditField value={company.sbi_code} field="sbi_code" onSave={saveField} />
+              </div>
+            </div>
+          </ErpCard>
+
+          <ErpCard className="p-5">
+            <div className="text-[14px] font-semibold mb-2">Notities</div>
+            <InlineEditField value={company.notes} field="notes" type="textarea" placeholder="Klik om notities toe te voegen..." onSave={saveField} />
+          </ErpCard>
+        </div>
+      )}
 
       {tab === "projects" && (
         <ErpCard className="overflow-hidden">
@@ -173,9 +222,7 @@ export default function CompanyDetailPage() {
                   <div className="pb-5 flex-1 min-w-0">
                     <div className="text-[13px] text-erp-text0 font-medium">{ev.subject}</div>
                     {isEmail && meta?.from && (
-                      <div className="text-[11px] text-erp-text3 mt-0.5">
-                        Van: {meta.from} → {meta.to || "—"}
-                      </div>
+                      <div className="text-[11px] text-erp-text3 mt-0.5">Van: {meta.from} → {meta.to || "—"}</div>
                     )}
                     {ev.description && <div className="text-[12px] text-erp-text2 mt-0.5 truncate">{ev.description}</div>}
                     <div className="text-[11px] text-erp-text3 mt-1">

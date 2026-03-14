@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { PageHeader, ErpButton, ErpCard, Avatar, Dot, fmt } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
-import { useDeals, usePipelineStages, useUpdateDeal } from "@/hooks/useDeals";
+import { useDeals, usePipelineStages, useUpdateDeal, DealWithRelations } from "@/hooks/useDeals";
 import CreateDealDialog from "@/components/erp/CreateDealDialog";
-import { differenceInDays } from "date-fns";
+import EditDealSheet from "@/components/erp/EditDealSheet";
+import { differenceInDays, format } from "date-fns";
+import { nl } from "date-fns/locale";
 
 export default function PipelinePage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState<DealWithRelations | null>(null);
   const { data: deals = [], isLoading: dealsLoading } = useDeals();
   const { data: stages = [], isLoading: stagesLoading } = usePipelineStages();
   const updateDeal = useUpdateDeal();
@@ -33,10 +36,14 @@ export default function PipelinePage() {
           {stages.map(st => {
             const ds = deals.filter(d => d.stage_id === st.id);
             const total = ds.reduce((a, d) => a + (d.value ? Number(d.value) : 0), 0);
+            const weightedTotal = ds.reduce((a, d) => {
+              const prob = d.probability ?? st.probability ?? 50;
+              return a + (d.value ? Number(d.value) * (prob / 100) : 0);
+            }, 0);
             const color = st.color ?? "#6b7280";
 
             return (
-              <div key={st.id} className="min-w-[244px] max-w-[244px] flex-shrink-0">
+              <div key={st.id} className="min-w-[260px] max-w-[260px] flex-shrink-0">
                 <div
                   className="flex items-center justify-between px-3 py-[9px] rounded-[10px] mb-2"
                   style={{ background: `${color}0c` }}
@@ -58,17 +65,36 @@ export default function PipelinePage() {
                     const prob = d.probability ?? st.probability ?? 50;
 
                     return (
-                      <ErpCard key={d.id} className="p-[14px] cursor-pointer" hover>
+                      <ErpCard
+                        key={d.id}
+                        className="p-[14px] cursor-pointer"
+                        hover
+                        onClick={() => setSelectedDeal(d)}
+                      >
                         <div className="text-[13px] font-semibold text-erp-text0 mb-[3px]">{d.title}</div>
-                        <div className="text-xs text-erp-text2 mb-[10px]">{d.companies?.name ?? "—"}</div>
-                        <div className="text-base font-bold text-erp-text0">
-                          €{fmt(d.value ? Number(d.value) : 0)}
+                        <div className="text-xs text-erp-text2 mb-1">{d.companies?.name ?? "—"}</div>
+                        {d.description && (
+                          <div className="text-[11px] text-erp-text3 mb-[6px] truncate">{d.description}</div>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-base font-bold text-erp-text0">€{fmt(d.value ? Number(d.value) : 0)}</span>
+                          <span className="text-[11px] text-erp-text2 font-medium">{prob}%</span>
                         </div>
-                        <div className="h-[3px] bg-erp-bg4 rounded-sm mt-[10px] overflow-hidden">
+                        <div className="h-[3px] bg-erp-bg4 rounded-sm mt-[6px] overflow-hidden">
                           <div className="h-full rounded-sm" style={{ width: `${prob}%`, background: color }} />
                         </div>
                         <div className="flex justify-between items-center mt-[10px]">
-                          <span className="text-[11px] text-erp-text3">{daysInStage}d in fase</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] text-erp-text3">{daysInStage}d in fase</span>
+                            {d.expected_close && (
+                              <>
+                                <span className="text-erp-text3">·</span>
+                                <span className="text-[11px] text-erp-text3">
+                                  Verwacht: {format(new Date(d.expected_close), "d MMM", { locale: nl })}
+                                </span>
+                              </>
+                            )}
+                          </div>
                           <Avatar name={contactName} id={d.id.charCodeAt(0)} size={22} />
                         </div>
                         {/* Quick stage move buttons */}
@@ -93,6 +119,17 @@ export default function PipelinePage() {
                     </div>
                   )}
                 </div>
+                {/* Column totals */}
+                {ds.length > 0 && (
+                  <div className="mt-2 px-3 py-2 rounded-lg text-center" style={{ background: `${color}06` }}>
+                    <span className="text-[11px] text-erp-text3">
+                      {ds.length} deal{ds.length !== 1 ? "s" : ""} · €{fmt(total)}
+                      {weightedTotal !== total && (
+                        <span className="ml-1">(gewogen: €{fmt(Math.round(weightedTotal))})</span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -100,6 +137,7 @@ export default function PipelinePage() {
       )}
 
       <CreateDealDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <EditDealSheet deal={selectedDeal} open={!!selectedDeal} onOpenChange={(o) => { if (!o) setSelectedDeal(null); }} />
     </div>
   );
 }

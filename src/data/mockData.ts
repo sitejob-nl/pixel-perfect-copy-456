@@ -71,7 +71,13 @@ export const tierColors: Record<string, string> = {
 };
 export const projStatus: Record<string, [string, string]> = {
   intake: ["Intake", "#6b7280"], quoted: ["Offerte", "hsl(43, 96%, 56%)"],
-  in_progress: ["In ontwikkeling", "hsl(263, 86%, 77%)"], delivered: ["Opgeleverd", "hsl(160, 67%, 52%)"],
+  accepted: ["Geaccepteerd", "hsl(225, 93%, 64%)"],
+  in_progress: ["In ontwikkeling", "hsl(263, 86%, 77%)"],
+  review: ["Review", "hsl(27, 96%, 61%)"],
+  delivered: ["Opgeleverd", "hsl(160, 67%, 52%)"],
+  completed: ["Afgerond", "hsl(160, 67%, 42%)"],
+  on_hold: ["On hold", "#f59e0b"],
+  cancelled: ["Geannuleerd", "hsl(0, 93%, 68%)"],
 };
 export const invStatus: Record<string, [string, string]> = {
   draft: ["Concept", "#6b7280"], sent: ["Verstuurd", "hsl(225, 93%, 64%)"],
