@@ -201,7 +201,7 @@ export default function KlantDetailPage() {
                   <div><span className="text-erp-text3 text-[11px] block mb-1">Naam</span><span className="text-erp-text0">{primaryContact.first_name} {primaryContact.last_name ?? ""}</span></div>
                   <div><span className="text-erp-text3 text-[11px] block mb-1">E-mail</span><span className="text-erp-text0">{primaryContact.email ?? "—"}</span></div>
                   <div><span className="text-erp-text3 text-[11px] block mb-1">Telefoon</span><span className="text-erp-text0">{primaryContact.phone ?? "—"}</span></div>
-                  <div><span className="text-erp-text3 text-[11px] block mb-1">Functie</span><span className="text-erp-text0">{primaryContact.function_title ?? "—"}</span></div>
+                  <div><span className="text-erp-text3 text-[11px] block mb-1">Functie</span><span className="text-erp-text0">{primaryContact.job_title ?? "—"}</span></div>
                 </div>
               </ErpCard>
             )}
