@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePendingSuggestionCount } from "@/hooks/useGmailThreads";
+import { Sparkles } from "lucide-react";
 
 interface Notification {
   id: string;
