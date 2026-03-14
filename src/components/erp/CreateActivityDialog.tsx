@@ -47,7 +47,7 @@ const priorityOptions = [
     { value: "urgent", label: "Urgent" },
 ];
 
-export default function CreateActivityDialog({ open, onOpenChange, defaultContactId, defaultCompanyId, defaultDealId }: Props) {
+export default function CreateActivityDialog({ open, onOpenChange, defaultContactId, defaultCompanyId, defaultDealId, defaultProjectId }: Props) {
     const [activityType, setActivityType] = useState("call");
     const [subject, setSubject] = useState("");
     const [description, setDescription] = useState("");
