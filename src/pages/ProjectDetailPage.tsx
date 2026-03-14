@@ -51,6 +51,7 @@ export default function ProjectDetailPage() {
   const [tab, setTab] = useState("overview");
   const [activityOpen, setActivityOpen] = useState(false);
   const [newItem, setNewItem] = useState("");
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
   const qc = useQueryClient();
