@@ -22,6 +22,7 @@ const healthColors: Record<string, string> = {
 type HealthFilter = "all" | "green" | "orange" | "red" | "mrr";
 
 export default function CompaniesPage() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filter, setFilter] = useState<HealthFilter>("all");
