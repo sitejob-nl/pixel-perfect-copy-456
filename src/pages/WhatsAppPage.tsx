@@ -19,7 +19,6 @@ export default function WhatsAppPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  // Enable realtime subscriptions
   useWhatsAppRealtime();
 
   const isConnected = account?.is_active && account?.phone_number_id !== "pending";
@@ -28,8 +27,8 @@ export default function WhatsAppPage() {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center max-w-sm space-y-3">
-          <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center" style={{ background: "hsl(142, 50%, 18%)" }}>
-            <MessageSquare className="w-8 h-8" style={{ color: "hsl(142, 70%, 45%)" }} />
+          <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center bg-erp-bg3">
+            <MessageSquare className="w-8 h-8 text-erp-green" />
           </div>
           <h2 className="text-[16px] font-semibold text-erp-text0">WhatsApp niet gekoppeld</h2>
           <p className="text-[13px] text-erp-text3">
@@ -37,8 +36,7 @@ export default function WhatsAppPage() {
           </p>
           <button
             onClick={() => navigate("/settings")}
-            className="h-9 px-4 rounded-lg text-[13px] font-medium text-white transition-colors"
-            style={{ background: "hsl(142, 50%, 30%)" }}
+            className="h-9 px-4 rounded-lg text-[13px] font-medium text-primary-foreground bg-primary transition-colors"
           >
             WhatsApp verbinden
           </button>
@@ -74,7 +72,7 @@ export default function WhatsAppPage() {
   // Mobile: show either list or chat
   if (isMobile) {
     return (
-      <div className="flex h-[calc(100vh-48px)] bg-erp-bg0">
+      <div className="flex flex-col h-[calc(100dvh-52px)] bg-erp-bg0">
         {activePhone ? (
           <ChatWindow
             phoneNumber={activePhone}
@@ -84,17 +82,15 @@ export default function WhatsAppPage() {
             isMobile
           />
         ) : (
-          <div className="w-full">
-            <ConversationList
-              conversations={conversations}
-              isLoading={isLoading}
-              activePhone={activePhone}
-              onSelect={handleSelect}
-              onNewChat={handleNewChat}
-              onSettings={() => navigate("/settings")}
-              isMobile
-            />
-          </div>
+          <ConversationList
+            conversations={conversations}
+            isLoading={isLoading}
+            activePhone={activePhone}
+            onSelect={handleSelect}
+            onNewChat={handleNewChat}
+            onSettings={() => navigate("/settings")}
+            isMobile
+          />
         )}
         <NewChatDialog open={newChatOpen} onOpenChange={setNewChatOpen} phone={newPhone} setPhone={setNewPhone} onStart={startNewChat} />
       </div>
@@ -102,8 +98,7 @@ export default function WhatsAppPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-48px)] bg-erp-bg0">
-      {/* Conversation sidebar */}
+    <div className="flex h-[calc(100dvh-96px)] bg-erp-bg0 rounded-xl overflow-hidden border border-erp-border0">
       <div className="w-[340px] flex-shrink-0">
         <ConversationList
           conversations={conversations}
@@ -114,14 +109,11 @@ export default function WhatsAppPage() {
           onSettings={() => navigate("/settings")}
         />
       </div>
-
-      {/* Chat area */}
       <ChatWindow
         phoneNumber={activePhone}
         contactName={activeName}
         contactId={activeContactId}
       />
-
       <NewChatDialog open={newChatOpen} onOpenChange={setNewChatOpen} phone={newPhone} setPhone={setNewPhone} onStart={startNewChat} />
     </div>
   );
@@ -150,8 +142,7 @@ function NewChatDialog({ open, onOpenChange, phone, setPhone, onStart }: {
           <button
             onClick={onStart}
             disabled={!phone.trim()}
-            className="w-full h-9 rounded-lg text-[13px] font-medium text-white disabled:opacity-40 transition-colors"
-            style={{ background: "hsl(142, 50%, 30%)" }}
+            className="w-full h-9 rounded-lg text-[13px] font-medium text-primary-foreground bg-primary disabled:opacity-40 transition-colors"
           >
             Start gesprek
           </button>
