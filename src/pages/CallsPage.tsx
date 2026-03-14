@@ -32,6 +32,8 @@ export default function CallsPage() {
   const [selectedCall, setSelectedCall] = useState<any>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const { session } = useAuth();
 
   const { data: calls = [], isLoading } = useQuery({
     queryKey: ["call-log", orgId, filter],
