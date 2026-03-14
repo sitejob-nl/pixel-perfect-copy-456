@@ -98,17 +98,41 @@ function LeadCard({ lead, selected, onSelect, onExpand, expanded }: {
       {expanded && (
         <div className="px-5 pb-4 space-y-3 border-t border-erp-border0 pt-3" style={{ borderLeft: `3px solid ${cfg.color}` }}>
           {/* Analysis */}
-          {lead.analysis && (
-            <div className="bg-erp-bg3 rounded-lg p-3">
+          {(lead.analysis || lead.fit_summary || scoreBreakdown) && (
+            <div className="bg-erp-bg3 rounded-lg p-3 space-y-2">
               <div className="text-[11px] font-semibold text-erp-text2 mb-1.5">Analyse</div>
-              <p className="text-[12px] text-erp-text1">{lead.fit_summary || JSON.stringify(lead.analysis)}</p>
+              {lead.fit_summary && (
+                <p className="text-[12px] text-erp-text1">{lead.fit_summary}</p>
+              )}
               {scoreBreakdown && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-1">
                   {Object.entries(scoreBreakdown).map(([k, v]) => (
                     <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-erp-bg4 text-erp-text2">
-                      {k}: {v}
+                      {k}: {v as number}
                     </span>
                   ))}
+                </div>
+              )}
+              {lead.analysis?.strengths && lead.analysis.strengths.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-[10px] font-semibold text-green-500 mb-1">✓ Sterke punten</div>
+                  <ul className="text-[11px] text-erp-text1 space-y-0.5 list-disc list-inside">
+                    {lead.analysis.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+              {lead.analysis?.weaknesses && lead.analysis.weaknesses.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-[10px] font-semibold text-orange-500 mb-1">⚡ Kansen</div>
+                  <ul className="text-[11px] text-erp-text1 space-y-0.5 list-disc list-inside">
+                    {lead.analysis.weaknesses.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+              {lead.analysis?.recommendation && (
+                <div className="mt-2">
+                  <div className="text-[10px] font-semibold text-erp-blue mb-1">💡 Aanbeveling</div>
+                  <p className="text-[11px] text-erp-text1">{lead.analysis.recommendation}</p>
                 </div>
               )}
             </div>
