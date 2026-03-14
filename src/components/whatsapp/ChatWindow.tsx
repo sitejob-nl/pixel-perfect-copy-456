@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, MessageSquare, Phone, User, MoreVertical, ArrowLeft, Copy, Link2, AlertTriangle } from "lucide-react";
 import { useWhatsAppChatMessages, useWhatsAppSend } from "@/hooks/useWhatsApp";
 import { Textarea } from "@/components/ui/textarea";
 import MessageBubble from "./MessageBubble";
 import ContactLinkSheet from "./ContactLinkSheet";
+import ChatToolbar from "./ChatToolbar";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
@@ -37,10 +38,22 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
   const bottomRef = useRef<HTMLDivElement>(null);
   const [linkSheetOpen, setLinkSheetOpen] = useState(false);
   const navigate = useNavigate();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Listen for emoji insert events from ChatToolbar
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const emoji = (e as CustomEvent).detail;
+      setText(prev => prev + emoji);
+      textareaRef.current?.focus();
+    };
+    window.addEventListener("wa-insert-emoji", handler);
+    return () => window.removeEventListener("wa-insert-emoji", handler);
+  }, []);
 
   const handleSend = async () => {
     if (!text.trim() || !phoneNumber) return;
@@ -192,9 +205,13 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
       </div>
 
       {/* Input */}
-      <div className="px-4 py-3 border-t border-erp-border0 bg-erp-bg1">
-        <div className="flex items-end gap-2">
+      <div className="border-t border-erp-border0 bg-erp-bg1">
+        <div className="px-2 py-1 border-b border-erp-border0">
+          <ChatToolbar phoneNumber={phoneNumber} contactId={contactId} />
+        </div>
+        <div className="px-4 py-2 flex items-end gap-2">
           <Textarea
+            ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}

@@ -3,8 +3,11 @@ import { useWhatsAppAccount, useWhatsAppRegister, useWhatsAppDisconnect, useWhat
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Check, X, RefreshCw, ExternalLink } from "lucide-react";
+import ProfileSettings from "@/components/whatsapp/ProfileSettings";
+import TemplateManager from "@/components/whatsapp/TemplateManager";
+import AutomationsPage from "@/components/whatsapp/AutomationsPage";
 
-type SubTab = "verbinding" | "berichten" | "logs";
+type SubTab = "verbinding" | "profiel" | "templates" | "automations" | "logs";
 
 export default function WhatsAppSettings() {
   const { data: account, isLoading, refetch } = useWhatsAppAccount();
@@ -46,7 +49,9 @@ export default function WhatsAppSettings() {
 
   const tabs: { key: SubTab; label: string }[] = [
     { key: "verbinding", label: "Verbinding" },
-    { key: "berichten", label: "Berichten" },
+    { key: "profiel", label: "Profiel" },
+    { key: "templates", label: "Templates" },
+    { key: "automations", label: "Automations" },
     { key: "logs", label: "Webhook Logs" },
   ];
 
@@ -213,10 +218,16 @@ export default function WhatsAppSettings() {
           </>
         )}
 
-        {/* Messages tab */}
-        {isConnected && subTab === "berichten" && <MessagesTab />}
+        {/* Profile tab */}
+        {isConnected && subTab === "profiel" && <ProfileSettings />}
 
-        {/* Webhook Logs tab */}
+        {/* Templates tab */}
+        {isConnected && subTab === "templates" && <TemplateManager />}
+
+        {/* Automations tab */}
+        {isConnected && subTab === "automations" && <AutomationsPage />}
+
+        {/* Messages tab (legacy) */}
         {isConnected && subTab === "logs" && <WebhookLogsTab />}
       </div>
     </div>
