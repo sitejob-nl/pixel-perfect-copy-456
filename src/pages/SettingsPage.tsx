@@ -82,6 +82,7 @@ export default function SettingsPage() {
       {isAdmin && safeTab === "snelstart" && <SnelstartSettings />}
 
       {safeTab === "linkedin" && <LinkedInSettings />}
+      {isAdmin && safeTab === "whatsapp" && <WhatsAppSettings />}
 
       {safeTab === "notificaties" && (
         <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
