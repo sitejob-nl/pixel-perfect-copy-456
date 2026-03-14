@@ -45,6 +45,7 @@ import CalendarPage from "./pages/CalendarPage";
 import BookingPage from "./pages/BookingPage";
 import BookingsPage from "./pages/BookingsPage";
 import CallsPage from "./pages/CallsPage";
+import AiAssistantPage from "./pages/AiAssistantPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
