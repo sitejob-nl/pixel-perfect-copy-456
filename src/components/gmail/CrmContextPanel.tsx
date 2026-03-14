@@ -119,7 +119,7 @@ export default function CrmContextPanel({ thread, emailIds }: Props) {
           <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider mb-2">Contact</div>
           <div
             className="text-[13px] font-medium text-erp-text0 cursor-pointer hover:text-erp-blue transition"
-            onClick={() => navigate(`/contacts/${contact.id}`)}
+            onClick={() => navigate(`/klanten/${contact.company_id || contact.id}`)}
           >
             {contact.first_name} {contact.last_name}
           </div>
