@@ -853,7 +853,7 @@ function GeminiCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
             Gemini 3.1 Pro · Generatie
           </span>
           <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-erp-bg4 border border-erp-border0 text-[10px] text-erp-text1">
-            Gemini 2.0 Flash · Analyse
+            Gemini 3 Flash · Analyse
           </span>
         </div>
 
