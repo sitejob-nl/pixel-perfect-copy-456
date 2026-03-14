@@ -19,6 +19,7 @@ const allTabs = [
   { key: "email", label: "E-mail", icon: "✉️", adminOnly: true },
   { key: "snelstart", label: "Snelstart", icon: "🔗", adminOnly: true },
   { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
+  { key: "google", label: "Google", icon: "📧", adminOnly: false },
   { key: "whatsapp", label: "WhatsApp", icon: "📱", adminOnly: true },
   { key: "notificaties", label: "Notificaties", icon: "🔔", adminOnly: false },
   { key: "account", label: "Account", icon: "👤", adminOnly: false },
