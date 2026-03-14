@@ -2790,6 +2790,127 @@ export type Database = {
           },
         ]
       }
+      lead_automation_logs: {
+        Row: {
+          automation_id: string
+          contact_id: string | null
+          created_at: string | null
+          deal_id: string
+          error_message: string | null
+          id: string
+          message_type: string | null
+          organization_id: string
+          phone_number: string | null
+          status: string | null
+          whatsapp_msg_id: string | null
+        }
+        Insert: {
+          automation_id: string
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id: string
+          error_message?: string | null
+          id?: string
+          message_type?: string | null
+          organization_id: string
+          phone_number?: string | null
+          status?: string | null
+          whatsapp_msg_id?: string | null
+        }
+        Update: {
+          automation_id?: string
+          contact_id?: string | null
+          created_at?: string | null
+          deal_id?: string
+          error_message?: string | null
+          id?: string
+          message_type?: string | null
+          organization_id?: string
+          phone_number?: string | null
+          status?: string | null
+          whatsapp_msg_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_automation_logs_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "lead_automations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_automation_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_automation_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_automations: {
+        Row: {
+          created_at: string | null
+          delay_minutes: number | null
+          id: string
+          is_active: boolean | null
+          message_config: Json
+          message_type: string
+          name: string
+          organization_id: string
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delay_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          message_config?: Json
+          message_type: string
+          name: string
+          organization_id: string
+          trigger_config?: Json | null
+          trigger_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delay_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          message_config?: Json
+          message_type?: string
+          name?: string
+          organization_id?: string
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_automations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_automations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_enrichment: {
         Row: {
           ai_analyzed_at: string | null
@@ -6385,6 +6506,70 @@ export type Database = {
           },
           {
             foreignKeyName: "whatsapp_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_templates: {
+        Row: {
+          account_id: string
+          category: string
+          components: Json | null
+          created_at: string | null
+          id: string
+          language: string
+          meta_template_id: string | null
+          name: string
+          organization_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_id: string
+          category: string
+          components?: Json | null
+          created_at?: string | null
+          id?: string
+          language?: string
+          meta_template_id?: string | null
+          name: string
+          organization_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_id?: string
+          category?: string
+          components?: Json | null
+          created_at?: string | null
+          id?: string
+          language?: string
+          meta_template_id?: string | null
+          name?: string
+          organization_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_templates_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
