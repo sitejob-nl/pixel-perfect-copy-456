@@ -190,7 +190,7 @@ export default function ProjectDetailPage() {
             {timeline.map((ev: any, i: number) => (
               <div key={ev.id} className="flex gap-3">
                 <div className="flex flex-col items-center">
-                  <span className="text-base w-7 h-7 flex items-center justify-center">{sourceIcon(ev.source)}</span>
+                  <span className="text-base w-7 h-7 flex items-center justify-center">{sourceIcon(ev.source, ev.event_type)}</span>
                   {i < timeline.length - 1 && <div className="w-px flex-1 bg-erp-border0 my-1" />}
                 </div>
                 <div className="pb-5 flex-1 min-w-0">
