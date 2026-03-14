@@ -1,64 +1,50 @@
-import { useState } from "react";
-import { useGoogleConnections, useGoogleEmails, useGoogleApi, useSyncGoogle } from "@/hooks/useGoogle";
-import { ErpCard, PageHeader } from "@/components/erp/ErpPrimitives";
+import { useState, useMemo } from "react";
+import { useGoogleConnections, useSyncGoogle } from "@/hooks/useGoogle";
+import { useEmailThreads, useThreadEmails, usePendingSuggestionsByThread } from "@/hooks/useGmailThreads";
+import { useOrganization } from "@/hooks/useOrganization";
+import { PageHeader, ErpCard } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
-import { formatDistanceToNow } from "date-fns";
-import { nl } from "date-fns/locale";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import ThreadList from "@/components/gmail/ThreadList";
+import EmailDetail from "@/components/gmail/EmailDetail";
+import CrmContextPanel from "@/components/gmail/CrmContextPanel";
+import ComposeEmailDialog from "@/components/gmail/ComposeEmailDialog";
+import type { EmailThread, ThreadEmail } from "@/hooks/useGmailThreads";
+import { Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function GmailPage() {
   const { data: connections = [] } = useGoogleConnections();
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
   const allConns = connections.filter((c) => c.is_active);
   const [activeConnId, setActiveConnId] = useState<string | null>(null);
   const selectedConn = activeConnId || allConns[0]?.id || null;
-  const { data: emails = [], isLoading } = useGoogleEmails(selectedConn);
-  const [selectedEmail, setSelectedEmail] = useState<any>(null);
-  const [emailDetail, setEmailDetail] = useState<any>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const { callApi } = useGoogleApi();
+  const isMobile = useIsMobile();
+
+  const [category, setCategory] = useState("alle");
+  const [search, setSearch] = useState("");
+  const [selectedThread, setSelectedThread] = useState<EmailThread | null>(null);
+  const [showContext, setShowContext] = useState(true);
+  const [composing, setComposing] = useState(false);
+  const [replyTo, setReplyTo] = useState<string | undefined>();
+  const [replySubject, setReplySubject] = useState<string | undefined>();
+
+  const { data: threads = [], isLoading: threadsLoading } = useEmailThreads(category);
+  const { data: threadEmails = [], isLoading: emailsLoading } = useThreadEmails(selectedThread?.thread_id || null);
+  const { data: pendingEmailIds = new Set() } = usePendingSuggestionsByThread(orgId);
   const sync = useSyncGoogle();
 
-  // Compose dialog
-  const [composing, setComposing] = useState(false);
-  const [composeTo, setComposeTo] = useState("");
-  const [composeSubject, setComposeSubject] = useState("");
-  const [composeBody, setComposeBody] = useState("");
-  const [sending, setSending] = useState(false);
+  const emailIds = useMemo(() => threadEmails.map(e => e.id), [threadEmails]);
 
-  const handleViewEmail = async (email: any) => {
-    setSelectedEmail(email);
-    setLoadingDetail(true);
-    try {
-      const detail = await callApi(selectedConn!, "get_message", { message_id: email.id });
-      setEmailDetail(detail);
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-
-  const handleSend = async () => {
-    if (!selectedConn || !composeTo || !composeSubject) return;
-    setSending(true);
-    try {
-      await callApi(selectedConn, "send_email", {
-        to: composeTo,
-        subject: composeSubject,
-        body_html: composeBody.replace(/\n/g, "<br>"),
-      });
-      toast.success("E-mail verzonden!");
-      setComposing(false);
-      setComposeTo("");
-      setComposeSubject("");
-      setComposeBody("");
-    } catch (err: any) {
-      toast.error(err.message);
-    } finally {
-      setSending(false);
-    }
-  };
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    threads.forEach(t => {
+      if (t.category) counts[t.category] = (counts[t.category] || 0) + 1;
+    });
+    return counts;
+  }, [threads]);
 
   const handleSync = async () => {
     if (!selectedConn) return;
@@ -68,6 +54,26 @@ export default function GmailPage() {
     } catch (err: any) {
       toast.error(err.message);
     }
+  };
+
+  const handleReply = (email: ThreadEmail) => {
+    setReplyTo(email.from_address);
+    setReplySubject(email.subject);
+    setComposing(true);
+  };
+
+  const handleCompose = () => {
+    setReplyTo(undefined);
+    setReplySubject(undefined);
+    setComposing(true);
+  };
+
+  // Mobile: show detail as full page
+  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
+
+  const handleSelectThread = (thread: EmailThread) => {
+    setSelectedThread(thread);
+    if (isMobile) setMobileView("detail");
   };
 
   if (allConns.length === 0) {
@@ -88,15 +94,24 @@ export default function GmailPage() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <PageHeader title="Gmail" />
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-erp-border0 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          {isMobile && mobileView === "detail" && (
+            <button onClick={() => setMobileView("list")} className="text-erp-text2 hover:text-erp-text0">
+              ←
+            </button>
+          )}
+          <h1 className="text-[18px] font-bold text-erp-text0">Gmail</h1>
+          {sync.isPending && <span className="text-[11px] text-erp-text3">Synchroniseren...</span>}
+        </div>
         <div className="flex items-center gap-2">
           {allConns.length > 1 && (
             <select
               value={selectedConn || ""}
               onChange={(e) => setActiveConnId(e.target.value)}
-              className="bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-1.5 text-[13px] text-erp-text0"
+              className="bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-1.5 text-[12px] text-erp-text0"
             >
               {allConns.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -111,10 +126,22 @@ export default function GmailPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-erp-bg3 border border-erp-border0 rounded-lg text-erp-text1 hover:bg-erp-hover transition"
           >
             <Icons.Search className="w-3.5 h-3.5" />
-            {sync.isPending ? "Syncing..." : "Synchroniseren"}
+            Sync
           </button>
           <button
-            onClick={() => setComposing(true)}
+            onClick={() => setShowContext(!showContext)}
+            className={cn(
+              "p-1.5 rounded-lg border transition",
+              showContext
+                ? "bg-erp-blue/10 border-erp-blue/20 text-erp-blue"
+                : "bg-erp-bg3 border-erp-border0 text-erp-text3"
+            )}
+            title="CRM context tonen/verbergen"
+          >
+            <Info className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleCompose}
             className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-erp-blue text-white rounded-lg hover:bg-erp-blue/90 transition"
           >
             <Icons.Plus className="w-3.5 h-3.5" />
@@ -123,109 +150,53 @@ export default function GmailPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-12 text-erp-text3 text-[13px]">E-mails laden...</div>
-      ) : emails.length === 0 ? (
-        <ErpCard>
-          <div className="text-center py-8 text-erp-text3 text-[13px]">Geen e-mails gevonden</div>
-        </ErpCard>
-      ) : (
-        <div className="space-y-1">
-          {emails.map((email: any) => (
-            <div
-              key={email.id}
-              onClick={() => handleViewEmail(email)}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition border ${
-                email.isRead
-                  ? "bg-erp-bg2 border-erp-border0 hover:bg-erp-hover"
-                  : "bg-erp-bg3 border-erp-blue/30 hover:bg-erp-hover"
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${email.isRead ? "bg-transparent" : "bg-erp-blue"}`} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className={`text-[13px] truncate ${email.isRead ? "text-erp-text2" : "text-erp-text0 font-medium"}`}>
-                    {email.from?.replace(/<.*>/, "").trim() || "Onbekend"}
-                  </span>
-                  <span className="text-[11px] text-erp-text3 flex-shrink-0 ml-2">
-                    {email.date ? formatDistanceToNow(new Date(email.date), { locale: nl, addSuffix: true }) : ""}
-                  </span>
-                </div>
-                <div className={`text-[12px] truncate ${email.isRead ? "text-erp-text3" : "text-erp-text1"}`}>
-                  {email.subject || "(geen onderwerp)"}
-                </div>
-                <div className="text-[11px] text-erp-text3 truncate mt-0.5">{email.snippet}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* 3-panel layout */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Panel 1: Thread list */}
+        {(!isMobile || mobileView === "list") && (
+          <ThreadList
+            threads={threads}
+            isLoading={threadsLoading}
+            selectedThreadId={selectedThread?.thread_id || null}
+            onSelect={handleSelectThread}
+            category={category}
+            onCategoryChange={setCategory}
+            search={search}
+            onSearchChange={setSearch}
+            pendingEmailIds={pendingEmailIds as Set<string>}
+            categoryCounts={categoryCounts}
+          />
+        )}
 
-      {/* Email detail dialog */}
-      <Dialog open={!!selectedEmail} onOpenChange={() => { setSelectedEmail(null); setEmailDetail(null); }}>
-        <DialogContent className="bg-erp-bg2 border-erp-border0 text-erp-text0 max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-[15px]">{emailDetail?.subject || "Laden..."}</DialogTitle>
-            <DialogDescription className="text-[12px] text-erp-text3">
-              {emailDetail?.from && `Van: ${emailDetail.from}`}
-              {emailDetail?.to && ` • Aan: ${emailDetail.to}`}
-            </DialogDescription>
-          </DialogHeader>
-          {loadingDetail ? (
-            <div className="py-8 text-center text-erp-text3 text-[13px]">E-mail laden...</div>
-          ) : emailDetail?.bodyHtml ? (
-            <div
-              className="mt-3 text-[13px] text-erp-text1 [&_a]:text-erp-blue [&_img]:max-w-full"
-              dangerouslySetInnerHTML={{ __html: emailDetail.bodyHtml }}
-            />
-          ) : (
-            <div className="mt-3 text-[13px] text-erp-text1 whitespace-pre-wrap">
-              {emailDetail?.bodyText || emailDetail?.snippet || ""}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        {/* Panel 2: Email detail */}
+        {(!isMobile || mobileView === "detail") && (
+          <EmailDetail
+            thread={selectedThread}
+            emails={threadEmails}
+            isLoading={emailsLoading}
+            connectionId={selectedConn}
+            onReply={handleReply}
+            onCompose={handleCompose}
+          />
+        )}
+
+        {/* Panel 3: CRM Context + AI Suggestions */}
+        {showContext && !isMobile && (
+          <CrmContextPanel
+            thread={selectedThread}
+            emailIds={emailIds}
+          />
+        )}
+      </div>
 
       {/* Compose dialog */}
-      <Dialog open={composing} onOpenChange={setComposing}>
-        <DialogContent className="bg-erp-bg2 border-erp-border0 text-erp-text0 max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-[15px]">Nieuwe e-mail</DialogTitle>
-            <DialogDescription className="text-[12px] text-erp-text3">Verstuur via {allConns.find(c => c.id === selectedConn)?.email}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 mt-2">
-            <input
-              placeholder="Aan..."
-              value={composeTo}
-              onChange={(e) => setComposeTo(e.target.value)}
-              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-            />
-            <input
-              placeholder="Onderwerp"
-              value={composeSubject}
-              onChange={(e) => setComposeSubject(e.target.value)}
-              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
-            />
-            <textarea
-              placeholder="Bericht..."
-              value={composeBody}
-              onChange={(e) => setComposeBody(e.target.value)}
-              rows={8}
-              className="w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-[13px] text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue resize-none"
-            />
-            <div className="flex justify-end">
-              <button
-                onClick={handleSend}
-                disabled={sending || !composeTo || !composeSubject}
-                className="flex items-center gap-2 px-4 py-2 bg-erp-blue text-white text-[13px] font-medium rounded-lg hover:bg-erp-blue/90 transition disabled:opacity-50"
-              >
-                <Icons.Send className="w-3.5 h-3.5" />
-                {sending ? "Verzenden..." : "Versturen"}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ComposeEmailDialog
+        open={composing}
+        onOpenChange={setComposing}
+        connectionId={selectedConn}
+        replyTo={replyTo}
+        replySubject={replySubject}
+      />
     </div>
   );
 }

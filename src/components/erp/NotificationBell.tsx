@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePendingSuggestionCount } from "@/hooks/useGmailThreads";
+import { Sparkles } from "lucide-react";
 
 interface Notification {
   id: string;
@@ -114,7 +116,22 @@ export default function NotificationBell() {
     }
   };
 
+  const { data: pendingSuggestions = 0 } = usePendingSuggestionCount();
+
   return (
+    <div className="flex items-center gap-1">
+      {pendingSuggestions > 0 && (
+        <button
+          onClick={() => navigate("/gmail")}
+          className="w-[34px] h-[34px] rounded-lg flex items-center justify-center cursor-pointer text-erp-amber bg-transparent border-none relative hover:text-erp-amber/80 transition-colors"
+          title={`${pendingSuggestions} AI suggesties wachten op goedkeuring`}
+        >
+          <Sparkles className="w-[16px] h-[16px]" />
+          <span className="absolute top-[4px] right-[4px] min-w-[14px] h-[14px] rounded-full bg-erp-amber text-white text-[8px] font-bold flex items-center justify-center px-0.5">
+            {pendingSuggestions > 99 ? "99+" : pendingSuggestions}
+          </span>
+        </button>
+      )}
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button className="w-[34px] h-[34px] rounded-lg flex items-center justify-center cursor-pointer text-erp-text2 bg-transparent border-none relative hover:text-erp-text1 transition-colors">
@@ -174,5 +191,6 @@ export default function NotificationBell() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
+    </div>
   );
 }

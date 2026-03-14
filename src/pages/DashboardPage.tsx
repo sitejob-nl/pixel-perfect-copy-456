@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
-import { AlertTriangle, Lightbulb, Bell, TrendingUp, Sparkles } from "lucide-react";
+import { AlertTriangle, Lightbulb, Bell, TrendingUp, Sparkles, CheckCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const EXCLUDED_KEYWORDS = ['Web', 'Agency', 'Media', 'Brendly', 'Rickid', 'Savvy', 'Yellow', 'Fluencer', 'Lefhebbers', 'Marsmedia'];
@@ -253,6 +253,9 @@ export default function DashboardPage() {
       {/* AI Widgets Row */}
       <AiWidgetsRow orgId={orgId} accessToken={session?.access_token} navigate={navigate} />
 
+      {/* AI Email Suggestions */}
+      <AiEmailSuggestionsCard navigate={navigate} />
+
       <CreateActivityDialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen} />
     </div>
   );
@@ -370,6 +373,95 @@ function AiWidgetsRow({ orgId, accessToken, navigate }: { orgId?: string; access
               </div>
             ))}
           </div>
+        )}
+      </ErpCard>
+    </div>
+  );
+}
+
+function AiEmailSuggestionsCard({ navigate }: { navigate: any }) {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard-suggestion-stats", orgId],
+    enabled: !!orgId,
+    refetchInterval: 60000,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("v_suggestion_counts")
+        .select("*")
+        .eq("organization_id", orgId);
+      if (error) throw error;
+      return (data?.[0] || { pending: 0, approved_today: 0 }) as { pending: number; approved_today: number };
+    },
+  });
+
+  const { data: pendingItems = [] } = useQuery({
+    queryKey: ["dashboard-pending-suggestions", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("ai_suggestions")
+        .select("id, title, suggestion_type, confidence")
+        .eq("organization_id", orgId)
+        .eq("status", "pending")
+        .order("confidence", { ascending: false })
+        .limit(3);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const pending = stats?.pending ?? 0;
+  const approvedToday = stats?.approved_today ?? 0;
+
+  if (pending === 0 && approvedToday === 0 && pendingItems.length === 0) return null;
+
+  const typeIcons: Record<string, string> = {
+    create_task: "✅", create_deal: "💰", update_contact: "👤",
+    log_activity: "📝", flag_urgent: "🚨", send_followup: "📧",
+  };
+
+  return (
+    <div className="mb-6">
+      <ErpCard className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-erp-amber" />
+            <span className="text-[15px] font-semibold">AI E-mail Suggesties</span>
+          </div>
+          <div className="flex gap-3">
+            {pending > 0 && (
+              <span className="text-[12px] text-erp-amber font-medium cursor-pointer hover:underline" onClick={() => navigate("/gmail")}>
+                {pending} wachtend
+              </span>
+            )}
+            {approvedToday > 0 && (
+              <span className="flex items-center gap-1 text-[12px] text-erp-green font-medium">
+                <CheckCircle className="w-3 h-3" /> {approvedToday} goedgekeurd vandaag
+              </span>
+            )}
+          </div>
+        </div>
+        {pendingItems.length > 0 ? (
+          <div className="space-y-1.5">
+            {pendingItems.map((item: any) => (
+              <div
+                key={item.id}
+                onClick={() => navigate("/gmail")}
+                className="flex items-center gap-2.5 py-2 px-2 rounded-lg cursor-pointer hover:bg-erp-hover transition"
+              >
+                <span className="text-[13px]">{typeIcons[item.suggestion_type] || "💡"}</span>
+                <span className="flex-1 text-[12px] text-erp-text1 truncate">{item.title}</span>
+                {item.confidence != null && (
+                  <span className="text-[10px] text-erp-text3">{Math.round(item.confidence * 100)}%</span>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[12px] text-erp-text3 text-center py-2">Geen wachtende suggesties</p>
         )}
       </ErpCard>
     </div>
