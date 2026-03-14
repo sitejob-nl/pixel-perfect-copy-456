@@ -38,6 +38,8 @@ import EmailPage from "./pages/EmailPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
 import TasksPage from "./pages/TasksPage";
+import ReportingPage from "./pages/ReportingPage";
+import CompanyDetailPage from "./pages/CompanyDetailPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
