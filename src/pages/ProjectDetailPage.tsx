@@ -106,7 +106,8 @@ export default function ProjectDetailPage() {
   const totalCount = checklist.length;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  const sourceIcon = (source: string) => {
+  const sourceIcon = (source: string, eventType?: string) => {
+    if (eventType === "email" || source === "email") return "📧";
     switch (source) {
       case "activity": return "📝"; case "status_update": return "📢"; case "invoice": return "💰";
       case "checklist": return "✓"; case "contract": return "📄"; default: return "⚡";
