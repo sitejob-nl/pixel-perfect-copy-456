@@ -195,6 +195,11 @@ export default function ProjectDetailPage() {
                 </div>
                 <div className="pb-5 flex-1 min-w-0">
                   <div className="text-[13px] text-erp-text0 font-medium">{ev.title}</div>
+                  {ev.event_type === "email" && ev.metadata?.from && (
+                    <div className="text-[11px] text-erp-text3 mt-0.5">
+                      Van: {(ev.metadata as any).from} → {(ev.metadata as any).to || "—"}
+                    </div>
+                  )}
                   {ev.description && <div className="text-[12px] text-erp-text2 mt-0.5 truncate">{ev.description}</div>}
                   <div className="text-[11px] text-erp-text3 mt-1">
                     {formatDistanceToNow(new Date(ev.event_at), { addSuffix: true, locale: nl })}
