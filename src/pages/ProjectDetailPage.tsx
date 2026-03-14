@@ -372,6 +372,6 @@ export default function ProjectDetailPage() {
       <CreateActivityDialog open={activityOpen} onOpenChange={setActivityOpen} defaultProjectId={id} />
     </div>
     {aiPanelOpen && orgId && <AiSidePanel entityType="project" entityId={id!} orgId={orgId} />}
-    </>
+    </div>
   );
 }
