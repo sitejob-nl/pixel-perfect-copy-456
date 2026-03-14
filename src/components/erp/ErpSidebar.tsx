@@ -210,11 +210,11 @@ export default function ErpSidebar() {
                   >
                     <Icon className="w-[18px] h-[18px]" />
                     <span className="flex-1">{it.l}</span>
-                    {it.b && (
+                    {(it.b || (it.k === "gmail" && pendingSuggestionCount > 0)) && (
                       <span className={cn(
                         "text-[10.5px] font-semibold px-[7px] py-[1px] rounded-[10px]",
                         active ? "bg-erp-blue/10 text-erp-blue" : "bg-erp-bg4 text-erp-text3"
-                      )}>{it.b}</span>
+                      )}>{it.k === "gmail" && pendingSuggestionCount > 0 ? String(pendingSuggestionCount) : it.b}</span>
                     )}
                     {it.dot && <Dot color="hsl(160, 67%, 52%)" size={6} />}
                   </div>
