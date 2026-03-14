@@ -614,7 +614,7 @@ function Step3Preview({ renderHtml, signers, onSignersChange, members, contractM
       {showFieldEditor && (
         <div>
           <h4 className="text-sm font-semibold text-erp-text0 mb-2">Velden positioneren op de PDF</h4>
-          <div className="h-[70vh]"><PDFFieldEditor pages={pdfPageImages} fields={signatureFields} onChange={onSignatureFieldsChange} signerCount={signers.length} /></div>
+          <div className="max-h-[60vh] overflow-auto"><PDFFieldEditor pages={pdfPageImages} fields={signatureFields} onChange={onSignatureFieldsChange} signerCount={signers.length} /></div>
         </div>
       )}
       {!showFieldEditor && (

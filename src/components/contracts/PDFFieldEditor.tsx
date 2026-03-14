@@ -15,7 +15,7 @@ export interface SignatureField {
 }
 
 interface Props {
-  pages: string[]; // HTML content per page (or single page)
+  pages: string[];
   fields: SignatureField[];
   onChange: (fields: SignatureField[]) => void;
   signerCount?: number;
@@ -31,10 +31,10 @@ const FIELD_TYPES: { type: SignatureField["type"]; label: string; icon: string }
 ];
 
 const SIGNER_COLORS = [
-  "border-blue-400 bg-blue-50",
-  "border-emerald-400 bg-emerald-50",
-  "border-amber-400 bg-amber-50",
-  "border-purple-400 bg-purple-50",
+  "border-blue-400 bg-blue-50/80",
+  "border-emerald-400 bg-emerald-50/80",
+  "border-amber-400 bg-amber-50/80",
+  "border-purple-400 bg-purple-50/80",
 ];
 
 const DEFAULT_SIZES: Record<SignatureField["type"], { w: number; h: number }> = {
@@ -50,24 +50,55 @@ function newFieldId() {
   return `field_${Date.now()}_${++fieldIdCounter}`;
 }
 
+function getClientPos(e: MouseEvent | TouchEvent) {
+  if ("touches" in e) {
+    const t = e.touches[0] || (e as TouchEvent).changedTouches[0];
+    return { x: t.clientX, y: t.clientY };
+  }
+  return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+}
+
 export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 1, readOnly = false }: Props) {
   const [activePage, setActivePage] = useState(0);
   const [selectedField, setSelectedField] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [imgSize, setImgSize] = useState<{ w: number; h: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const pageFields = fields.filter((f) => f.page === activePage);
+
+  // Re-measure image on resize
+  useEffect(() => {
+    const measure = () => {
+      if (imgRef.current) {
+        const { offsetWidth, offsetHeight } = imgRef.current;
+        if (offsetWidth > 0 && offsetHeight > 0) {
+          setImgSize({ w: offsetWidth, h: offsetHeight });
+        }
+      }
+    };
+    const ro = new ResizeObserver(measure);
+    if (imgRef.current) ro.observe(imgRef.current);
+    return () => ro.disconnect();
+  }, [activePage]);
+
+  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setImgSize({ w: img.offsetWidth, h: img.offsetHeight });
+  }, []);
 
   const addField = useCallback(
     (type: SignatureField["type"]) => {
       const size = DEFAULT_SIZES[type];
+      // Place center-bottom of visible area
       const newField: SignatureField = {
         id: newFieldId(),
         type,
         label: FIELD_TYPES.find((t) => t.type === type)?.label || type,
-        x: 10,
-        y: 70,
+        x: Math.max(0, Math.min(100 - size.w, 50 - size.w / 2)),
+        y: Math.max(0, Math.min(100 - size.h, 65)),
         width: size.w,
         height: size.h,
         page: activePage,
@@ -95,11 +126,9 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
     [fields, onChange, selectedField]
   );
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, fieldId: string) => {
-      if (readOnly) return;
-      e.preventDefault();
-      e.stopPropagation();
+  const startDrag = useCallback(
+    (clientX: number, clientY: number, fieldId: string) => {
+      if (readOnly || !imgSize) return;
       const container = containerRef.current;
       if (!container) return;
 
@@ -107,31 +136,51 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
       const field = fields.find((f) => f.id === fieldId);
       if (!field) return;
 
-      const fieldXPx = (field.x / 100) * rect.width;
-      const fieldYPx = (field.y / 100) * rect.height;
+      const fieldXPx = (field.x / 100) * imgSize.w;
+      const fieldYPx = (field.y / 100) * imgSize.h;
 
       setDragOffset({
-        x: e.clientX - rect.left - fieldXPx,
-        y: e.clientY - rect.top - fieldYPx,
+        x: clientX - rect.left - fieldXPx,
+        y: clientY - rect.top - fieldYPx,
       });
       setDragging(fieldId);
       setSelectedField(fieldId);
     },
-    [fields, readOnly]
+    [fields, readOnly, imgSize]
+  );
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent, fieldId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startDrag(e.clientX, e.clientY, fieldId);
+    },
+    [startDrag]
+  );
+
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent, fieldId: string) => {
+      e.stopPropagation();
+      const t = e.touches[0];
+      if (t) startDrag(t.clientX, t.clientY, fieldId);
+    },
+    [startDrag]
   );
 
   useEffect(() => {
-    if (!dragging) return;
+    if (!dragging || !imgSize) return;
     const container = containerRef.current;
     if (!container) return;
 
-    const handleMove = (e: MouseEvent) => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      const pos = getClientPos(e);
       const rect = container.getBoundingClientRect();
-      const x = ((e.clientX - rect.left - dragOffset.x) / rect.width) * 100;
-      const y = ((e.clientY - rect.top - dragOffset.y) / rect.height) * 100;
+      const x = ((pos.x - rect.left - dragOffset.x) / imgSize.w) * 100;
+      const y = ((pos.y - rect.top - dragOffset.y) / imgSize.h) * 100;
       updateField(dragging, {
-        x: Math.max(0, Math.min(85, x)),
-        y: Math.max(0, Math.min(92, y)),
+        x: Math.max(0, Math.min(90, x)),
+        y: Math.max(0, Math.min(95, y)),
       });
     };
 
@@ -139,13 +188,19 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
 
     window.addEventListener("mousemove", handleMove);
     window.addEventListener("mouseup", handleUp);
+    window.addEventListener("touchmove", handleMove, { passive: false });
+    window.addEventListener("touchend", handleUp);
     return () => {
       window.removeEventListener("mousemove", handleMove);
       window.removeEventListener("mouseup", handleUp);
+      window.removeEventListener("touchmove", handleMove);
+      window.removeEventListener("touchend", handleUp);
     };
-  }, [dragging, dragOffset, updateField]);
+  }, [dragging, dragOffset, updateField, imgSize]);
 
   const selField = fields.find((f) => f.id === selectedField);
+
+  const isImagePage = pages[activePage]?.startsWith("data:image") || pages[activePage]?.startsWith("blob:");
 
   return (
     <div className="flex gap-4 h-full">
@@ -157,7 +212,7 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
             {pages.map((_, i) => (
               <button
                 key={i}
-                onClick={() => setActivePage(i)}
+                onClick={() => { setActivePage(i); setImgSize(null); }}
                 className={cn(
                   "px-3 py-1 text-xs rounded-lg font-medium transition-colors",
                   i === activePage
@@ -172,14 +227,20 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
         )}
 
         {/* Document with overlay fields */}
-        <div className="border border-erp-border0 rounded-xl bg-slate-100 overflow-y-auto flex-1">
-          <div className="relative mx-auto bg-white" ref={containerRef} style={{ width: 'fit-content' }}>
-            {pages[activePage]?.startsWith("data:image") || pages[activePage]?.startsWith("blob:") ? (
+        <div className="border border-erp-border0 rounded-xl bg-slate-100 overflow-auto flex-1">
+          <div
+            className="relative inline-block"
+            ref={containerRef}
+            style={imgSize ? { width: imgSize.w, height: imgSize.h } : undefined}
+          >
+            {isImagePage ? (
               <img
+                ref={imgRef}
                 src={pages[activePage]}
                 alt={`Pagina ${activePage + 1}`}
-                className="block max-w-full h-auto select-none"
+                className="block w-full h-auto select-none"
                 draggable={false}
+                onLoad={handleImageLoad}
                 onClick={() => setSelectedField(null)}
               />
             ) : (
@@ -190,20 +251,21 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
               />
             )}
 
-            {/* Draggable fields overlay */}
-            {pageFields.map((field) => {
+            {/* Draggable fields overlay — only render when image is measured */}
+            {(isImagePage ? imgSize : true) && pageFields.map((field) => {
               const colorClass = SIGNER_COLORS[field.signerIndex % SIGNER_COLORS.length];
               const isSelected = selectedField === field.id;
               return (
                 <div
                   key={field.id}
                   onMouseDown={(e) => handleMouseDown(e, field.id)}
+                  onTouchStart={(e) => handleTouchStart(e, field.id)}
                   className={cn(
-                    "absolute border-2 border-dashed rounded-lg flex items-center justify-center gap-1.5 cursor-move transition-shadow text-xs font-medium select-none",
+                    "absolute border-2 border-dashed rounded-lg flex items-center justify-center gap-1.5 transition-shadow text-xs font-medium select-none",
                     colorClass,
                     isSelected && "ring-2 ring-erp-blue shadow-lg",
                     dragging === field.id && "opacity-70",
-                    readOnly && "cursor-default"
+                    readOnly ? "cursor-default" : "cursor-move"
                   )}
                   style={{
                     left: `${field.x}%`,
@@ -236,7 +298,6 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
       {/* Right: Field palette & properties */}
       {!readOnly && (
         <div className="w-56 shrink-0 space-y-4">
-          {/* Add fields */}
           <div>
             <h4 className="text-xs font-semibold text-erp-text2 mb-2 uppercase tracking-wider">Velden toevoegen</h4>
             <div className="space-y-1">
@@ -253,11 +314,9 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
             </div>
           </div>
 
-          {/* Field properties */}
           {selField && (
             <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-3 space-y-3">
               <h4 className="text-xs font-semibold text-erp-text2 uppercase tracking-wider">Veldeigenschappen</h4>
-
               <div>
                 <label className="block text-[10px] text-erp-text3 mb-0.5">Label</label>
                 <input
@@ -266,7 +325,6 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
                   className="w-full bg-erp-bg2 border border-erp-border0 rounded-lg px-2 py-1 text-xs text-erp-text0 focus:outline-none focus:ring-1 focus:ring-erp-blue"
                 />
               </div>
-
               <div>
                 <label className="block text-[10px] text-erp-text3 mb-0.5">Ondertekenaar</label>
                 <select
@@ -279,7 +337,6 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
                   ))}
                 </select>
               </div>
-
               <label className="flex items-center gap-2 text-xs text-erp-text1 cursor-pointer">
                 <input
                   type="checkbox"
@@ -289,7 +346,6 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
                 />
                 Verplicht veld
               </label>
-
               <button
                 onClick={() => removeField(selField.id)}
                 className="w-full text-xs text-red-500 hover:text-red-600 font-medium py-1"
@@ -299,7 +355,6 @@ export default function PDFFieldEditor({ pages, fields, onChange, signerCount = 
             </div>
           )}
 
-          {/* Field list */}
           {fields.length > 0 && (
             <div>
               <h4 className="text-xs font-semibold text-erp-text2 mb-2 uppercase tracking-wider">Alle velden ({fields.length})</h4>
