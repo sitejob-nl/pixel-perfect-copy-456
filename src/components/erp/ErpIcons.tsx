@@ -2,7 +2,7 @@ import {
   Home, Users, Building2, Kanban, Zap, FileText, Receipt, FolderOpen,
   Calendar, Globe, MessageCircle, PenLine, Search, Plus, Bell, Settings, ChevronDown, LogOut,
   Pencil, Trash2, Bot, Menu, ShieldCheck, Send, BookOpen, LayoutDashboard, Mail,
-  CheckSquare, BarChart3, MoreHorizontal, Copy, ExternalLink, Key,
+  CheckSquare, BarChart3, MoreHorizontal, Copy, ExternalLink, Key, Phone,
 } from "lucide-react";
 
 export const Icons = {
@@ -11,7 +11,7 @@ export const Icons = {
   Search, Plus, Bell, Settings, ChevDown: ChevronDown, LogOut,
   Edit: Pencil, Trash: Trash2, Bot, Menu, Shield: ShieldCheck, Send,
   Book: BookOpen, Portal: LayoutDashboard, Mail, CheckSquare, BarChart: BarChart3,
-  More: MoreHorizontal, Copy, ExternalLink, Key,
+  More: MoreHorizontal, Copy, ExternalLink, Key, Phone,
 };
 
 export type IconName = keyof typeof Icons;

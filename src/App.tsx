@@ -42,6 +42,9 @@ import ReportingPage from "./pages/ReportingPage";
 import CompanyDetailPage from "./pages/CompanyDetailPage";
 import GmailPage from "./pages/GmailPage";
 import CalendarPage from "./pages/CalendarPage";
+import BookingPage from "./pages/BookingPage";
+import BookingsPage from "./pages/BookingsPage";
+import CallsPage from "./pages/CallsPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
