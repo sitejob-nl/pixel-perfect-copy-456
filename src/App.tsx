@@ -191,6 +191,7 @@ const App = () => (
               <Route path="bookings" element={<BookingsPage />} />
               <Route path="calls" element={<CallsPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
+              <Route path="drafts" element={<EmailDraftsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminRoute />} />
             </Route>
