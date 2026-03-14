@@ -1,39 +1,53 @@
 
 
-## Analyse: Profielfoto upload
+# ✅ LinkedIn Integratie: Posts Plaatsen
 
-### Wat er aan de hand is
+## Wat is gebouwd
 
-De upload **werkt technisch** — de edge function logs en network response bevestigen:
-- Upload session aangemaakt ✓
-- Bestand geüpload, handle ontvangen ✓  
-- `{"success":true,"handle":"4:TG9n..."}` teruggestuurd ✓
+### Database
+- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
 
-Maar na herlaad-profiel komt er **geen `profile_picture_url`** terug van Meta. Dit heeft twee oorzaken:
+### Edge Functions
+- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
+- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
 
-### Oorzaak 1: `getClaims()` bestaat niet in supabase-js v2
-Regel 31 in `whatsapp-business-profile/index.ts`:
-```ts
-const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
+### Frontend
+- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
+- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
+
+### Secrets
+- `LINKEDIN_CLIENT_ID` — opgeslagen
+- `LINKEDIN_CLIENT_SECRET` — opgeslagen
+
+## ⚠️ Actie vereist
+
+Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
 ```
-Dit is **geen standaard supabase-js methode**. Het moet `getUser()` zijn. Dit kan intermittent crashen of onbetrouwbaar zijn.
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
+```
 
-### Oorzaak 2: Meta verwerkt foto's asynchroon
-Na het instellen van de `profile_picture_handle` duurt het enkele seconden tot minuten voordat Meta de foto verwerkt en de `profile_picture_url` beschikbaar maakt. De huidige code roept direct `loadProfile()` aan, waardoor de URL nog leeg is.
+---
 
-### Plan
+# ✅ LinkedIn Webhooks: Real-time Notificaties
 
-**1. Fix auth in edge function** (`whatsapp-business-profile/index.ts`)
-- Vervang `supabase.auth.getClaims(token)` door `supabase.auth.getUser(token)` 
-- Gebruik `user.id` in plaats van `claims.claims.sub`
+## Wat is gebouwd
 
-**2. Verbeter UI feedback** (`ProfileSettings.tsx`)
-- Na succesvolle upload: toon direct een lokale preview van het geüploade bestand (via `URL.createObjectURL`)
-- Toon melding dat het even kan duren voordat de foto zichtbaar is bij ontvangers
-- Wacht 3 seconden voor automatische herlaad van het profiel
+### Database
+- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
 
-| Bestand | Wijziging |
-|---|---|
-| `supabase/functions/whatsapp-business-profile/index.ts` | `getClaims` → `getUser` |
-| `src/components/whatsapp/ProfileSettings.tsx` | Lokale preview + vertraagde reload |
+### Edge Function
+- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
 
+### Frontend
+- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
+
+### Webhook URL
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
+```
+
+## ⚠️ Actie vereist
+
+1. Vraag een webhook use case aan in je LinkedIn Developer Portal
+2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
+3. LinkedIn valideert automatisch via de challenge-response flow
