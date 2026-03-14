@@ -12,6 +12,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { projStatus } from "@/data/mockData";
 import { toast } from "sonner";
+import AiSidePanel from "@/components/erp/AiSidePanel";
 
 const healthColors: Record<string, string> = {
   green: "#22c55e", orange: "#f59e0b", red: "#ef4444", unknown: "#6b7280",
