@@ -16,6 +16,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
+import ContactWhatsAppTab from "@/components/whatsapp/ContactWhatsAppTab";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
