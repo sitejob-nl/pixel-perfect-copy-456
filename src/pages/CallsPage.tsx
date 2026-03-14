@@ -288,6 +288,18 @@ export default function CallsPage() {
                 </div>
               )}
 
+              {/* AI Analyze button */}
+              {selectedCall.has_transcription && !selectedCall.ai_summary && (
+                <button
+                  onClick={analyzeCall}
+                  disabled={analyzing}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-erp-blue to-erp-purple text-white text-xs font-medium hover:brightness-110 disabled:opacity-50"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {analyzing ? "Analyseren..." : "AI Analyse"}
+                </button>
+              )}
+
               {/* AI Summary */}
               {selectedCall.ai_summary && (
                 <div>
