@@ -40,6 +40,8 @@ import AcceptInvitePage from "./pages/AcceptInvitePage";
 import TasksPage from "./pages/TasksPage";
 import ReportingPage from "./pages/ReportingPage";
 import CompanyDetailPage from "./pages/CompanyDetailPage";
+import GmailPage from "./pages/GmailPage";
+import CalendarPage from "./pages/CalendarPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -173,6 +175,8 @@ const App = () => (
               <Route path="portals" element={<PortalAdminPage />} />
               <Route path="whatsapp" element={<WhatsAppPage />} />
               <Route path="email" element={<EmailPage />} />
+              <Route path="gmail" element={<GmailPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminRoute />} />

@@ -10,6 +10,7 @@ import ResendSettings from "@/components/erp/ResendSettings";
 import LinkedInSettings from "@/components/erp/LinkedInSettings";
 import WhatsAppSettings from "@/components/erp/WhatsAppSettings";
 import NotificationSettings from "@/components/erp/NotificationSettings";
+import GoogleSettings from "@/components/erp/GoogleSettings";
 
 const allTabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
@@ -18,6 +19,7 @@ const allTabs = [
   { key: "email", label: "E-mail", icon: "✉️", adminOnly: true },
   { key: "snelstart", label: "Snelstart", icon: "🔗", adminOnly: true },
   { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
+  { key: "google", label: "Google", icon: "📧", adminOnly: false },
   { key: "whatsapp", label: "WhatsApp", icon: "📱", adminOnly: true },
   { key: "notificaties", label: "Notificaties", icon: "🔔", adminOnly: false },
   { key: "account", label: "Account", icon: "👤", adminOnly: false },
@@ -83,6 +85,7 @@ export default function SettingsPage() {
       {isAdmin && safeTab === "snelstart" && <SnelstartSettings />}
 
       {safeTab === "linkedin" && <LinkedInSettings />}
+      {safeTab === "google" && <GoogleSettings />}
       {isAdmin && safeTab === "whatsapp" && <WhatsAppSettings />}
 
       {safeTab === "notificaties" && <NotificationSettings />}

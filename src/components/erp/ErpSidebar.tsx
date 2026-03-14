@@ -60,7 +60,9 @@ const nav: NavSection[] = [
   },
   {
     l: "Communicatie", items: [
-      { k: "email", l: "Email", i: "Send" },
+      { k: "gmail", l: "Gmail", i: "Mail" },
+      { k: "calendar", l: "Agenda", i: "Calendar" },
+      { k: "email", l: "Email Builder", i: "Send" },
       { k: "portals", l: "Klantenportaal", i: "Portal" },
       { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
     ]
