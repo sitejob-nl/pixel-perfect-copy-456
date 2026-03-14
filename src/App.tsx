@@ -185,6 +185,8 @@ const App = () => (
               <Route path="reports" element={<ReportingPage />} />
               <Route path="ai" element={<AiAssistantPage />} />
               <Route path="aiagent" element={<AIAgentPage />} />
+              <Route path="prospecting" element={<ProspectingPage />} />
+              <Route path="prospecting/:poolId" element={<ProspectPoolDetailPage />} />
               <Route path="demos" element={<DemosPage />} />
               <Route path="demos/:id/edit" element={<DemoEditPage />} />
               <Route path="content" element={<ContentPage />} />
