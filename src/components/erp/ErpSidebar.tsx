@@ -118,6 +118,7 @@ export default function ErpSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { data: org } = useOrganization();
+  const { data: pendingSuggestionCount = 0 } = usePendingSuggestionCount();
 
   const { data: savedViews = [] } = useQuery({
     queryKey: ["saved-views-pinned", org?.organization_id],
