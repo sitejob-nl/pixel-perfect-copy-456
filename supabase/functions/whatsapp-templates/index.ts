@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
     // ─── LIST templates ───
     if (action === "list") {
       let url = `${META_API}/${account.waba_id}/message_templates?limit=100`;
-      if (body.status) url += `&status=${body.status.toLowerCase()}`;
+      if (body.status) url += `&status=${body.status}`;
       const res = await fetch(url, { headers: metaHeaders });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error?.message || "Failed to list templates");
