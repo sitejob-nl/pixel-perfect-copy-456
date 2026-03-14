@@ -77,7 +77,7 @@ export function usePushNotifications() {
       const { error } = await supabase.from("push_subscriptions").upsert(
         {
           user_id: user.id,
-          organization_id: org.id,
+          organization_id: orgId,
           endpoint: subJson.endpoint!,
           p256dh: subJson.keys!.p256dh!,
           auth_key: subJson.keys!.auth!,
