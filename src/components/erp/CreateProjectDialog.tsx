@@ -22,6 +22,9 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [contactId, setContactId] = useState<string | null>(null);
   const [estimatedValue, setEstimatedValue] = useState("");
+  const [serviceType, setServiceType] = useState<string | null>(null);
+  const [monthlyAmount, setMonthlyAmount] = useState("");
+  const [billingFrequency, setBillingFrequency] = useState<string | null>(null);
 
   const createProject = useCreateProject();
 
@@ -67,7 +70,6 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
     if (!name.trim()) { toast.error("Naam is verplicht"); return; }
     if (!orgMembership?.organization_id) { toast.error("Geen organisatie gevonden"); return; }
 
-    // Generate project number via DB function
     const { data: projectNumber, error: numError } = await supabase.rpc("generate_document_number", {
       p_org_id: orgMembership.organization_id,
       p_prefix: "PRJ",
@@ -86,6 +88,9 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
         company_id: companyId,
         contact_id: contactId,
         estimated_value: estimatedValue ? parseFloat(estimatedValue) : null,
+        service_type: serviceType,
+        monthly_amount: monthlyAmount ? parseFloat(monthlyAmount) : null,
+        billing_frequency: billingFrequency,
       },
       {
         onSuccess: () => {
@@ -93,6 +98,7 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
           onOpenChange(false);
           setName(""); setDescription(""); setStatus("intake"); setPriority("medium");
           setCompanyId(null); setContactId(null); setEstimatedValue("");
+          setServiceType(null); setMonthlyAmount(""); setBillingFrequency(null);
         },
         onError: (err) => {
           if (err.message?.toLowerCase().includes("limit reached")) {
@@ -145,6 +151,22 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
               </Select>
             </div>
           </div>
+          <div className="space-y-1">
+            <Label className="text-erp-text2 text-xs">Type project</Label>
+            <Select value={serviceType ?? "none"} onValueChange={v => setServiceType(v === "none" ? null : v)}>
+              <SelectTrigger className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-erp-bg2 border-erp-border0">
+                <SelectItem value="none">— Geen type —</SelectItem>
+                <SelectItem value="website">Website</SelectItem>
+                <SelectItem value="platform">Platform / Maatwerk</SelectItem>
+                <SelectItem value="saas">SaaS Product</SelectItem>
+                <SelectItem value="implementatie">Implementatie</SelectItem>
+                <SelectItem value="maatwerk">Maatwerk</SelectItem>
+                <SelectItem value="dashboard">Dashboard</SelectItem>
+                <SelectItem value="intern">Intern</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-erp-text2 text-xs">Bedrijf</Label>
@@ -170,6 +192,24 @@ export default function CreateProjectDialog({ open, onOpenChange }: Props) {
           <div className="space-y-1">
             <Label className="text-erp-text2 text-xs">Geschatte waarde (€)</Label>
             <Input type="number" value={estimatedValue} onChange={e => setEstimatedValue(e.target.value)} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" placeholder="10000" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-erp-text2 text-xs">Maandelijks bedrag (€)</Label>
+              <Input type="number" value={monthlyAmount} onChange={e => setMonthlyAmount(e.target.value)} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" placeholder="350" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-erp-text2 text-xs">Facturatiefrequentie</Label>
+              <Select value={billingFrequency ?? "none"} onValueChange={v => setBillingFrequency(v === "none" ? null : v)}>
+                <SelectTrigger className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-erp-bg2 border-erp-border0">
+                  <SelectItem value="none">— Geen —</SelectItem>
+                  <SelectItem value="monthly">Maandelijks</SelectItem>
+                  <SelectItem value="quarterly">Per kwartaal</SelectItem>
+                  <SelectItem value="yearly">Jaarlijks</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <ErpButton onClick={() => onOpenChange(false)}>Annuleren</ErpButton>
