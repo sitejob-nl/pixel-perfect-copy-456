@@ -532,6 +532,440 @@ export type Database = {
           },
         ]
       }
+      booking_blocked_dates: {
+        Row: {
+          booking_page_id: string
+          created_at: string
+          end_at: string
+          id: string
+          is_all_day: boolean | null
+          recurring: string | null
+          start_at: string
+          title: string | null
+        }
+        Insert: {
+          booking_page_id: string
+          created_at?: string
+          end_at: string
+          id?: string
+          is_all_day?: boolean | null
+          recurring?: string | null
+          start_at: string
+          title?: string | null
+        }
+        Update: {
+          booking_page_id?: string
+          created_at?: string
+          end_at?: string
+          id?: string
+          is_all_day?: boolean | null
+          recurring?: string | null
+          start_at?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_blocked_dates_booking_page_id_fkey"
+            columns: ["booking_page_id"]
+            isOneToOne: false
+            referencedRelation: "booking_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_event_types: {
+        Row: {
+          auto_create_activity: boolean | null
+          auto_create_contact: boolean | null
+          auto_create_deal: boolean | null
+          auto_create_meet: boolean | null
+          booking_page_id: string
+          color: string | null
+          created_at: string
+          currency: string | null
+          custom_fields: Json | null
+          default_deal_stage_id: string | null
+          description: string | null
+          duration_minutes: number
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          is_paid: boolean | null
+          location_type: string | null
+          location_value: string | null
+          max_bookings_per_day: number | null
+          name: string
+          organization_id: string
+          price_cents: number | null
+          slug: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          auto_create_activity?: boolean | null
+          auto_create_contact?: boolean | null
+          auto_create_deal?: boolean | null
+          auto_create_meet?: boolean | null
+          booking_page_id: string
+          color?: string | null
+          created_at?: string
+          currency?: string | null
+          custom_fields?: Json | null
+          default_deal_stage_id?: string | null
+          description?: string | null
+          duration_minutes?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_paid?: boolean | null
+          location_type?: string | null
+          location_value?: string | null
+          max_bookings_per_day?: number | null
+          name: string
+          organization_id: string
+          price_cents?: number | null
+          slug: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          auto_create_activity?: boolean | null
+          auto_create_contact?: boolean | null
+          auto_create_deal?: boolean | null
+          auto_create_meet?: boolean | null
+          booking_page_id?: string
+          color?: string | null
+          created_at?: string
+          currency?: string | null
+          custom_fields?: Json | null
+          default_deal_stage_id?: string | null
+          description?: string | null
+          duration_minutes?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_paid?: boolean | null
+          location_type?: string | null
+          location_value?: string | null
+          max_bookings_per_day?: number | null
+          name?: string
+          organization_id?: string
+          price_cents?: number | null
+          slug?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_event_types_booking_page_id_fkey"
+            columns: ["booking_page_id"]
+            isOneToOne: false
+            referencedRelation: "booking_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_event_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_event_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_pages: {
+        Row: {
+          avatar_url: string | null
+          buffer_after_minutes: number | null
+          buffer_before_minutes: number | null
+          calendar_account_id: string | null
+          calendar_provider: string | null
+          confirmation_message: string | null
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean | null
+          logo_url: string | null
+          max_days_ahead: number | null
+          min_notice_hours: number | null
+          organization_id: string
+          primary_color: string | null
+          redirect_url: string | null
+          require_approval: boolean | null
+          slug: string
+          timezone: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+          working_hours: Json | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          buffer_after_minutes?: number | null
+          buffer_before_minutes?: number | null
+          calendar_account_id?: string | null
+          calendar_provider?: string | null
+          confirmation_message?: string | null
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_days_ahead?: number | null
+          min_notice_hours?: number | null
+          organization_id: string
+          primary_color?: string | null
+          redirect_url?: string | null
+          require_approval?: boolean | null
+          slug: string
+          timezone?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+          working_hours?: Json | null
+        }
+        Update: {
+          avatar_url?: string | null
+          buffer_after_minutes?: number | null
+          buffer_before_minutes?: number | null
+          calendar_account_id?: string | null
+          calendar_provider?: string | null
+          confirmation_message?: string | null
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          max_days_ahead?: number | null
+          min_notice_hours?: number | null
+          organization_id?: string
+          primary_color?: string | null
+          redirect_url?: string | null
+          require_approval?: boolean | null
+          slug?: string
+          timezone?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+          working_hours?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_pages_calendar_account_id_fkey"
+            columns: ["calendar_account_id"]
+            isOneToOne: false
+            referencedRelation: "email_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bookings: {
+        Row: {
+          booking_page_id: string
+          calendar_event_id: string | null
+          cancel_reason: string | null
+          cancel_token: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_activity_id: string | null
+          created_at: string
+          created_deal_id: string | null
+          custom_field_values: Json | null
+          end_at: string
+          event_type_id: string
+          guest_company: string | null
+          guest_email: string
+          guest_name: string
+          guest_notes: string | null
+          guest_phone: string | null
+          host_user_id: string
+          id: string
+          matched_company_id: string | null
+          matched_contact_id: string | null
+          meeting_url: string | null
+          organization_id: string
+          reminder_1h_sent: boolean | null
+          reminder_24h_sent: boolean | null
+          reschedule_token: string | null
+          start_at: string
+          status: string
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          booking_page_id: string
+          calendar_event_id?: string | null
+          cancel_reason?: string | null
+          cancel_token?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_activity_id?: string | null
+          created_at?: string
+          created_deal_id?: string | null
+          custom_field_values?: Json | null
+          end_at: string
+          event_type_id: string
+          guest_company?: string | null
+          guest_email: string
+          guest_name: string
+          guest_notes?: string | null
+          guest_phone?: string | null
+          host_user_id: string
+          id?: string
+          matched_company_id?: string | null
+          matched_contact_id?: string | null
+          meeting_url?: string | null
+          organization_id: string
+          reminder_1h_sent?: boolean | null
+          reminder_24h_sent?: boolean | null
+          reschedule_token?: string | null
+          start_at: string
+          status?: string
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          booking_page_id?: string
+          calendar_event_id?: string | null
+          cancel_reason?: string | null
+          cancel_token?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          created_activity_id?: string | null
+          created_at?: string
+          created_deal_id?: string | null
+          custom_field_values?: Json | null
+          end_at?: string
+          event_type_id?: string
+          guest_company?: string | null
+          guest_email?: string
+          guest_name?: string
+          guest_notes?: string | null
+          guest_phone?: string | null
+          host_user_id?: string
+          id?: string
+          matched_company_id?: string | null
+          matched_contact_id?: string | null
+          meeting_url?: string | null
+          organization_id?: string
+          reminder_1h_sent?: boolean | null
+          reminder_24h_sent?: boolean | null
+          reschedule_token?: string | null
+          start_at?: string
+          status?: string
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_booking_page_id_fkey"
+            columns: ["booking_page_id"]
+            isOneToOne: false
+            referencedRelation: "booking_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_created_deal_id_fkey"
+            columns: ["created_deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_created_deal_id_fkey"
+            columns: ["created_deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_event_type_id_fkey"
+            columns: ["event_type_id"]
+            isOneToOne: false
+            referencedRelation: "booking_event_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "bookings_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_events: {
         Row: {
           attendee_emails: string[] | null
@@ -619,6 +1053,203 @@ export type Database = {
           },
           {
             foreignKeyName: "calendar_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      call_log: {
+        Row: {
+          ai_action_items: Json | null
+          ai_summary: string | null
+          answered_at: string | null
+          caller_account_number: string | null
+          caller_name: string | null
+          caller_number: string | null
+          caller_user_email: string | null
+          created_activity_id: string | null
+          created_at: string
+          destination_account_number: string | null
+          destination_name: string | null
+          destination_number: string | null
+          destination_user_email: string | null
+          direction: string
+          duration_seconds: number | null
+          ended_at: string | null
+          has_recording: boolean | null
+          has_transcription: boolean | null
+          id: string
+          matched_company_id: string | null
+          matched_contact_id: string | null
+          matched_project_id: string | null
+          matched_user_id: string | null
+          notes: string | null
+          organization_id: string
+          recording_duration_seconds: number | null
+          recording_storage_path: string | null
+          recording_url: string | null
+          ring_duration_seconds: number | null
+          sentiment: string | null
+          started_at: string | null
+          status: string
+          tags: string[] | null
+          transcription_language: string | null
+          transcription_summary: string | null
+          transcription_text: string | null
+          updated_at: string
+          voys_call_id: string
+          webhook_payloads: Json | null
+        }
+        Insert: {
+          ai_action_items?: Json | null
+          ai_summary?: string | null
+          answered_at?: string | null
+          caller_account_number?: string | null
+          caller_name?: string | null
+          caller_number?: string | null
+          caller_user_email?: string | null
+          created_activity_id?: string | null
+          created_at?: string
+          destination_account_number?: string | null
+          destination_name?: string | null
+          destination_number?: string | null
+          destination_user_email?: string | null
+          direction: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          has_recording?: boolean | null
+          has_transcription?: boolean | null
+          id?: string
+          matched_company_id?: string | null
+          matched_contact_id?: string | null
+          matched_project_id?: string | null
+          matched_user_id?: string | null
+          notes?: string | null
+          organization_id: string
+          recording_duration_seconds?: number | null
+          recording_storage_path?: string | null
+          recording_url?: string | null
+          ring_duration_seconds?: number | null
+          sentiment?: string | null
+          started_at?: string | null
+          status?: string
+          tags?: string[] | null
+          transcription_language?: string | null
+          transcription_summary?: string | null
+          transcription_text?: string | null
+          updated_at?: string
+          voys_call_id: string
+          webhook_payloads?: Json | null
+        }
+        Update: {
+          ai_action_items?: Json | null
+          ai_summary?: string | null
+          answered_at?: string | null
+          caller_account_number?: string | null
+          caller_name?: string | null
+          caller_number?: string | null
+          caller_user_email?: string | null
+          created_activity_id?: string | null
+          created_at?: string
+          destination_account_number?: string | null
+          destination_name?: string | null
+          destination_number?: string | null
+          destination_user_email?: string | null
+          direction?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          has_recording?: boolean | null
+          has_transcription?: boolean | null
+          id?: string
+          matched_company_id?: string | null
+          matched_contact_id?: string | null
+          matched_project_id?: string | null
+          matched_user_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          recording_duration_seconds?: number | null
+          recording_storage_path?: string | null
+          recording_url?: string | null
+          ring_duration_seconds?: number | null
+          sentiment?: string | null
+          started_at?: string | null
+          status?: string
+          tags?: string[] | null
+          transcription_language?: string | null
+          transcription_summary?: string | null
+          transcription_text?: string | null
+          updated_at?: string
+          voys_call_id?: string
+          webhook_payloads?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_log_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_project_id_fkey"
+            columns: ["matched_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_project_id_fkey"
+            columns: ["matched_project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -8565,6 +9196,126 @@ export type Database = {
           },
         ]
       }
+      v_call_log: {
+        Row: {
+          ai_action_items: Json | null
+          ai_summary: string | null
+          answered_at: string | null
+          caller_account_number: string | null
+          caller_name: string | null
+          caller_number: string | null
+          caller_user_email: string | null
+          company_name: string | null
+          contact_name: string | null
+          created_activity_id: string | null
+          created_at: string | null
+          destination_account_number: string | null
+          destination_name: string | null
+          destination_number: string | null
+          destination_user_email: string | null
+          direction: string | null
+          duration_display: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          has_recording: boolean | null
+          has_transcription: boolean | null
+          id: string | null
+          matched_company_id: string | null
+          matched_contact_id: string | null
+          matched_project_id: string | null
+          matched_user_id: string | null
+          notes: string | null
+          organization_id: string | null
+          recording_duration_seconds: number | null
+          recording_storage_path: string | null
+          recording_url: string | null
+          ring_duration_seconds: number | null
+          sentiment: string | null
+          started_at: string | null
+          status: string | null
+          status_label: string | null
+          tags: string[] | null
+          transcription_language: string | null
+          transcription_summary: string | null
+          transcription_text: string | null
+          updated_at: string | null
+          user_name: string | null
+          voys_call_id: string | null
+          webhook_payloads: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "call_log_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_contact_id_fkey"
+            columns: ["matched_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_project_id_fkey"
+            columns: ["matched_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_matched_project_id_fkey"
+            columns: ["matched_project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "call_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_comments: {
         Row: {
           author_email: string | null
@@ -9111,6 +9862,46 @@ export type Database = {
           },
         ]
       }
+      v_upcoming_bookings: {
+        Row: {
+          cancel_token: string | null
+          duration_minutes: number | null
+          end_at: string | null
+          event_color: string | null
+          event_icon: string | null
+          event_type_name: string | null
+          guest_company: string | null
+          guest_email: string | null
+          guest_name: string | null
+          host_full_name: string | null
+          host_name: string | null
+          host_user_id: string | null
+          id: string | null
+          meeting_url: string | null
+          organization_id: string | null
+          page_slug: string | null
+          reschedule_token: string | null
+          start_at: string | null
+          status: string | null
+          urgency: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_upcoming_events: {
         Row: {
           attendee_emails: string[] | null
@@ -9155,6 +9946,13 @@ export type Database = {
         Returns: undefined
       }
       fn_daily_digest: { Args: { p_org_id: string }; Returns: Json }
+      fn_get_available_slots: {
+        Args: { p_date: string; p_event_type_slug: string; p_page_slug: string }
+        Returns: {
+          slot_end: string
+          slot_start: string
+        }[]
+      }
       fn_get_entity_context: {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: Json
@@ -9272,6 +10070,10 @@ export type Database = {
       fn_unread_notification_count: {
         Args: { p_user_id: string }
         Returns: number
+      }
+      fn_voys_process_webhook: {
+        Args: { p_org_id: string; p_payload: Json }
+        Returns: Json
       }
       generate_document_number: {
         Args: { p_entity: string; p_org_id: string; p_prefix: string }
@@ -9449,6 +10251,20 @@ export type Database = {
       mcp_project_status:
         | { Args: { p_api_key: string; p_name: string }; Returns: Json }
         | { Args: { p_name: string }; Returns: Json }
+      mcp_recent_calls: {
+        Args: { p_api_key: string; p_limit?: number }
+        Returns: {
+          bedrijf: string
+          duur: string
+          naam: string
+          nummer: string
+          opname: boolean
+          richting: string
+          status: string
+          transcriptie: boolean
+          wanneer: string
+        }[]
+      }
       mcp_search:
         | {
             Args: { p_api_key: string; p_query: string }
