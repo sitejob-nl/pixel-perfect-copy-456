@@ -37,6 +37,7 @@ import ClientPortalPage from "./pages/ClientPortalPage";
 import EmailPage from "./pages/EmailPage";
 import WhatsAppPage from "./pages/WhatsAppPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
+import TasksPage from "./pages/TasksPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
