@@ -77,7 +77,7 @@ export default function EditDealSheet({ deal, open, onOpenChange }: Props) {
             <div className="text-[11px] text-erp-text3 mb-1">Bedrijf</div>
             <InlineEditField value={deal.company_id} field="company_id" type="select" options={companyOptions} onSave={saveField} />
             {deal.company_id && (
-              <button onClick={() => navigate(`/companies/${deal.company_id}`)} className="text-[11px] text-erp-blue hover:underline mt-0.5">
+              <button onClick={() => navigate(`/klanten/${deal.company_id}`)} className="text-[11px] text-erp-blue hover:underline mt-0.5">
                 Bekijk bedrijf →
               </button>
             )}
