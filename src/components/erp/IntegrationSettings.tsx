@@ -521,17 +521,16 @@ function GoogleCard({ orgId, integration }: { orgId: string; integration: any })
 }
 
 // ─── Voys Card ────────────────────────────────────────────────
-function VoysCard({ orgId, integration, clientUuid, apiToken }: { orgId: string; integration: any; clientUuid: string; apiToken: string }) {
+function VoysCard({ orgId, integration, secrets }: { orgId: string; integration: any; secrets: any[] }) {
   const qc = useQueryClient();
   const config = integration?.config ?? {};
   const [active, setActive] = useState(integration?.is_active ?? false);
-  const [uuid, setUuid] = useState(clientUuid);
-  const [token, setToken] = useState(apiToken);
+  const [uuid, setUuid] = useState(getSecret(secrets, "voys", "client_uuid"));
+  const [token, setToken] = useState(getSecret(secrets, "voys", "api_token"));
   const [autoActivity, setAutoActivity] = useState(config.auto_create_activity ?? true);
   const [autoMatch, setAutoMatch] = useState(config.auto_match_contacts ?? true);
   const [transcriptionEnabled, setTranscriptionEnabled] = useState(config.transcription_enabled ?? true);
   const [summaryEnabled, setSummaryEnabled] = useState(config.summary_enabled ?? true);
-  const [autoAiSummary, setAutoAiSummary] = useState(config.auto_ai_summary ?? true);
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -542,21 +541,20 @@ function VoysCard({ orgId, integration, clientUuid, apiToken }: { orgId: string;
     setAutoMatch(c.auto_match_contacts ?? true);
     setTranscriptionEnabled(c.transcription_enabled ?? true);
     setSummaryEnabled(c.summary_enabled ?? true);
-    setAutoAiSummary(c.auto_ai_summary ?? true);
   }, [integration]);
-  useEffect(() => { setUuid(clientUuid); }, [clientUuid]);
-  useEffect(() => { setToken(apiToken); }, [apiToken]);
+  useEffect(() => { setUuid(getSecret(secrets, "voys", "client_uuid")); }, [secrets]);
+  useEffect(() => { setToken(getSecret(secrets, "voys", "api_token")); }, [secrets]);
 
-  const webhookUrl = config.webhook_url || `https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/voys-webhook?org_id=${orgId}`;
+  const webhookUrl = `https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/voys-webhook?org_id=${orgId}`;
 
   const { data: callStats } = useQuery({
-    queryKey: ["voys-call-stats", orgId],
+    queryKey: ["voys-stats", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { count: total } = await sb.from("call_log").select("*", { count: "exact", head: true }).eq("organization_id", orgId);
-      const { count: missed } = await sb.from("call_log").select("*", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "missed");
-      const { count: today } = await sb.from("call_log").select("*", { count: "exact", head: true }).eq("organization_id", orgId).gte("started_at", new Date().toISOString().split("T")[0]);
-      return { total: total ?? 0, missed: missed ?? 0, today: today ?? 0 };
+      const { count: total } = await sb.from("call_log").select("id", { count: "exact", head: true }).eq("organization_id", orgId);
+      const { count: today } = await sb.from("call_log").select("id", { count: "exact", head: true }).eq("organization_id", orgId).gte("started_at", new Date().toISOString().split("T")[0] + "T00:00:00");
+      const { count: transcribed } = await sb.from("call_log").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("has_transcription", true);
+      return { total: total ?? 0, today: today ?? 0, transcribed: transcribed ?? 0 };
     },
   });
 
@@ -568,13 +566,10 @@ function VoysCard({ orgId, integration, clientUuid, apiToken }: { orgId: string;
         provider: "voys",
         is_active: active,
         config: {
-          ...config,
           auto_create_activity: autoActivity,
           auto_match_contacts: autoMatch,
           transcription_enabled: transcriptionEnabled,
           summary_enabled: summaryEnabled,
-          auto_ai_summary: autoAiSummary,
-          webhook_url: webhookUrl,
         },
       }, { onConflict: "organization_id,provider" });
 
@@ -619,9 +614,8 @@ function VoysCard({ orgId, integration, clientUuid, apiToken }: { orgId: string;
       <p className="text-[12px] text-erp-text3 mb-4">Gesprekken automatisch loggen, opnames en transcripties ophalen</p>
 
       <div className="space-y-4">
-        {/* Webhook URL */}
         <div>
-          <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Webhook URL voor Voys Freedom</label>
+          <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Webhook URL</label>
           <div className="flex gap-2">
             <input
               readOnly
@@ -633,56 +627,242 @@ function VoysCard({ orgId, integration, clientUuid, apiToken }: { orgId: string;
               {copied ? "✓" : "Kopiëren"}
             </ErpButton>
           </div>
-          <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3 mt-2">
-            <p className="text-[11px] text-erp-text3 leading-relaxed">
-              Plak deze URL in Voys Freedom → Beheer → Gespreksnotificaties
-            </p>
-          </div>
         </div>
 
-        {/* API Credentials */}
-        <MaskedInput label="Client UUID" value={uuid} onChange={setUuid} placeholder="Je Voys client UUID" />
-        <MaskedInput label="API Token" value={token} onChange={setToken} placeholder="Je Voys API token" />
         <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3">
           <p className="text-[11px] text-erp-text3 leading-relaxed">
-            Vind je Client UUID en API Token in Voys Freedom → Persoonlijke instellingen. Nodig voor het ophalen van gespreksopnames en transcripties.
+            Kopieer deze URL naar Voys Freedom → Beheer → Gespreksnotificaties.<br />
+            Client UUID en API Token vind je onder Voys Freedom → Beheer → Intelligence.
           </p>
         </div>
 
-        {/* Automation toggles */}
+        <MaskedInput label="Client UUID" value={uuid} onChange={setUuid} placeholder="Je Voys client UUID" />
+        <MaskedInput label="API Token" value={token} onChange={setToken} placeholder="Je Voys API token" />
+
         <div className="flex items-center justify-between">
-          <label className="text-[12px] font-medium text-erp-text2">Gesprekken automatisch loggen</label>
+          <label className="text-[12px] font-medium text-erp-text2">Automatisch activiteiten aanmaken</label>
           <Switch checked={autoActivity} onCheckedChange={setAutoActivity} />
         </div>
         <div className="flex items-center justify-between">
-          <label className="text-[12px] font-medium text-erp-text2">Contact matching op telefoonnummer</label>
+          <label className="text-[12px] font-medium text-erp-text2">Contacten automatisch matchen</label>
           <Switch checked={autoMatch} onCheckedChange={setAutoMatch} />
         </div>
         <div className="flex items-center justify-between">
-          <label className="text-[12px] font-medium text-erp-text2">Transcripties ophalen na gesprek</label>
+          <label className="text-[12px] font-medium text-erp-text2">Transcriptie ophalen</label>
           <Switch checked={transcriptionEnabled} onCheckedChange={setTranscriptionEnabled} />
         </div>
         <div className="flex items-center justify-between">
-          <label className="text-[12px] font-medium text-erp-text2">Samenvattingen ophalen</label>
+          <label className="text-[12px] font-medium text-erp-text2">AI samenvatting</label>
           <Switch checked={summaryEnabled} onCheckedChange={setSummaryEnabled} />
         </div>
-        <div className="flex items-center justify-between">
-          <label className="text-[12px] font-medium text-erp-text2">AI analyse van gesprekken</label>
-          <Switch checked={autoAiSummary} onCheckedChange={setAutoAiSummary} />
-        </div>
 
-        {/* Statistics */}
         {callStats && (
-          <div className="space-y-1">
-            <p className="text-[11px] text-erp-text3">📊 {callStats.total} gesprekken gelogd</p>
-            <p className="text-[11px] text-erp-text3">📞 {callStats.today} gesprekken vandaag</p>
-            <p className="text-[11px] text-erp-text3">❌ {callStats.missed} gemiste gesprekken</p>
-          </div>
+          <p className="text-[11px] text-erp-text3">
+            📞 {callStats.total} gesprekken · 📝 {callStats.transcribed} transcripties · Vandaag: {callStats.today}
+          </p>
         )}
 
         <div className="flex gap-2 pt-1">
           <ErpButton primary onClick={save} disabled={saving}>
             {saving && <Loader2 size={14} className="animate-spin" />} Opslaan
+          </ErpButton>
+        </div>
+      </div>
+    </ErpCard>
+  );
+}
+
+// ─── Cloudflare Card ──────────────────────────────────────────
+function CloudflareCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
+  const qc = useQueryClient();
+  const [accountId, setAccountId] = useState(getSecret(secrets, "cloudflare", "account_id"));
+  const [apiToken, setApiToken] = useState(getSecret(secrets, "cloudflare", "api_token"));
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    setAccountId(getSecret(secrets, "cloudflare", "account_id"));
+    setApiToken(getSecret(secrets, "cloudflare", "api_token"));
+  }, [secrets]);
+
+  const { data: crawlStats } = useQuery({
+    queryKey: ["cf-stats", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { count } = await sb.from("crawl_jobs").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "completed");
+      return { total: count ?? 0 };
+    },
+  });
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      if (accountId) {
+        await sb.from("integration_secrets").upsert({
+          organization_id: orgId, provider: "cloudflare", secret_key: "account_id", secret_value: accountId,
+        }, { onConflict: "organization_id,provider,secret_key" });
+      }
+      if (apiToken) {
+        await sb.from("integration_secrets").upsert({
+          organization_id: orgId, provider: "cloudflare", secret_key: "api_token", secret_value: apiToken,
+        }, { onConflict: "organization_id,provider,secret_key" });
+      }
+      qc.invalidateQueries({ queryKey: ["integration-secrets"] });
+      toast.success("Cloudflare instellingen opgeslagen");
+    } catch (e: any) {
+      toast.error("Fout bij opslaan: " + (e.message ?? "Onbekend"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testConnection = async () => {
+    setTesting(true);
+    try {
+      const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, {
+        headers: { Authorization: `Bearer ${apiToken}` },
+      });
+      const data = await res.json();
+      if (data.success) toast.success("Cloudflare verbinding werkt");
+      else toast.error("Ongeldige credentials");
+    } catch (e: any) {
+      toast.error("Test mislukt: " + e.message);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <ErpCard className="p-5">
+      <div className="flex items-center gap-2.5 mb-4">
+        <span className="text-lg">🌐</span>
+        <h3 className="text-[15px] font-semibold text-erp-text0">Cloudflare</h3>
+      </div>
+      <p className="text-[12px] text-erp-text3 mb-4">Browser Rendering API voor website crawling</p>
+
+      <div className="space-y-4">
+        <MaskedInput label="Account ID" value={accountId} onChange={setAccountId} placeholder="Cloudflare Account ID" />
+        <MaskedInput label="API Token" value={apiToken} onChange={setApiToken} placeholder="Cloudflare API Token" />
+
+        <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3">
+          <p className="text-[11px] text-erp-text3 leading-relaxed">
+            Maak een API token aan op{" "}
+            <a href="https://dash.cloudflare.com" target="_blank" rel="noopener" className="text-erp-blue hover:underline">
+              dash.cloudflare.com
+            </a>
+            {" "}→ Manage Account → Account API Tokens.<br />
+            Permission: Account → Browser Rendering → Edit.<br />
+            Account ID staat in de URL van je Cloudflare dashboard.
+          </p>
+        </div>
+
+        {crawlStats && (
+          <p className="text-[11px] text-erp-text3">🌐 {crawlStats.total} websites gecrawld</p>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <ErpButton primary onClick={save} disabled={saving}>
+            {saving && <Loader2 size={14} className="animate-spin" />} Opslaan
+          </ErpButton>
+          <ErpButton onClick={testConnection} disabled={testing || !accountId || !apiToken}>
+            {testing && <Loader2 size={14} className="animate-spin" />} Test verbinding
+          </ErpButton>
+        </div>
+      </div>
+    </ErpCard>
+  );
+}
+
+// ─── Gemini Card ──────────────────────────────────────────────
+function GeminiCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
+  const qc = useQueryClient();
+  const [apiKey, setApiKey] = useState(getSecret(secrets, "google", "gemini_api_key"));
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    setApiKey(getSecret(secrets, "google", "gemini_api_key"));
+  }, [secrets]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      if (apiKey) {
+        await sb.from("integration_secrets").upsert({
+          organization_id: orgId, provider: "google", secret_key: "gemini_api_key", secret_value: apiKey,
+        }, { onConflict: "organization_id,provider,secret_key" });
+      }
+      qc.invalidateQueries({ queryKey: ["integration-secrets"] });
+      toast.success("Gemini instellingen opgeslagen");
+    } catch (e: any) {
+      toast.error("Fout bij opslaan: " + (e.message ?? "Onbekend"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testKey = async () => {
+    setTesting(true);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: "Zeg alleen: OK" }] }],
+            generationConfig: { maxOutputTokens: 10 },
+          }),
+        }
+      );
+      const data = await res.json();
+      if (data.candidates?.[0]) toast.success("Gemini API key werkt");
+      else toast.error("Ongeldig antwoord van Gemini");
+    } catch (e: any) {
+      toast.error("Test mislukt: " + e.message);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <ErpCard className="p-5">
+      <div className="flex items-center gap-2.5 mb-4">
+        <span className="text-lg">🤖</span>
+        <h3 className="text-[15px] font-semibold text-erp-text0">Gemini AI</h3>
+      </div>
+      <p className="text-[12px] text-erp-text3 mb-4">Google Gemini modellen voor demo generatie en analyse</p>
+
+      <div className="space-y-4">
+        <MaskedInput label="Gemini API Key" value={apiKey} onChange={setApiKey} placeholder="AIza..." />
+
+        <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3">
+          <p className="text-[11px] text-erp-text3 leading-relaxed">
+            Maak een API key aan op{" "}
+            <a href="https://aistudio.google.com" target="_blank" rel="noopener" className="text-erp-blue hover:underline">
+              aistudio.google.com
+            </a>
+            {" "}→ Get API Key.<br />
+            Wordt gebruikt voor demo generatie en website analyse.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-medium text-erp-text2">Modellen:</span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-erp-bg4 border border-erp-border0 text-[10px] text-erp-text1">
+            Gemini 2.5 Pro · Generatie
+          </span>
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-erp-bg4 border border-erp-border0 text-[10px] text-erp-text1">
+            Gemini 2.0 Flash · Analyse
+          </span>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <ErpButton primary onClick={save} disabled={saving}>
+            {saving && <Loader2 size={14} className="animate-spin" />} Opslaan
+          </ErpButton>
+          <ErpButton onClick={testKey} disabled={testing || !apiKey}>
+            {testing && <Loader2 size={14} className="animate-spin" />} Test API Key
           </ErpButton>
         </div>
       </div>
@@ -711,15 +891,15 @@ export default function IntegrationSettings() {
   const voysInt = getIntegration(integrations ?? [], "voys");
   const slackWebhook = getSecret(secrets ?? [], "slack", "webhook_url");
   const kvkApiKey = getSecret(secrets ?? [], "kvk", "api_key");
-  const voysClientUuid = getSecret(secrets ?? [], "voys", "client_uuid");
-  const voysApiToken = getSecret(secrets ?? [], "voys", "api_token");
 
   return (
     <div className="space-y-4">
+      <GeminiCard orgId={orgId!} secrets={secrets ?? []} />
+      <VoysCard orgId={orgId!} integration={voysInt} secrets={secrets ?? []} />
+      <CloudflareCard orgId={orgId!} secrets={secrets ?? []} />
       <SlackCard orgId={orgId!} integration={slackInt} secret={slackWebhook} />
       <KvkCard orgId={orgId!} integration={kvkInt} secret={kvkApiKey} />
       <GoogleCard orgId={orgId!} integration={googleInt} />
-      <VoysCard orgId={orgId!} integration={voysInt} clientUuid={voysClientUuid} apiToken={voysApiToken} />
     </div>
   );
 }
