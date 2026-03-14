@@ -18,6 +18,7 @@ interface Props {
     defaultContactId?: string;
     defaultCompanyId?: string;
     defaultDealId?: string;
+    defaultProjectId?: string;
 }
 
 const activityTypes = [
@@ -46,7 +47,7 @@ const priorityOptions = [
     { value: "urgent", label: "Urgent" },
 ];
 
-export default function CreateActivityDialog({ open, onOpenChange, defaultContactId, defaultCompanyId, defaultDealId }: Props) {
+export default function CreateActivityDialog({ open, onOpenChange, defaultContactId, defaultCompanyId, defaultDealId, defaultProjectId }: Props) {
     const [activityType, setActivityType] = useState("call");
     const [subject, setSubject] = useState("");
     const [description, setDescription] = useState("");
@@ -101,6 +102,7 @@ export default function CreateActivityDialog({ open, onOpenChange, defaultContac
                 contact_id: contactId || null,
                 company_id: companyId || null,
                 deal_id: defaultDealId || null,
+                project_id: defaultProjectId || null,
                 organization_id: orgMembership.organization_id,
                 user_id: orgMembership.user_id,
                 completed_at: status === "completed" ? new Date().toISOString() : null,

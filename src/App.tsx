@@ -26,6 +26,7 @@ import AdminPage from "./pages/AdminPage";
 import SettingsPage from "./pages/SettingsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import ContractsPage from "./pages/ContractsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ContractSigningPage from "./pages/ContractSigningPage";
 import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
@@ -153,6 +154,7 @@ const App = () => (
               <Route path="companies" element={<CompaniesPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
               <Route path="projects" element={<ProjectsPage />} />
+              <Route path="projects/:id" element={<ProjectDetailPage />} />
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="quotes" element={<QuotesPage />} />
               <Route path="contracts" element={<ContractsPage />} />
