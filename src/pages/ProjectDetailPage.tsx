@@ -10,6 +10,7 @@ import { nl } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
+import CommentsSection from "@/components/erp/CommentsSection";
 import { projStatus } from "@/data/mockData";
 
 export default function ProjectDetailPage() {
