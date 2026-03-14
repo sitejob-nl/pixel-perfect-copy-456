@@ -773,6 +773,110 @@ function CloudflareCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
   );
 }
 
+// ─── Firecrawl Card ───────────────────────────────────────────
+function FirecrawlCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
+  const qc = useQueryClient();
+  const [apiKey, setApiKey] = useState(getSecret(secrets, "firecrawl", "api_key"));
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    setApiKey(getSecret(secrets, "firecrawl", "api_key"));
+  }, [secrets]);
+
+  const { data: crawlStats } = useQuery({
+    queryKey: ["fc-stats", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { count } = await sb.from("crawl_jobs").select("id", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "completed");
+      return { total: count ?? 0 };
+    },
+  });
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      if (apiKey) {
+        await sb.from("integration_secrets").upsert({
+          organization_id: orgId, provider: "firecrawl", secret_key: "api_key", secret_value: apiKey,
+        }, { onConflict: "organization_id,provider,secret_key" });
+      }
+      qc.invalidateQueries({ queryKey: ["integration-secrets"] });
+      toast.success("Firecrawl instellingen opgeslagen");
+    } catch (e: any) {
+      toast.error("Fout bij opslaan: " + (e.message ?? "Onbekend"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const testKey = async () => {
+    setTesting(true);
+    try {
+      const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ url: "https://example.com", formats: ["markdown"], onlyMainContent: true }),
+      });
+      const data = await res.json();
+      if (data.success) toast.success("Firecrawl API key werkt");
+      else toast.error("Ongeldige API key");
+    } catch (e: any) {
+      toast.error("Test mislukt: " + e.message);
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <ErpCard className="p-5">
+      <div className="flex items-center gap-2.5 mb-4">
+        <span className="text-lg">🔥</span>
+        <h3 className="text-[15px] font-semibold text-erp-text0">Firecrawl</h3>
+      </div>
+      <p className="text-[12px] text-erp-text3 mb-4">Website scraping: branding, afbeeldingen, content en bedrijfsinformatie</p>
+
+      <div className="space-y-4">
+        <MaskedInput label="API Key" value={apiKey} onChange={setApiKey} placeholder="fc-..." />
+
+        <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3">
+          <p className="text-[11px] text-erp-text3 leading-relaxed">
+            Maak een API key aan op{" "}
+            <a href="https://firecrawl.dev" target="_blank" rel="noopener" className="text-erp-blue hover:underline">
+              firecrawl.dev
+            </a>
+            {" "}→ Dashboard → API Keys.<br />
+            Wordt gebruikt voor website scraping: branding, afbeeldingen, content, en bedrijfsinformatie in één call.<br />
+            Vervangt Cloudflare Browser Rendering.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-medium text-erp-text2">Features:</span>
+          {["Branding extractie", "Afbeeldingen", "Structured data", "Markdown", "Samenvatting"].map((f) => (
+            <span key={f} className="inline-flex items-center px-2 py-0.5 rounded-full bg-erp-bg4 border border-erp-border0 text-[10px] text-erp-text1">
+              {f}
+            </span>
+          ))}
+        </div>
+
+        {crawlStats && (
+          <p className="text-[11px] text-erp-text3">🔥 {crawlStats.total} websites gescraped</p>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <ErpButton primary onClick={save} disabled={saving}>
+            {saving && <Loader2 size={14} className="animate-spin" />} Opslaan
+          </ErpButton>
+          <ErpButton onClick={testKey} disabled={testing || !apiKey}>
+            {testing && <Loader2 size={14} className="animate-spin" />} Test API Key
+          </ErpButton>
+        </div>
+      </div>
+    </ErpCard>
+  );
+}
+
 // ─── Gemini Card ──────────────────────────────────────────────
 function GeminiCard({ orgId, secrets }: { orgId: string; secrets: any[] }) {
   const qc = useQueryClient();
@@ -894,6 +998,7 @@ export default function IntegrationSettings() {
 
   return (
     <div className="space-y-4">
+      <FirecrawlCard orgId={orgId!} secrets={secrets ?? []} />
       <GeminiCard orgId={orgId!} secrets={secrets ?? []} />
       <VoysCard orgId={orgId!} integration={voysInt} secrets={secrets ?? []} />
       <CloudflareCard orgId={orgId!} secrets={secrets ?? []} />
