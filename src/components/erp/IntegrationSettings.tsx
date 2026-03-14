@@ -521,25 +521,44 @@ function GoogleCard({ orgId, integration }: { orgId: string; integration: any })
 }
 
 // ─── Voys Card ────────────────────────────────────────────────
-function VoysCard({ orgId, integration }: { orgId: string; integration: any }) {
+function VoysCard({ orgId, integration, clientUuid, apiToken }: { orgId: string; integration: any; clientUuid: string; apiToken: string }) {
   const qc = useQueryClient();
   const config = integration?.config ?? {};
   const [active, setActive] = useState(integration?.is_active ?? false);
-  const [autoLog, setAutoLog] = useState(config.auto_create_activity ?? true);
+  const [uuid, setUuid] = useState(clientUuid);
+  const [token, setToken] = useState(apiToken);
+  const [autoActivity, setAutoActivity] = useState(config.auto_create_activity ?? true);
   const [autoMatch, setAutoMatch] = useState(config.auto_match_contacts ?? true);
-  const [autoAi, setAutoAi] = useState(config.auto_ai_summary ?? false);
+  const [transcriptionEnabled, setTranscriptionEnabled] = useState(config.transcription_enabled ?? true);
+  const [summaryEnabled, setSummaryEnabled] = useState(config.summary_enabled ?? true);
+  const [autoAiSummary, setAutoAiSummary] = useState(config.auto_ai_summary ?? true);
   const [saving, setSaving] = useState(false);
-
-  const webhookSecret = config.webhook_secret || crypto.randomUUID?.() || Math.random().toString(36).slice(2);
-  const webhookUrl = `https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/voys-webhook?org_id=${orgId}&secret=${webhookSecret}`;
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setActive(integration?.is_active ?? false);
     const c = integration?.config ?? {};
-    setAutoLog(c.auto_create_activity ?? true);
+    setAutoActivity(c.auto_create_activity ?? true);
     setAutoMatch(c.auto_match_contacts ?? true);
-    setAutoAi(c.auto_ai_summary ?? false);
+    setTranscriptionEnabled(c.transcription_enabled ?? true);
+    setSummaryEnabled(c.summary_enabled ?? true);
+    setAutoAiSummary(c.auto_ai_summary ?? true);
   }, [integration]);
+  useEffect(() => { setUuid(clientUuid); }, [clientUuid]);
+  useEffect(() => { setToken(apiToken); }, [apiToken]);
+
+  const webhookUrl = config.webhook_url || `https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/voys-webhook?org_id=${orgId}`;
+
+  const { data: callStats } = useQuery({
+    queryKey: ["voys-call-stats", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { count: total } = await sb.from("call_log").select("*", { count: "exact", head: true }).eq("organization_id", orgId);
+      const { count: missed } = await sb.from("call_log").select("*", { count: "exact", head: true }).eq("organization_id", orgId).eq("status", "missed");
+      const { count: today } = await sb.from("call_log").select("*", { count: "exact", head: true }).eq("organization_id", orgId).gte("started_at", new Date().toISOString().split("T")[0]);
+      return { total: total ?? 0, missed: missed ?? 0, today: today ?? 0 };
+    },
+  });
 
   const save = async () => {
     setSaving(true);
@@ -549,19 +568,42 @@ function VoysCard({ orgId, integration }: { orgId: string; integration: any }) {
         provider: "voys",
         is_active: active,
         config: {
-          webhook_secret: webhookSecret,
-          auto_create_activity: autoLog,
+          ...config,
+          auto_create_activity: autoActivity,
           auto_match_contacts: autoMatch,
-          auto_ai_summary: autoAi,
+          transcription_enabled: transcriptionEnabled,
+          summary_enabled: summaryEnabled,
+          auto_ai_summary: autoAiSummary,
+          webhook_url: webhookUrl,
         },
       }, { onConflict: "organization_id,provider" });
+
+      if (uuid) {
+        await sb.from("integration_secrets").upsert({
+          organization_id: orgId, provider: "voys", secret_key: "client_uuid", secret_value: uuid,
+        }, { onConflict: "organization_id,provider,secret_key" });
+      }
+      if (token) {
+        await sb.from("integration_secrets").upsert({
+          organization_id: orgId, provider: "voys", secret_key: "api_token", secret_value: token,
+        }, { onConflict: "organization_id,provider,secret_key" });
+      }
+
       qc.invalidateQueries({ queryKey: ["integrations"] });
+      qc.invalidateQueries({ queryKey: ["integration-secrets"] });
       toast.success("Voys instellingen opgeslagen");
     } catch (e: any) {
       toast.error("Fout bij opslaan: " + (e.message ?? "Onbekend"));
     } finally {
       setSaving(false);
     }
+  };
+
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    toast.success("Webhook URL gekopieerd");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -574,45 +616,69 @@ function VoysCard({ orgId, integration }: { orgId: string; integration: any }) {
         </div>
         <Switch checked={active} onCheckedChange={setActive} />
       </div>
-      <p className="text-[12px] text-erp-text3 mb-4">Gesprekken automatisch loggen, opnames en transcripties</p>
+      <p className="text-[12px] text-erp-text3 mb-4">Gesprekken automatisch loggen, opnames en transcripties ophalen</p>
 
       <div className="space-y-4">
+        {/* Webhook URL */}
         <div>
-          <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Webhook URL</label>
+          <label className="block text-[12px] font-medium text-erp-text2 mb-1.5">Webhook URL voor Voys Freedom</label>
           <div className="flex gap-2">
             <input
-              type="text"
               readOnly
               value={webhookUrl}
-              className="flex-1 bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-2 text-[11px] text-erp-text1 font-mono"
+              className="flex-1 bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-[11px] text-erp-text1 font-mono focus:outline-none cursor-text select-all"
+              onClick={(e) => (e.target as HTMLInputElement).select()}
             />
-            <button
-              onClick={() => { navigator.clipboard.writeText(webhookUrl); toast.success("Webhook URL gekopieerd"); }}
-              className="p-2 rounded-lg bg-erp-bg3 border border-erp-border0 text-erp-text2 hover:text-erp-text0"
-            >
-              <Pencil size={14} />
-            </button>
+            <ErpButton onClick={copyWebhookUrl}>
+              {copied ? "✓" : "Kopiëren"}
+            </ErpButton>
+          </div>
+          <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3 mt-2">
+            <p className="text-[11px] text-erp-text3 leading-relaxed">
+              Plak deze URL in Voys Freedom → Beheer → Gespreksnotificaties
+            </p>
           </div>
         </div>
 
+        {/* API Credentials */}
+        <MaskedInput label="Client UUID" value={uuid} onChange={setUuid} placeholder="Je Voys client UUID" />
+        <MaskedInput label="API Token" value={token} onChange={setToken} placeholder="Je Voys API token" />
+        <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3">
+          <p className="text-[11px] text-erp-text3 leading-relaxed">
+            Vind je Client UUID en API Token in Voys Freedom → Persoonlijke instellingen. Nodig voor het ophalen van gespreksopnames en transcripties.
+          </p>
+        </div>
+
+        {/* Automation toggles */}
         <div className="flex items-center justify-between">
-          <label className="text-[12px] font-medium text-erp-text2">Automatisch gesprekken loggen</label>
-          <Switch checked={autoLog} onCheckedChange={setAutoLog} />
+          <label className="text-[12px] font-medium text-erp-text2">Gesprekken automatisch loggen</label>
+          <Switch checked={autoActivity} onCheckedChange={setAutoActivity} />
         </div>
         <div className="flex items-center justify-between">
-          <label className="text-[12px] font-medium text-erp-text2">Contact matching</label>
+          <label className="text-[12px] font-medium text-erp-text2">Contact matching op telefoonnummer</label>
           <Switch checked={autoMatch} onCheckedChange={setAutoMatch} />
         </div>
         <div className="flex items-center justify-between">
-          <label className="text-[12px] font-medium text-erp-text2">AI samenvatting</label>
-          <Switch checked={autoAi} onCheckedChange={setAutoAi} />
+          <label className="text-[12px] font-medium text-erp-text2">Transcripties ophalen na gesprek</label>
+          <Switch checked={transcriptionEnabled} onCheckedChange={setTranscriptionEnabled} />
+        </div>
+        <div className="flex items-center justify-between">
+          <label className="text-[12px] font-medium text-erp-text2">Samenvattingen ophalen</label>
+          <Switch checked={summaryEnabled} onCheckedChange={setSummaryEnabled} />
+        </div>
+        <div className="flex items-center justify-between">
+          <label className="text-[12px] font-medium text-erp-text2">AI analyse van gesprekken</label>
+          <Switch checked={autoAiSummary} onCheckedChange={setAutoAiSummary} />
         </div>
 
-        <div className="bg-erp-bg3 border border-erp-border0 rounded-lg p-3">
-          <p className="text-[11px] text-erp-text3 leading-relaxed">
-            Configureer deze webhook URL in je Voys Freedom onder Gespreksnotificaties. Alle inkomende en uitgaande gesprekken worden automatisch gelogd.
-          </p>
-        </div>
+        {/* Statistics */}
+        {callStats && (
+          <div className="space-y-1">
+            <p className="text-[11px] text-erp-text3">📊 {callStats.total} gesprekken gelogd</p>
+            <p className="text-[11px] text-erp-text3">📞 {callStats.today} gesprekken vandaag</p>
+            <p className="text-[11px] text-erp-text3">❌ {callStats.missed} gemiste gesprekken</p>
+          </div>
+        )}
 
         <div className="flex gap-2 pt-1">
           <ErpButton primary onClick={save} disabled={saving}>
