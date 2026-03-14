@@ -3,13 +3,31 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader, ErpButton, ErpCard, StatCard, Badge, Dot, TH, TD, TR, fmt, FilterButton, Chip } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { projStatus, invStatus } from "@/data/mockData";
-import { useProjects, useDeleteProject } from "@/hooks/useProjects";
+import { useProjects, useDeleteProject, useUpdateProject } from "@/hooks/useProjects";
 import { useInvoices, useUpdateInvoice, useDeleteInvoice } from "@/hooks/useInvoices";
 import CreateProjectDialog from "@/components/erp/CreateProjectDialog";
 import CreateInvoiceDialog from "@/components/erp/CreateInvoiceDialog";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const statusOptions = Object.entries(projStatus);
+const priorityOptions = [
+  { value: "low", label: "Laag" },
+  { value: "medium", label: "Normaal" },
+  { value: "high", label: "Hoog" },
+  { value: "urgent", label: "Urgent" },
+];
 
 type ProjFilter = "all" | "active" | "delivered" | "dev" | "intern";
 
@@ -18,6 +36,7 @@ export function ProjectsPage() {
   const [filter, setFilter] = useState<ProjFilter>("all");
   const { data: projects = [], isLoading } = useProjects();
   const deleteProject = useDeleteProject();
+  const updateProject = useUpdateProject();
   const navigate = useNavigate();
 
   const activeCount = projects.filter(p => p.status === "in_progress").length;
@@ -32,6 +51,20 @@ export function ProjectsPage() {
     }
     return result;
   }, [projects, filter]);
+
+  const handleStatusChange = (projectId: string, newStatus: string) => {
+    updateProject.mutate(
+      { id: projectId, status: newStatus },
+      { onSuccess: () => toast.success(`Status → ${projStatus[newStatus]?.[0] ?? newStatus}`) }
+    );
+  };
+
+  const handlePriorityChange = (projectId: string, newPriority: string) => {
+    updateProject.mutate(
+      { id: projectId, priority: newPriority },
+      { onSuccess: () => toast.success(`Prioriteit → ${priorityOptions.find(o => o.value === newPriority)?.label ?? newPriority}`) }
+    );
+  };
 
   return (
     <div className="animate-fade-up max-w-[1200px]">
@@ -87,12 +120,67 @@ export function ProjectsPage() {
                       </div>
                     </TD>
                     <TD>
-                      <button
-                        onClick={e => { e.stopPropagation(); if (confirm("Project verwijderen?")) deleteProject.mutate(p.id, { onSuccess: () => toast.success("Verwijderd") }); }}
-                        className="text-erp-text3 hover:text-erp-red transition-colors p-1"
-                      >
-                        <Icons.Trash className="w-3.5 h-3.5" />
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            onClick={e => e.stopPropagation()}
+                            className="text-erp-text3 hover:text-erp-text1 transition-colors p-1 rounded hover:bg-erp-bg3"
+                          >
+                            <Icons.More className="w-4 h-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-erp-bg3 border-erp-border0 text-erp-text0 min-w-[180px]" align="end">
+                          <DropdownMenuItem
+                            className="text-[13px] focus:bg-erp-hover cursor-pointer"
+                            onClick={(e) => { e.stopPropagation(); navigate(`/projects/${p.id}`); }}
+                          >
+                            <Icons.ExternalLink className="w-3.5 h-3.5 mr-2" /> Bekijken
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-erp-border0" />
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="text-[13px] focus:bg-erp-hover cursor-pointer">
+                              <Dot color={sc} size={5} /> Status wijzigen
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="bg-erp-bg3 border-erp-border0">
+                              {statusOptions.map(([key, [label, color]]) => (
+                                <DropdownMenuItem
+                                  key={key}
+                                  className="text-[13px] focus:bg-erp-hover cursor-pointer"
+                                  onClick={(e) => { e.stopPropagation(); handleStatusChange(p.id, key); }}
+                                >
+                                  <Dot color={color} size={5} /> {label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="text-[13px] focus:bg-erp-hover cursor-pointer">
+                              Prioriteit
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent className="bg-erp-bg3 border-erp-border0">
+                              {priorityOptions.map(o => (
+                                <DropdownMenuItem
+                                  key={o.value}
+                                  className="text-[13px] focus:bg-erp-hover cursor-pointer"
+                                  onClick={(e) => { e.stopPropagation(); handlePriorityChange(p.id, o.value); }}
+                                >
+                                  {o.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuSeparator className="bg-erp-border0" />
+                          <DropdownMenuItem
+                            className="text-[13px] text-erp-red focus:bg-erp-hover cursor-pointer focus:text-erp-red"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm("Project verwijderen?")) deleteProject.mutate(p.id, { onSuccess: () => toast.success("Verwijderd") });
+                            }}
+                          >
+                            <Icons.Trash className="w-3.5 h-3.5 mr-2" /> Verwijderen
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TD>
                   </TR>
                 );

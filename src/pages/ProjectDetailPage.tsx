@@ -12,7 +12,38 @@ import { toast } from "sonner";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
 import CommentsSection from "@/components/erp/CommentsSection";
 import AiSummaryCard from "@/components/erp/AiSummaryCard";
+import InlineEditField from "@/components/erp/InlineEditField";
 import { projStatus } from "@/data/mockData";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useOrgMembers } from "@/hooks/useTeam";
+
+const statusOptions = Object.entries(projStatus).map(([k, [label]]) => ({ value: k, label }));
+const priorityOptions = [
+  { value: "low", label: "Laag" },
+  { value: "medium", label: "Normaal" },
+  { value: "high", label: "Hoog" },
+  { value: "urgent", label: "Urgent" },
+];
+const billingOptions = [
+  { value: "monthly", label: "Maandelijks" },
+  { value: "quarterly", label: "Per kwartaal" },
+  { value: "yearly", label: "Jaarlijks" },
+];
+const slaOptions = [
+  { value: "standard", label: "Standard" },
+  { value: "premium", label: "Premium" },
+  { value: "enterprise", label: "Enterprise" },
+];
+const serviceTypeOptions = [
+  { value: "website", label: "Website" },
+  { value: "webshop", label: "Webshop" },
+  { value: "platform", label: "Platform" },
+  { value: "maatwerk", label: "Maatwerk" },
+  { value: "dashboard", label: "Dashboard" },
+  { value: "saas", label: "SaaS" },
+  { value: "intern", label: "Intern" },
+  { value: "other", label: "Anders" },
+];
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +54,8 @@ export default function ProjectDetailPage() {
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
   const qc = useQueryClient();
+  const { data: membersData } = useOrgMembers();
+  const members = membersData?.members ?? [];
 
   const { data: project, isLoading } = useQuery({
     queryKey: ["project-detail", id],
@@ -98,6 +131,14 @@ export default function ProjectDetailPage() {
     },
   });
 
+  const saveField = async (field: string, value: any) => {
+    const { error } = await supabase.from("projects").update({ [field]: value }).eq("id", id!);
+    if (error) { toast.error("Fout bij opslaan"); throw error; }
+    qc.invalidateQueries({ queryKey: ["project-detail", id] });
+    qc.invalidateQueries({ queryKey: ["projects"] });
+    toast.success("Opgeslagen");
+  };
+
   if (isLoading) return <ErpCard className="p-8 text-center text-erp-text2 text-sm">Laden...</ErpCard>;
   if (!project) return <ErpCard className="p-8 text-center text-erp-text3 text-sm">Project niet gevonden</ErpCard>;
 
@@ -114,6 +155,8 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const assignedMember = members.find(m => m.user_id === project.assigned_to);
+
   return (
     <div className="animate-fade-up max-w-[1200px]">
       <div className="flex items-center gap-2 mb-2">
@@ -129,10 +172,25 @@ export default function ProjectDetailPage() {
         </ErpButton>
       </PageHeader>
 
-      <div className="flex items-center gap-3 mb-5">
-        <Badge color={statusColor}><Dot color={statusColor} size={5} />{statusLabel}</Badge>
-        {project.priority && <Chip>{project.priority}</Chip>}
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        {/* Quick status switcher */}
+        <Select value={project.status} onValueChange={(v) => saveField("status", v)}>
+          <SelectTrigger className="h-auto px-0 py-0 bg-transparent border-none w-auto min-w-0 focus:ring-0 focus:ring-offset-0 gap-0">
+            <Badge color={statusColor}><Dot color={statusColor} size={5} />{statusLabel}</Badge>
+          </SelectTrigger>
+          <SelectContent className="bg-erp-bg3 border-erp-border0">
+            {statusOptions.map(o => (
+              <SelectItem key={o.value} value={o.value} className="text-erp-text0 text-[13px] focus:bg-erp-hover">
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {project.priority && <Chip>{priorityOptions.find(o => o.value === project.priority)?.label ?? project.priority}</Chip>}
         {project.companies?.name && <Chip>{project.companies.name}</Chip>}
+        {assignedMember && (
+          <Chip>👤 {assignedMember.profiles?.full_name ?? assignedMember.profiles?.email ?? "—"}</Chip>
+        )}
       </div>
 
       <ErpTabs
@@ -147,39 +205,74 @@ export default function ProjectDetailPage() {
           <ErpCard className="p-5">
             <div className="text-[14px] font-semibold mb-4">Details</div>
             <div className="grid grid-cols-3 gap-4">
-              {[
-                ["Geschatte waarde", project.estimated_value ? `€${fmt(project.estimated_value)}` : "—"],
-                ["Werkelijke waarde", project.actual_value ? `€${fmt(project.actual_value)}` : "—"],
-                ["MRR", project.monthly_amount ? `€${fmt(project.monthly_amount)}` : "—"],
-                ["Facturatie", project.billing_frequency ?? "—"],
-                ["Contract start", project.contract_start ? format(new Date(project.contract_start), "d MMM yyyy") : "—"],
-                ["Contract einde", project.contract_end ? format(new Date(project.contract_end), "d MMM yyyy") : "—"],
-                ["Opzegtermijn", project.notice_period_days ? `${project.notice_period_days} dagen` : "—"],
-                ["SLA", project.sla_level ?? "—"],
-                ["Toegewezen aan", project.assigned_to ?? "—"],
-              ].map(([label, value]) => (
-                <div key={label as string}>
-                  <div className="text-[11px] text-erp-text3 mb-1">{label}</div>
-                  <div className="text-[13px] text-erp-text0">{value}</div>
-                </div>
-              ))}
-              {project.preview_url && (
-                <div>
-                  <div className="text-[11px] text-erp-text3 mb-1">Preview URL</div>
-                  <a href={project.preview_url} target="_blank" rel="noopener" className="text-[13px] text-erp-blue hover:underline truncate block">
-                    {project.preview_url.replace(/^https?:\/\//, "")}
-                  </a>
-                </div>
-              )}
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Status</div>
+                <InlineEditField value={project.status} field="status" type="select" options={statusOptions} onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Prioriteit</div>
+                <InlineEditField value={project.priority} field="priority" type="select" options={priorityOptions} onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Geschatte waarde</div>
+                <InlineEditField value={project.estimated_value} field="estimated_value" type="number" prefix="€" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Werkelijke waarde</div>
+                <InlineEditField value={project.actual_value} field="actual_value" type="number" prefix="€" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">MRR</div>
+                <InlineEditField value={project.monthly_amount} field="monthly_amount" type="number" prefix="€" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Facturatie</div>
+                <InlineEditField value={project.billing_frequency} field="billing_frequency" type="select" options={billingOptions} onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Contract start</div>
+                <InlineEditField value={project.contract_start} field="contract_start" type="date" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Contract einde</div>
+                <InlineEditField value={project.contract_end} field="contract_end" type="date" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Opzegtermijn</div>
+                <InlineEditField value={project.notice_period_days} field="notice_period_days" type="number" suffix=" dagen" onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">SLA</div>
+                <InlineEditField value={project.sla_level} field="sla_level" type="select" options={slaOptions} onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Service type</div>
+                <InlineEditField value={project.service_type} field="service_type" type="select" options={serviceTypeOptions} onSave={saveField} />
+              </div>
+              <div className="group">
+                <div className="text-[11px] text-erp-text3 mb-1">Toegewezen aan</div>
+                <InlineEditField
+                  value={project.assigned_to}
+                  field="assigned_to"
+                  type="select"
+                  options={members.map(m => ({
+                    value: m.user_id,
+                    label: m.profiles?.full_name ?? m.profiles?.email ?? "—",
+                  }))}
+                  onSave={saveField}
+                />
+              </div>
+              <div className="group col-span-3">
+                <div className="text-[11px] text-erp-text3 mb-1">Preview URL</div>
+                <InlineEditField value={project.preview_url} field="preview_url" type="url" onSave={saveField} />
+              </div>
             </div>
           </ErpCard>
 
-          {project.notes && (
-            <ErpCard className="p-5">
-              <div className="text-[14px] font-semibold mb-2">Notities</div>
-              <div className="text-[13px] text-erp-text1 whitespace-pre-wrap">{project.notes}</div>
-            </ErpCard>
-          )}
+          <ErpCard className="p-5">
+            <div className="text-[14px] font-semibold mb-2">Notities</div>
+            <InlineEditField value={project.notes} field="notes" type="textarea" placeholder="Klik om notities toe te voegen..." onSave={saveField} />
+          </ErpCard>
         </div>
       )}
 
@@ -213,7 +306,6 @@ export default function ProjectDetailPage() {
 
       {tab === "checklist" && (
         <div className="space-y-4">
-          {/* Progress */}
           <ErpCard className="p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-erp-text2">{completedCount}/{totalCount} afgerond</span>
