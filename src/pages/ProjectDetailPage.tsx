@@ -169,6 +169,12 @@ export default function ProjectDetailPage() {
       </div>
 
       <PageHeader title={project.name} desc={project.project_number}>
+        <button
+          onClick={() => setAiPanelOpen(!aiPanelOpen)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${aiPanelOpen ? "bg-erp-blue text-white" : "bg-erp-bg3 border border-erp-border0 text-erp-text1 hover:bg-erp-hover"}`}
+        >
+          ✨ AI {aiPanelOpen ? "Sluiten" : ""}
+        </button>
         <ErpButton onClick={() => setActivityOpen(true)}>
           <Icons.Plus className="w-4 h-4" /> Activiteit
         </ErpButton>
