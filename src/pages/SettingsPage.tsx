@@ -85,30 +85,7 @@ export default function SettingsPage() {
       {safeTab === "linkedin" && <LinkedInSettings />}
       {isAdmin && safeTab === "whatsapp" && <WhatsAppSettings />}
 
-      {safeTab === "notificaties" && (
-        <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
-          <h3 className="text-[15px] font-semibold text-erp-text0 mb-4">Notificatie voorkeuren</h3>
-          <div className="space-y-3">
-            {[
-              { label: "E-mail notificaties", desc: "Ontvang updates per e-mail", default: true },
-              { label: "Nieuwe deals", desc: "Melding bij nieuwe pipeline deals", default: true },
-              { label: "Sync fouten", desc: "Melding bij mislukte Snelstart sync", default: true },
-              { label: "Wekelijks rapport", desc: "Wekelijks overzicht van activiteiten", default: false },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between py-2 border-b border-erp-border0 last:border-0">
-                <div>
-                  <div className="text-[13px] font-medium text-erp-text0">{item.label}</div>
-                  <div className="text-[11px] text-erp-text3">{item.desc}</div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" defaultChecked={item.default} className="sr-only peer" />
-                  <div className="w-9 h-5 bg-erp-bg4 peer-focus:ring-1 peer-focus:ring-erp-blue rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-erp-text3 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-erp-blue peer-checked:after:bg-white" />
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {safeTab === "notificaties" && <NotificationSettings />}
 
       {safeTab === "account" && (
         <div className="bg-erp-bg3 rounded-xl border border-erp-border0 p-5">
