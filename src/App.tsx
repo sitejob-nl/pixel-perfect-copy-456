@@ -26,6 +26,7 @@ import AdminPage from "./pages/AdminPage";
 import SettingsPage from "./pages/SettingsPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 import ContractsPage from "./pages/ContractsPage";
+import ProjectDetailPage from "./pages/ProjectDetailPage";
 import ContractSigningPage from "./pages/ContractSigningPage";
 import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
