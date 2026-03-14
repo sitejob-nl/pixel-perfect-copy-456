@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import CreateActivityDialog from "@/components/erp/CreateActivityDialog";
-import { AlertTriangle, Lightbulb, Bell, TrendingUp, Sparkles } from "lucide-react";
+import { AlertTriangle, Lightbulb, Bell, TrendingUp, Sparkles, CheckCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const EXCLUDED_KEYWORDS = ['Web', 'Agency', 'Media', 'Brendly', 'Rickid', 'Savvy', 'Yellow', 'Fluencer', 'Lefhebbers', 'Marsmedia'];
