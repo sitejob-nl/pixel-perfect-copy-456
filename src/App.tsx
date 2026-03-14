@@ -181,6 +181,8 @@ const App = () => (
               <Route path="email" element={<EmailPage />} />
               <Route path="gmail" element={<GmailPage />} />
               <Route path="calendar" element={<CalendarPage />} />
+              <Route path="bookings" element={<BookingsPage />} />
+              <Route path="calls" element={<CallsPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminRoute />} />
