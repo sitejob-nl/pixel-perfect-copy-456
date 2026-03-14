@@ -102,6 +102,7 @@ export default function CreateActivityDialog({ open, onOpenChange, defaultContac
                 contact_id: contactId || null,
                 company_id: companyId || null,
                 deal_id: defaultDealId || null,
+                project_id: defaultProjectId || null,
                 organization_id: orgMembership.organization_id,
                 user_id: orgMembership.user_id,
                 completed_at: status === "completed" ? new Date().toISOString() : null,
