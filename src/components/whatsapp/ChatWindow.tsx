@@ -1,9 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, MessageSquare, Phone, User, MoreVertical, ArrowLeft, Copy, Link2, AlertTriangle } from "lucide-react";
 import { useWhatsAppChatMessages, useWhatsAppSend } from "@/hooks/useWhatsApp";
 import { Textarea } from "@/components/ui/textarea";
 import MessageBubble from "./MessageBubble";
 import ContactLinkSheet from "./ContactLinkSheet";
+import ChatToolbar from "./ChatToolbar";
 import { toast } from "sonner";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
