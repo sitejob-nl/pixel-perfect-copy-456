@@ -359,7 +359,7 @@ export default function KlantDetailPage() {
           </ErpCard>
         )}
 
-        <CreateContactDialog open={contactDialogOpen} onOpenChange={setContactDialogOpen} defaultCompanyId={id} />
+        <CreateContactDialog open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
         <CreateDealDialog open={dealDialogOpen} onOpenChange={setDealDialogOpen} />
         <CreateProjectDialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen} />
       </div>

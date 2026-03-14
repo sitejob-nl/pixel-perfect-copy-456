@@ -49,7 +49,7 @@ export default function CreateKlantDialog({ open, onOpenChange }: Props) {
         last_name: form.lastName || null,
         email: form.email,
         phone: form.phone || null,
-        function_title: form.functionTitle || null,
+        job_title: form.functionTitle || null,
         company_id: company.id,
         organization_id: orgId,
       });
