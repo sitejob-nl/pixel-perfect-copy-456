@@ -470,3 +470,51 @@ function AiEmailSuggestionsCard({ navigate }: { navigate: any }) {
     </div>
   );
 }
+
+function EmailDraftsWidget({ orgId, navigate }: { orgId?: string; navigate: any }) {
+  const { data: drafts = [] } = useQuery({
+    queryKey: ["dashboard-email-drafts", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("email_sends")
+        .select("id, subject, to_address, created_at")
+        .eq("organization_id", orgId)
+        .eq("status", "draft")
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (error) throw error;
+      return (data as any[]) ?? [];
+    },
+  });
+
+  if (drafts.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <ErpCard className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Dot color="#f59e0b" size={8} />
+            <span className="text-[15px] font-semibold">Email Drafts</span>
+          </div>
+          <span className="text-[12px] text-erp-amber font-medium cursor-pointer hover:underline" onClick={() => navigate("/drafts")}>
+            {drafts.length} emails wachten op review
+          </span>
+        </div>
+        <div className="space-y-1.5">
+          {drafts.map((d: any) => (
+            <div key={d.id} onClick={() => navigate("/drafts")} className="flex items-center gap-2.5 py-2 px-2 rounded-lg cursor-pointer hover:bg-erp-hover transition">
+              <span className="text-[13px]">📧</span>
+              <span className="flex-1 text-[12px] text-erp-text1 truncate">{d.subject || "Geen onderwerp"}</span>
+              <span className="text-[10px] text-erp-text3">{d.to_address}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 text-center">
+          <span className="text-[11px] text-erp-blue cursor-pointer hover:underline" onClick={() => navigate("/drafts")}>Bekijk alle →</span>
+        </div>
+      </ErpCard>
+    </div>
+  );
+}
