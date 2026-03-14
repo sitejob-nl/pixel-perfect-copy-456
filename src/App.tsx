@@ -175,6 +175,8 @@ const App = () => (
               <Route path="portals" element={<PortalAdminPage />} />
               <Route path="whatsapp" element={<WhatsAppPage />} />
               <Route path="email" element={<EmailPage />} />
+              <Route path="gmail" element={<GmailPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminRoute />} />
