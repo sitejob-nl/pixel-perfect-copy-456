@@ -203,7 +203,7 @@ export default function ConversationList({ conversations, isLoading, activePhone
                         "text-[12px] truncate",
                         c.unread_count > 0 ? "text-erp-text1 font-medium" : "text-erp-text2"
                       )}>
-                        {statusPrefix(conv)}
+                        {statusPrefix(c)}
                         {lastMessagePreview(c)}
                       </span>
                       {c.unread_count > 0 && (
