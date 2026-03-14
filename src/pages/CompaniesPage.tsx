@@ -119,7 +119,7 @@ export default function CompaniesPage() {
                 <tr><td colSpan={8} className="px-4 py-8 border-b border-erp-border0 text-center text-erp-text3 text-sm">Geen bedrijven gevonden</td></tr>
               )}
               {list.map(c => (
-                <TR key={c.id}>
+                <TR key={c.id} onClick={() => navigate(`/companies/${c.id}`)}>
                   <TD>
                     <div className="flex items-center gap-[10px]">
                       <Avatar name={c.name} id={c.id.charCodeAt(0)} />
