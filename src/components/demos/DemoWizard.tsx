@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useCrawlStart, useCrawlAnalyze, useGenerateDemo, usePollStatus, callDemoService } from "@/hooks/useDemos";
@@ -20,7 +21,6 @@ import {
   Plus, Monitor, Tablet, Smartphone, ExternalLink, Copy, Share2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useNavigate } from "react-router-dom";
 
 const STEPS = [
   "Website & Klant",
@@ -58,6 +58,7 @@ interface Props {
 
 export default function DemoWizard({ onClose }: Props) {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: orgData } = useOrganization();
   const orgId = (orgData?.organizations as any)?.id;
 
@@ -132,8 +133,25 @@ export default function DemoWizard({ onClose }: Props) {
   );
 
   const crawlStart = useCrawlStart();
-  const crawlAnalyze = useCrawlAnalyze();
   const generateDemo = useGenerateDemo();
+
+  // Generation polling
+  const { data: genStatus } = usePollStatus(
+    "check-generation",
+    { demo_id: generationId },
+    3000,
+    !!generationId && step === 3 && !generationDone
+  );
+
+  // Inline update mutation
+  const updateDemo = useMutation({
+    mutationFn: async ({ id, ...values }: { id: string; [key: string]: any }) => {
+      const { data, error } = await supabase.from("demos").update(values).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["demos"] }),
+  });
 
   // Handle klant selection
   useEffect(() => {
@@ -163,7 +181,6 @@ export default function DemoWizard({ onClose }: Props) {
       if (a.secondary_color) setSecondaryColor(a.secondary_color);
       if (a.accent_color) setAccentColor(a.accent_color);
       if (a.font) setFont(a.font);
-      // Set pages from nav items if available
       if (a.nav_items && Array.isArray(a.nav_items) && a.nav_items.length > 0) {
         const navPages = a.nav_items.map((item: any, i: number) => ({
           title: typeof item === "string" ? item : item.label || item.title || `Pagina ${i + 1}`,
@@ -182,14 +199,7 @@ export default function DemoWizard({ onClose }: Props) {
     }
   }, [crawlStatus]);
 
-  // Handle generation polling
-  const { data: genStatus } = usePollStatus(
-    "check-generation",
-    { demo_id: generationId },
-    3000,
-    !!generationId && step === 3 && !generationDone
-  );
-
+  // Handle generation completion
   useEffect(() => {
     if (!genStatus) return;
     if (genStatus.status === "completed" || genStatus.generation_status === "completed") {
@@ -226,15 +236,11 @@ export default function DemoWizard({ onClose }: Props) {
         setCrawlJobId(result.crawl_job_id);
       } else if (result?.error?.includes("credentials") || result?.error?.includes("Cloudflare")) {
         setCrawlFailed(true);
-      } else {
-        // Direct analysis result
-        setCrawlJobId(null);
-        if (result?.analysis) {
-          const a = result.analysis;
-          if (a.company_name) setCompanyName(a.company_name);
-          if (a.industry) setIndustry(a.industry || "");
-          setStep(1);
-        }
+      } else if (result?.analysis) {
+        const a = result.analysis;
+        if (a.company_name) setCompanyName(a.company_name);
+        if (a.industry) setIndustry(a.industry || "");
+        setStep(1);
       }
     } catch {
       setCrawlFailed(true);
@@ -269,7 +275,6 @@ export default function DemoWizard({ onClose }: Props) {
           location,
         },
       });
-      // If synchronous result
       if (result?.id && (result?.demo_html || result?.pages)) {
         setResultDemo(result);
         setResultPages(result.pages || []);
@@ -300,20 +305,11 @@ export default function DemoWizard({ onClose }: Props) {
     setAddingPage(false);
   };
 
-  const copyLink = () => {
-    const slug = resultDemo?.public_slug;
-    if (slug) {
-      navigator.clipboard.writeText(`${window.location.origin}/demo/${slug}`);
-      toast.success("Link gekopieerd");
-    }
-  };
-
   const enabledPages = pages.filter((p) => p.enabled);
   const activeHtml = resultPages.find((p: any) => p.slug === activePage)?.html_content
     || (resultDemo?.demo_html || "");
   const activeWidth = DEVICES.find((d) => d.key === device)?.w || "100%";
 
-  // Crawl progress calculation
   const crawlProgress = crawlStatus
     ? crawlStatus.pages_found
       ? Math.min(100, Math.round((crawlStatus.pages_found / (crawlStatus.page_limit || 15)) * 100))
@@ -382,7 +378,6 @@ export default function DemoWizard({ onClose }: Props) {
               </Select>
             </div>
 
-            {/* Crawl loading */}
             {crawlJobId && (
               <Card className="p-4 space-y-3">
                 <div className="flex items-center gap-2">
@@ -404,12 +399,11 @@ export default function DemoWizard({ onClose }: Props) {
               </Card>
             )}
 
-            {/* Crawl failed / manual fallback */}
             {(crawlFailed || manualMode) && (
               <Card className="p-4 space-y-3 border-amber-500/30">
                 <p className="text-xs text-muted-foreground">
-                  {crawlFailed ? "Cloudflare is niet geconfigureerd of de crawl is mislukt." : ""}
-                  {" "}Je kunt handmatig doorgaan.
+                  {crawlFailed ? "Cloudflare is niet geconfigureerd of de crawl is mislukt. " : ""}
+                  Je kunt handmatig doorgaan.
                 </p>
                 <div className="space-y-2">
                   <Label>Bedrijfsnaam *</Label>
@@ -701,7 +695,6 @@ export default function DemoWizard({ onClose }: Props) {
         {/* ─── Step 5: Preview & Delen ─── */}
         {step === 4 && (
           <div className="flex flex-col h-full">
-            {/* Top bar */}
             <div className="border-b border-border px-4 py-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 overflow-x-auto">
                 <span className="text-sm font-semibold text-foreground shrink-0">{companyName}</span>
@@ -735,9 +728,7 @@ export default function DemoWizard({ onClose }: Props) {
               </div>
             </div>
 
-            {/* Content */}
             <div className="flex-1 flex overflow-hidden">
-              {/* Iframe */}
               <div className="flex-1 flex items-start justify-center overflow-auto p-4 bg-muted/30">
                 <iframe
                   srcDoc={activeHtml}
@@ -747,8 +738,6 @@ export default function DemoWizard({ onClose }: Props) {
                   title="Demo preview"
                 />
               </div>
-
-              {/* AI Editor sidebar */}
               {resultDemo?.id && (
                 <div className="w-80 border-l border-border p-4 overflow-y-auto bg-card hidden lg:block">
                   <h3 className="text-sm font-semibold text-foreground mb-3">AI Editor</h3>
@@ -757,7 +746,6 @@ export default function DemoWizard({ onClose }: Props) {
               )}
             </div>
 
-            {/* Footer */}
             <div className="border-t border-border px-4 py-2 flex items-center justify-between">
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <ArrowLeft className="h-4 w-4 mr-1" /> Terug naar overzicht
@@ -775,88 +763,52 @@ export default function DemoWizard({ onClose }: Props) {
             </div>
 
             {/* Share dialog */}
-            <ShareDialog
-              open={shareOpen}
-              onOpenChange={setShareOpen}
-              demo={resultDemo}
-            />
+            <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Demo delen</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label>Publiek maken</Label>
+                    <Switch
+                      checked={resultDemo?.is_public || false}
+                      onCheckedChange={(v) => {
+                        if (resultDemo?.id) updateDemo.mutate({ id: resultDemo.id, is_public: v });
+                        setResultDemo((prev: any) => prev ? { ...prev, is_public: v } : prev);
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Feedback toestaan</Label>
+                    <Switch
+                      checked={resultDemo?.share_settings?.allow_feedback !== false}
+                      onCheckedChange={(v) => {
+                        const ss = { ...(resultDemo?.share_settings || {}), allow_feedback: v };
+                        if (resultDemo?.id) updateDemo.mutate({ id: resultDemo.id, share_settings: ss });
+                        setResultDemo((prev: any) => prev ? { ...prev, share_settings: ss } : prev);
+                      }}
+                    />
+                  </div>
+                  {resultDemo?.public_slug && (
+                    <>
+                      <div className="flex gap-2">
+                        <Input value={`${window.location.origin}/demo/${resultDemo.public_slug}`} readOnly className="text-xs" />
+                        <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/demo/${resultDemo.public_slug}`); toast.success("Link gekopieerd"); }}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                      <Button variant="outline" className="w-full" onClick={() => window.open(`/demo/${resultDemo.public_slug}`, "_blank")}>
+                        <ExternalLink className="h-4 w-4 mr-2" /> Open in nieuw tab
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>
     </div>
   );
 }
-
-// ── Share Dialog ─────────────────────────────────────────────────
-function ShareDialog({ open, onOpenChange, demo }: { open: boolean; onOpenChange: (v: boolean) => void; demo: any }) {
-  const { mutate: updateDemo } = useUpdateDemoInline();
-  const [isPublic, setIsPublic] = useState(demo?.is_public || false);
-  const [password, setPassword] = useState("");
-  const [allowFeedback, setAllowFeedback] = useState(demo?.share_settings?.allow_feedback ?? true);
-
-  const slug = demo?.public_slug;
-  const link = slug ? `${window.location.origin}/demo/${slug}` : "";
-
-  const handleTogglePublic = (v: boolean) => {
-    setIsPublic(v);
-    if (demo?.id) updateDemo({ id: demo.id, is_public: v });
-  };
-
-  const handleFeedbackToggle = (v: boolean) => {
-    setAllowFeedback(v);
-    if (demo?.id) updateDemo({ id: demo.id, share_settings: { ...demo.share_settings, allow_feedback: v } });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Demo delen</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <Label>Publiek maken</Label>
-            <Switch checked={isPublic} onCheckedChange={handleTogglePublic} />
-          </div>
-          <div className="flex items-center justify-between">
-            <Label>Feedback toestaan</Label>
-            <Switch checked={allowFeedback} onCheckedChange={handleFeedbackToggle} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Wachtwoord (optioneel)</Label>
-            <Input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laat leeg voor geen wachtwoord" type="password" />
-          </div>
-          {link && (
-            <div className="flex gap-2">
-              <Input value={link} readOnly className="text-xs" />
-              <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(link); toast.success("Link gekopieerd"); }}>
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
-          {link && (
-            <Button variant="outline" className="w-full" onClick={() => window.open(link, "_blank")}>
-              <ExternalLink className="h-4 w-4 mr-2" /> Open in nieuw tab
-            </Button>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function useUpdateDemoInline() {
-  const qc = useQueryClient();
-  const { useQueryClient: _unused, ...rest } = { useQueryClient: null };
-  return useMutation({
-    mutationFn: async ({ id, ...values }: { id: string; [key: string]: any }) => {
-      const { data, error } = await supabase.from("demos").update(values).eq("id", id).select().single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["demos"] }),
-  });
-}
-
-// Need to import these at the top level for the ShareDialog
-import { useMutation, useQueryClient } from "@tanstack/react-query";
