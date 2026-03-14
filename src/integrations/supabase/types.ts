@@ -6518,6 +6518,63 @@ export type Database = {
         }
         Relationships: []
       }
+      outreach_daily_stats: {
+        Row: {
+          daily_limit: number | null
+          date: string
+          demos_viewed: number | null
+          emails_bounced: number | null
+          emails_opened: number | null
+          emails_replied: number | null
+          emails_sent: number | null
+          id: string
+          is_paused: boolean | null
+          organization_id: string
+          pause_reason: string | null
+        }
+        Insert: {
+          daily_limit?: number | null
+          date?: string
+          demos_viewed?: number | null
+          emails_bounced?: number | null
+          emails_opened?: number | null
+          emails_replied?: number | null
+          emails_sent?: number | null
+          id?: string
+          is_paused?: boolean | null
+          organization_id: string
+          pause_reason?: string | null
+        }
+        Update: {
+          daily_limit?: number | null
+          date?: string
+          demos_viewed?: number | null
+          emails_bounced?: number | null
+          emails_opened?: number | null
+          emails_replied?: number | null
+          emails_sent?: number | null
+          id?: string
+          is_paused?: boolean | null
+          organization_id?: string
+          pause_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_daily_stats_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_daily_stats_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       outreach_enrollments: {
         Row: {
           completed_at: string | null
@@ -6705,6 +6762,66 @@ export type Database = {
           },
           {
             foreignKeyName: "outreach_sequences_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_templates: {
+        Row: {
+          body_template: string
+          created_at: string
+          description: string | null
+          id: string
+          industry: string | null
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          reply_rate: number | null
+          subject_template: string
+          tone: string | null
+          use_count: number | null
+        }
+        Insert: {
+          body_template: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          reply_rate?: number | null
+          subject_template: string
+          tone?: string | null
+          use_count?: number | null
+        }
+        Update: {
+          body_template?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          industry?: string | null
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          reply_rate?: number | null
+          subject_template?: string
+          tone?: string | null
+          use_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_templates_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -7853,6 +7970,348 @@ export type Database = {
           },
           {
             foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_leads: {
+        Row: {
+          address: string | null
+          analysis: Json | null
+          analyzed_at: string | null
+          city: string | null
+          company_id: string | null
+          company_name: string
+          contact_email: string | null
+          contact_id: string | null
+          contact_job_title: string | null
+          contact_linkedin_url: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contact_source: string | null
+          converted_at: string | null
+          cooling_until: string | null
+          crawl_job_id: string | null
+          created_at: string
+          deal_id: string | null
+          demo_built_at: string | null
+          demo_id: string | null
+          demo_url: string | null
+          demo_view_count: number | null
+          demo_viewed_at: string | null
+          do_not_contact: boolean | null
+          email_body: string | null
+          email_draft_id: string | null
+          email_drafted_at: string | null
+          email_opened_at: string | null
+          email_replied_at: string | null
+          email_sent_at: string | null
+          email_subject: string | null
+          fit_summary: string | null
+          google_rating: number | null
+          google_review_count: number | null
+          id: string
+          kvk_number: string | null
+          organization_id: string
+          phone: string | null
+          pool_id: string
+          score: number | null
+          score_breakdown: Json | null
+          source_data: Json | null
+          status: string
+          updated_at: string
+          website_url: string | null
+        }
+        Insert: {
+          address?: string | null
+          analysis?: Json | null
+          analyzed_at?: string | null
+          city?: string | null
+          company_id?: string | null
+          company_name: string
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_job_title?: string | null
+          contact_linkedin_url?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_source?: string | null
+          converted_at?: string | null
+          cooling_until?: string | null
+          crawl_job_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          demo_built_at?: string | null
+          demo_id?: string | null
+          demo_url?: string | null
+          demo_view_count?: number | null
+          demo_viewed_at?: string | null
+          do_not_contact?: boolean | null
+          email_body?: string | null
+          email_draft_id?: string | null
+          email_drafted_at?: string | null
+          email_opened_at?: string | null
+          email_replied_at?: string | null
+          email_sent_at?: string | null
+          email_subject?: string | null
+          fit_summary?: string | null
+          google_rating?: number | null
+          google_review_count?: number | null
+          id?: string
+          kvk_number?: string | null
+          organization_id: string
+          phone?: string | null
+          pool_id: string
+          score?: number | null
+          score_breakdown?: Json | null
+          source_data?: Json | null
+          status?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Update: {
+          address?: string | null
+          analysis?: Json | null
+          analyzed_at?: string | null
+          city?: string | null
+          company_id?: string | null
+          company_name?: string
+          contact_email?: string | null
+          contact_id?: string | null
+          contact_job_title?: string | null
+          contact_linkedin_url?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_source?: string | null
+          converted_at?: string | null
+          cooling_until?: string | null
+          crawl_job_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          demo_built_at?: string | null
+          demo_id?: string | null
+          demo_url?: string | null
+          demo_view_count?: number | null
+          demo_viewed_at?: string | null
+          do_not_contact?: boolean | null
+          email_body?: string | null
+          email_draft_id?: string | null
+          email_drafted_at?: string | null
+          email_opened_at?: string | null
+          email_replied_at?: string | null
+          email_sent_at?: string | null
+          email_subject?: string | null
+          fit_summary?: string | null
+          google_rating?: number | null
+          google_review_count?: number | null
+          id?: string
+          kvk_number?: string | null
+          organization_id?: string
+          phone?: string | null
+          pool_id?: string
+          score?: number | null
+          score_breakdown?: Json | null
+          source_data?: Json | null
+          status?: string
+          updated_at?: string
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_crawl_job_id_fkey"
+            columns: ["crawl_job_id"]
+            isOneToOne: false
+            referencedRelation: "crawl_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "v_demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_email_draft_id_fkey"
+            columns: ["email_draft_id"]
+            isOneToOne: false
+            referencedRelation: "email_sends"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_email_draft_id_fkey"
+            columns: ["email_draft_id"]
+            isOneToOne: false
+            referencedRelation: "v_email_drafts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_pools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_pools: {
+        Row: {
+          analyzed_leads: number | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          demos_built: number | null
+          emails_drafted: number | null
+          emails_sent: number | null
+          error_message: string | null
+          id: string
+          name: string
+          organization_id: string
+          search_config: Json | null
+          search_query: string | null
+          source: string
+          started_at: string | null
+          status: string
+          total_leads: number | null
+          updated_at: string
+        }
+        Insert: {
+          analyzed_leads?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          demos_built?: number | null
+          emails_drafted?: number | null
+          emails_sent?: number | null
+          error_message?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          search_config?: Json | null
+          search_query?: string | null
+          source: string
+          started_at?: string | null
+          status?: string
+          total_leads?: number | null
+          updated_at?: string
+        }
+        Update: {
+          analyzed_leads?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          demos_built?: number | null
+          emails_drafted?: number | null
+          emails_sent?: number | null
+          error_message?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          search_config?: Json | null
+          search_query?: string | null
+          source?: string
+          started_at?: string | null
+          status?: string
+          total_leads?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_pools_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_pools_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -11082,6 +11541,78 @@ export type Database = {
         }
         Relationships: []
       }
+      v_prospect_leads: {
+        Row: {
+          analyzed_at: string | null
+          city: string | null
+          company_name: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_source: string | null
+          created_at: string | null
+          demo_built_at: string | null
+          demo_id: string | null
+          demo_slug: string | null
+          demo_status: string | null
+          demo_url: string | null
+          demo_view_count: number | null
+          demo_viewed_at: string | null
+          do_not_contact: boolean | null
+          email_opened_at: string | null
+          email_replied_at: string | null
+          email_sent_at: string | null
+          email_subject: string | null
+          fit_summary: string | null
+          google_rating: number | null
+          google_review_count: number | null
+          id: string | null
+          organization_id: string | null
+          pool_id: string | null
+          pool_name: string | null
+          pool_source: string | null
+          score: number | null
+          score_breakdown: Json | null
+          status: string | null
+          website_url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_leads_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_demo_id_fkey"
+            columns: ["demo_id"]
+            isOneToOne: false
+            referencedRelation: "v_demos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_leads_pool_id_fkey"
+            columns: ["pool_id"]
+            isOneToOne: false
+            referencedRelation: "prospect_pools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_revenue_summary: {
         Row: {
           invoice_count: number | null
@@ -11368,6 +11899,20 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      fn_outreach_can_send: { Args: { p_org_id: string }; Returns: Json }
+      fn_prospect_check_duplicate: {
+        Args: {
+          p_kvk?: string
+          p_name?: string
+          p_org_id: string
+          p_website?: string
+        }
+        Returns: Json
+      }
+      fn_prospect_convert_to_crm: {
+        Args: { p_lead_id: string; p_user_id: string }
+        Returns: Json
       }
       fn_reject_suggestion: {
         Args: { p_suggestion_id: string; p_user_id: string }
