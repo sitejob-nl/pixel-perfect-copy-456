@@ -160,7 +160,8 @@ export default function ProjectDetailPage() {
   const assignedMember = members.find(m => m.user_id === project.assigned_to);
 
   return (
-    <div className="animate-fade-up max-w-[1200px]">
+    <div className={`flex gap-4 ${aiPanelOpen ? "" : ""}`}>
+    <div className="animate-fade-up max-w-[1200px] flex-1 min-w-0">
       <div className="flex items-center gap-2 mb-2">
         <button onClick={() => navigate("/projects")} className="text-erp-text3 hover:text-erp-text1 transition-colors">
           <Icons.ChevDown className="w-4 h-4 rotate-90" />
