@@ -14,6 +14,7 @@ import CommentsSection from "@/components/erp/CommentsSection";
 import AiSummaryCard from "@/components/erp/AiSummaryCard";
 import InlineEditField from "@/components/erp/InlineEditField";
 import { projStatus } from "@/data/mockData";
+import AiSidePanel from "@/components/erp/AiSidePanel";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useOrgMembers } from "@/hooks/useTeam";
 
