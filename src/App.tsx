@@ -163,7 +163,7 @@ const App = () => (
               <Route path="demos" element={<DemosPage />} />
               <Route path="content" element={<ContentPage />} />
               <Route path="portals" element={<PortalAdminPage />} />
-              <Route path="whatsapp" element={<PlaceholderPage title="WhatsApp" icon="Msg" />} />
+              <Route path="whatsapp" element={<WhatsAppPage />} />
               <Route path="email" element={<EmailPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="settings" element={<SettingsPage />} />
