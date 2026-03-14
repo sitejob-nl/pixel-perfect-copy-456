@@ -88,6 +88,7 @@ export default function SettingsPage() {
       {isAdmin && safeTab === "email" && <ResendSettings />}
       {isAdmin && safeTab === "snelstart" && <SnelstartSettings />}
       {isAdmin && safeTab === "integraties" && <IntegrationSettings />}
+      {isAdmin && safeTab === "mcp" && <McpApiKeySettings />}
 
       {safeTab === "linkedin" && <LinkedInSettings />}
       {safeTab === "google" && <GoogleSettings />}
