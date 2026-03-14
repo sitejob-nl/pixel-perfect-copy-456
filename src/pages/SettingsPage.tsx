@@ -59,19 +59,19 @@ export default function SettingsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-erp-bg2 p-1 rounded-xl border border-erp-border0 mb-6">
+      <div className="flex gap-1 bg-erp-bg2 p-1 rounded-xl border border-erp-border0 mb-6 overflow-x-auto scrollbar-none">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 flex-1 justify-center",
+              "flex items-center gap-1.5 px-3 py-2 rounded-lg text-[12px] font-medium transition-all duration-150 whitespace-nowrap shrink-0",
               safeTab === tab.key
                 ? "bg-erp-bg3 text-erp-text0 shadow-sm border border-erp-border0"
                 : "text-erp-text3 hover:text-erp-text1"
             )}
           >
-            <span>{tab.icon}</span>
+            <span className="text-[14px]">{tab.icon}</span>
             <span>{tab.label}</span>
           </button>
         ))}
