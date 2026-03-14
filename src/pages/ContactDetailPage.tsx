@@ -62,6 +62,7 @@ export default function ContactDetailPage() {
   const { data: org } = useOrganization();
   const [editing, setEditing] = useState(false);
   const [noteText, setNoteText] = useState("");
+  const [activeTab, setActiveTab] = useState<"details" | "whatsapp">("details");
   const [form, setForm] = useState({
     first_name: "",
     last_name: "",
