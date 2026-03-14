@@ -998,6 +998,7 @@ export default function IntegrationSettings() {
 
   return (
     <div className="space-y-4">
+      <FirecrawlCard orgId={orgId!} secrets={secrets ?? []} />
       <GeminiCard orgId={orgId!} secrets={secrets ?? []} />
       <VoysCard orgId={orgId!} integration={voysInt} secrets={secrets ?? []} />
       <CloudflareCard orgId={orgId!} secrets={secrets ?? []} />
