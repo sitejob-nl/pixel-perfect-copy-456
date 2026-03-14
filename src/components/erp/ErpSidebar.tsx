@@ -110,7 +110,7 @@ export default function ErpSidebar() {
     enabled: !!org?.organization_id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("saved_views" as any)
+        .from("saved_views")
         .select("*")
         .eq("is_pinned", true)
         .order("sort_order");
