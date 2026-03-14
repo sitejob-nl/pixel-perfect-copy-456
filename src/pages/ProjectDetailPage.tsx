@@ -143,6 +143,7 @@ export default function ProjectDetailPage() {
 
       {tab === "overview" && (
         <div className="space-y-5">
+          <AiSummaryCard entityType="project" entityId={id!} />
           <ErpCard className="p-5">
             <div className="text-[14px] font-semibold mb-4">Details</div>
             <div className="grid grid-cols-3 gap-4">
