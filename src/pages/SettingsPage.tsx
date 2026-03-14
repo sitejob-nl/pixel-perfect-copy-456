@@ -12,6 +12,7 @@ import WhatsAppSettings from "@/components/erp/WhatsAppSettings";
 import NotificationSettings from "@/components/erp/NotificationSettings";
 import GoogleSettings from "@/components/erp/GoogleSettings";
 import IntegrationSettings from "@/components/erp/IntegrationSettings";
+import McpApiKeySettings from "@/components/erp/McpApiKeySettings";
 
 const allTabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
