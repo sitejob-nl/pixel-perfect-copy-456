@@ -711,13 +711,15 @@ export default function IntegrationSettings() {
   const voysInt = getIntegration(integrations ?? [], "voys");
   const slackWebhook = getSecret(secrets ?? [], "slack", "webhook_url");
   const kvkApiKey = getSecret(secrets ?? [], "kvk", "api_key");
+  const voysClientUuid = getSecret(secrets ?? [], "voys", "client_uuid");
+  const voysApiToken = getSecret(secrets ?? [], "voys", "api_token");
 
   return (
     <div className="space-y-4">
       <SlackCard orgId={orgId!} integration={slackInt} secret={slackWebhook} />
       <KvkCard orgId={orgId!} integration={kvkInt} secret={kvkApiKey} />
       <GoogleCard orgId={orgId!} integration={googleInt} />
-      <VoysCard orgId={orgId!} integration={voysInt} />
+      <VoysCard orgId={orgId!} integration={voysInt} clientUuid={voysClientUuid} apiToken={voysApiToken} />
     </div>
   );
 }
