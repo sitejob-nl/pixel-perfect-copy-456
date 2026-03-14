@@ -101,6 +101,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "activities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "activities_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -1192,6 +1199,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bookings_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bookings_matched_contact_id_fkey"
             columns: ["matched_contact_id"]
             isOneToOne: false
@@ -1472,6 +1486,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "call_log_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "call_log_matched_contact_id_fkey"
             columns: ["matched_contact_id"]
             isOneToOne: false
@@ -1683,6 +1704,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "communications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "communications_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -1792,6 +1820,7 @@ export type Database = {
           organization_id: string
           phone: string | null
           postal_code: string | null
+          primary_contact_id: string | null
           sbi_code: string | null
           sbi_description: string | null
           snelstart_id: string | null
@@ -1828,6 +1857,7 @@ export type Database = {
           organization_id: string
           phone?: string | null
           postal_code?: string | null
+          primary_contact_id?: string | null
           sbi_code?: string | null
           sbi_description?: string | null
           snelstart_id?: string | null
@@ -1864,6 +1894,7 @@ export type Database = {
           organization_id?: string
           phone?: string | null
           postal_code?: string | null
+          primary_contact_id?: string | null
           sbi_code?: string | null
           sbi_description?: string | null
           snelstart_id?: string | null
@@ -1883,6 +1914,27 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
             referencedColumns: ["id"]
           },
         ]
@@ -2110,6 +2162,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
             referencedColumns: ["id"]
           },
           {
@@ -2723,6 +2782,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contracts_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -3037,6 +3103,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
             referencedColumns: ["id"]
           },
           {
@@ -3495,26 +3568,40 @@ export type Database = {
             referencedRelation: "email_sends"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "email_link_clicks_email_send_id_fkey"
+            columns: ["email_send_id"]
+            isOneToOne: false
+            referencedRelation: "v_email_drafts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       email_sends: {
         Row: {
+          ai_generated: boolean | null
+          approved_at: string | null
+          approved_by: string | null
           bounce_type: string | null
           bounced_at: string | null
           clicked_at: string | null
           clicked_count: number | null
+          company_id: string | null
           contact_id: string | null
           created_at: string
           delivered_at: string | null
+          enrollment_id: string | null
           error_message: string | null
           failed_at: string | null
           from_address: string
           html_content: string
           id: string
+          merge_data: Json | null
           metadata: Json | null
           opened_at: string | null
           opened_count: number | null
           organization_id: string
+          project_id: string | null
           reply_to: string | null
           resend_id: string | null
           scheduled_for: string | null
@@ -3522,27 +3609,36 @@ export type Database = {
           sent_at: string | null
           sequence_id: string | null
           status: string
+          step_number: number | null
           subject: string
           template_id: string | null
           to_address: string
+          trigger_event: string | null
         }
         Insert: {
+          ai_generated?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
           bounce_type?: string | null
           bounced_at?: string | null
           clicked_at?: string | null
           clicked_count?: number | null
+          company_id?: string | null
           contact_id?: string | null
           created_at?: string
           delivered_at?: string | null
+          enrollment_id?: string | null
           error_message?: string | null
           failed_at?: string | null
           from_address: string
           html_content: string
           id?: string
+          merge_data?: Json | null
           metadata?: Json | null
           opened_at?: string | null
           opened_count?: number | null
           organization_id: string
+          project_id?: string | null
           reply_to?: string | null
           resend_id?: string | null
           scheduled_for?: string | null
@@ -3550,27 +3646,36 @@ export type Database = {
           sent_at?: string | null
           sequence_id?: string | null
           status?: string
+          step_number?: number | null
           subject: string
           template_id?: string | null
           to_address: string
+          trigger_event?: string | null
         }
         Update: {
+          ai_generated?: boolean | null
+          approved_at?: string | null
+          approved_by?: string | null
           bounce_type?: string | null
           bounced_at?: string | null
           clicked_at?: string | null
           clicked_count?: number | null
+          company_id?: string | null
           contact_id?: string | null
           created_at?: string
           delivered_at?: string | null
+          enrollment_id?: string | null
           error_message?: string | null
           failed_at?: string | null
           from_address?: string
           html_content?: string
           id?: string
+          merge_data?: Json | null
           metadata?: Json | null
           opened_at?: string | null
           opened_count?: number | null
           organization_id?: string
+          project_id?: string | null
           reply_to?: string | null
           resend_id?: string | null
           scheduled_for?: string | null
@@ -3578,11 +3683,41 @@ export type Database = {
           sent_at?: string | null
           sequence_id?: string | null
           status?: string
+          step_number?: number | null
           subject?: string
           template_id?: string | null
           to_address?: string
+          trigger_event?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "email_sends_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "email_sends_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "email_sends_contact_id_fkey"
             columns: ["contact_id"]
@@ -3605,6 +3740,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "email_sends_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_enrollments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "email_sends_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -3616,6 +3758,20 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
             referencedColumns: ["id"]
           },
           {
@@ -3727,6 +3883,13 @@ export type Database = {
             columns: ["matched_company_id"]
             isOneToOne: false
             referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sync_messages_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
             referencedColumns: ["id"]
           },
           {
@@ -3950,6 +4113,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "google_calendar_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "google_calendar_events_connection_id_fkey"
             columns: ["connection_id"]
             isOneToOne: false
@@ -4170,6 +4340,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_emails_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
             referencedColumns: ["id"]
           },
           {
@@ -6551,6 +6728,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "portal_sessions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "portal_sessions_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -7284,6 +7468,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "projects_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -7602,6 +7793,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rate_limits: {
+        Row: {
+          endpoint: string
+          id: string
+          identifier: string
+          request_count: number | null
+          window_start: string
+        }
+        Insert: {
+          endpoint: string
+          id?: string
+          identifier: string
+          request_count?: number | null
+          window_start?: string
+        }
+        Update: {
+          endpoint?: string
+          id?: string
+          identifier?: string
+          request_count?: number | null
+          window_start?: string
+        }
+        Relationships: []
       }
       raw_leads: {
         Row: {
@@ -8065,6 +8280,115 @@ export type Database = {
           },
         ]
       }
+      security_events: {
+        Row: {
+          blocked: boolean | null
+          created_at: string
+          details: Json | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          organization_id: string | null
+          severity: string
+          source: string | null
+          user_id: string | null
+        }
+        Insert: {
+          blocked?: boolean | null
+          created_at?: string
+          details?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          organization_id?: string | null
+          severity?: string
+          source?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          blocked?: boolean | null
+          created_at?: string
+          details?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          organization_id?: string | null
+          severity?: string
+          source?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "security_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sequence_triggers: {
+        Row: {
+          conditions: Json | null
+          created_at: string
+          delay_days: number | null
+          id: string
+          is_active: boolean | null
+          organization_id: string
+          sequence_id: string
+          trigger_event: string
+        }
+        Insert: {
+          conditions?: Json | null
+          created_at?: string
+          delay_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          organization_id: string
+          sequence_id: string
+          trigger_event: string
+        }
+        Update: {
+          conditions?: Json | null
+          created_at?: string
+          delay_days?: number | null
+          id?: string
+          is_active?: boolean | null
+          organization_id?: string
+          sequence_id?: string
+          trigger_event?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sequence_triggers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sequence_triggers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sequence_triggers_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       snelstart_config: {
         Row: {
           app_short_name: string | null
@@ -8445,6 +8769,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -8724,6 +9055,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "webhook_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "webhook_logs_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -8958,6 +9296,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "website_scrapes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
             referencedColumns: ["id"]
           },
           {
@@ -9569,6 +9914,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "call_log_matched_company_id_fkey"
+            columns: ["matched_company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "call_log_matched_contact_id_fkey"
             columns: ["matched_contact_id"]
             isOneToOne: false
@@ -9792,6 +10144,42 @@ export type Database = {
           },
         ]
       }
+      v_email_drafts: {
+        Row: {
+          ai_generated: boolean | null
+          company_name: string | null
+          contact_name: string | null
+          created_at: string | null
+          html_content: string | null
+          id: string | null
+          merge_data: Json | null
+          organization_id: string | null
+          project_name: string | null
+          sequence_name: string | null
+          status: string | null
+          step_number: number | null
+          subject: string | null
+          to_address: string | null
+          trigger_event: string | null
+          trigger_label: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_sends_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_sends_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_email_threads: {
         Row: {
           category: string | null
@@ -9902,6 +10290,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contacts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -9913,6 +10308,78 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_klanten: {
+        Row: {
+          aantal_contacten: number | null
+          actieve_projecten: number | null
+          calls_30d: number | null
+          city: string | null
+          company_size: string | null
+          contact_achternaam: string | null
+          contact_email: string | null
+          contact_functie: string | null
+          contact_naam: string | null
+          contact_score: number | null
+          contact_telefoon: string | null
+          contact_temperatuur: string | null
+          contact_voornaam: string | null
+          created_at: string | null
+          dagen_stil: number | null
+          email: string | null
+          emails_30d: number | null
+          gezondheid: string | null
+          id: string | null
+          industry: string | null
+          kvk_number: string | null
+          laatste_activiteit: string | null
+          last_activity_at: string | null
+          mrr: number | null
+          name: string | null
+          open_deals: number | null
+          organization_id: string | null
+          phone: string | null
+          primary_contact_id: string | null
+          totaal_projecten: number | null
+          website: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "companies_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
             referencedColumns: ["id"]
           },
         ]
@@ -9994,6 +10461,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contacts_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
@@ -10054,6 +10528,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
             referencedColumns: ["id"]
           },
           {
@@ -10328,8 +10809,21 @@ export type Database = {
         }
         Returns: string
       }
+      fn_ai_rate_check: {
+        Args: {
+          p_endpoint: string
+          p_max_per_hour?: number
+          p_max_per_minute?: number
+          p_user_id: string
+        }
+        Returns: Json
+      }
       fn_ai_smart_digest: {
         Args: { p_org_id: string; p_user_id: string }
+        Returns: Json
+      }
+      fn_approve_email_draft: {
+        Args: { p_email_id: string; p_user_id: string }
         Returns: Json
       }
       fn_approve_suggestion: {
@@ -10450,10 +10944,39 @@ export type Database = {
         Args: { p_suggestion_id: string; p_user_id: string }
         Returns: undefined
       }
+      fn_sanitize_ai_input: { Args: { p_input: string }; Returns: Json }
+      fn_sanitize_ai_output: { Args: { p_output: string }; Returns: string }
       fn_send_daily_digest_all: { Args: never; Returns: undefined }
       fn_send_slack_message: {
         Args: { p_blocks: Json; p_org_id: string }
         Returns: number
+      }
+      fn_sequence_advance_step: {
+        Args: { p_enrollment_id: string }
+        Returns: undefined
+      }
+      fn_sequence_create_step_draft: {
+        Args: {
+          p_company: Record<string, unknown>
+          p_contact: Record<string, unknown>
+          p_context?: Json
+          p_enrollment_id: string
+          p_org_id: string
+          p_sequence: Record<string, unknown>
+          p_step: number
+          p_trigger_event?: string
+        }
+        Returns: string
+      }
+      fn_sequence_enroll: {
+        Args: {
+          p_contact_id: string
+          p_context?: Json
+          p_org_id: string
+          p_sequence_id: string
+          p_trigger_event?: string
+        }
+        Returns: string
       }
       fn_slack_digest_blocks: { Args: { p_org_id: string }; Returns: Json }
       fn_slack_notify_event: {
@@ -10474,6 +10997,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: number
       }
+      fn_validate_ai_sql: { Args: { p_query: string }; Returns: Json }
       fn_voys_process_webhook: {
         Args: { p_org_id: string; p_payload: Json }
         Returns: Json
@@ -10489,22 +11013,29 @@ export type Database = {
       get_due_scheduled_emails: {
         Args: never
         Returns: {
+          ai_generated: boolean | null
+          approved_at: string | null
+          approved_by: string | null
           bounce_type: string | null
           bounced_at: string | null
           clicked_at: string | null
           clicked_count: number | null
+          company_id: string | null
           contact_id: string | null
           created_at: string
           delivered_at: string | null
+          enrollment_id: string | null
           error_message: string | null
           failed_at: string | null
           from_address: string
           html_content: string
           id: string
+          merge_data: Json | null
           metadata: Json | null
           opened_at: string | null
           opened_count: number | null
           organization_id: string
+          project_id: string | null
           reply_to: string | null
           resend_id: string | null
           scheduled_for: string | null
@@ -10512,9 +11043,11 @@ export type Database = {
           sent_at: string | null
           sequence_id: string | null
           status: string
+          step_number: number | null
           subject: string
           template_id: string | null
           to_address: string
+          trigger_event: string | null
         }[]
         SetofOptions: {
           from: "*"

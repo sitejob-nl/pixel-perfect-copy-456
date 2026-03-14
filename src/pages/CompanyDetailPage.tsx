@@ -87,10 +87,10 @@ export default function CompanyDetailPage() {
     <div className="flex gap-4">
     <div className="animate-fade-up max-w-[1200px] flex-1 min-w-0">
       <div className="flex items-center gap-2 mb-2">
-        <button onClick={() => navigate("/companies")} className="text-erp-text3 hover:text-erp-text1 transition-colors">
+        <button onClick={() => navigate("/klanten")} className="text-erp-text3 hover:text-erp-text1 transition-colors">
           <Icons.ChevDown className="w-4 h-4 rotate-90" />
         </button>
-        <span className="text-erp-text3 text-xs">Bedrijven</span>
+        <span className="text-erp-text3 text-xs">Klanten</span>
       </div>
 
       <PageHeader title={company.name} desc={company.industry || undefined}>

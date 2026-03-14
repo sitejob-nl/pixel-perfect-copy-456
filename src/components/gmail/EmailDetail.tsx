@@ -90,7 +90,7 @@ export default function EmailDetail({ thread, emails, isLoading, connectionId, o
             <Chip>
               <span
                 className="cursor-pointer hover:text-erp-blue transition"
-                onClick={() => navigate(`/companies/${thread.matched_company_id}`)}
+                onClick={() => navigate(`/klanten/${thread.matched_company_id}`)}
               >
                 🏢 {thread.matched_company_name}
               </span>

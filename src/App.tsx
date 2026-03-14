@@ -16,6 +16,9 @@ import ContactsPage from "./pages/ContactsPage";
 import ContactDetailPage from "./pages/ContactDetailPage";
 import CompaniesPage from "./pages/CompaniesPage";
 import PipelinePage from "./pages/PipelinePage";
+import KlantenPage from "./pages/KlantenPage";
+import KlantDetailPage from "./pages/KlantDetailPage";
+import EmailDraftsPage from "./pages/EmailDraftsPage";
 import { ProjectsPage, InvoicesPage } from "./pages/ProjectsInvoicesPage";
 import QuotesPage from "./pages/QuotesPage";
 import DataIntelPage from "./pages/DataIntelPage";
@@ -160,10 +163,12 @@ const App = () => (
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="tasks" element={<TasksPage />} />
-              <Route path="contacts" element={<ContactsPage />} />
-              <Route path="contacts/:id" element={<ContactDetailPage />} />
-              <Route path="companies" element={<CompaniesPage />} />
-              <Route path="companies/:id" element={<CompanyDetailPage />} />
+              <Route path="contacts" element={<Navigate to="/klanten" replace />} />
+              <Route path="contacts/:id" element={<Navigate to="/klanten" replace />} />
+              <Route path="companies" element={<Navigate to="/klanten" replace />} />
+              <Route path="companies/:id" element={<Navigate to="/klanten" replace />} />
+              <Route path="klanten" element={<KlantenPage />} />
+              <Route path="klanten/:id" element={<KlantDetailPage />} />
               <Route path="pipeline" element={<PipelinePage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="projects/:id" element={<ProjectDetailPage />} />
@@ -186,6 +191,7 @@ const App = () => (
               <Route path="bookings" element={<BookingsPage />} />
               <Route path="calls" element={<CallsPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
+              <Route path="drafts" element={<EmailDraftsPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminRoute />} />
             </Route>

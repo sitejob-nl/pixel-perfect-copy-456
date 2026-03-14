@@ -31,8 +31,7 @@ const nav: NavSection[] = [
   ] },
   {
     l: "CRM", items: [
-      { k: "contacts", l: "Contacten", i: "Users", b: "8" },
-      { k: "companies", l: "Bedrijven", i: "Building" },
+      { k: "klanten", l: "Klanten", i: "Building" },
       { k: "pipeline", l: "Pipeline", i: "Kanban", b: "7" },
     ]
   },
@@ -67,6 +66,7 @@ const nav: NavSection[] = [
       { k: "bookings", l: "Boekingen", i: "Calendar" },
       { k: "calls", l: "Gesprekken", i: "Phone" },
       { k: "email", l: "Email Builder", i: "Send" },
+      { k: "drafts", l: "Email Drafts", i: "Send" },
       { k: "portals", l: "Klantenportaal", i: "Portal" },
       { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
     ]
@@ -95,8 +95,8 @@ const moduleMap: Record<string, string> = {
 
 const entityRouteMap: Record<string, string> = {
   projects: "/projects",
-  companies: "/companies",
-  contacts: "/contacts",
+  companies: "/klanten",
+  contacts: "/klanten",
   deals: "/pipeline",
   invoices: "/invoices",
   quotes: "/quotes",
