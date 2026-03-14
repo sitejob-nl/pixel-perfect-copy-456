@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
         name: r.handelsnaam ?? r.naam ?? "",
         city: adres.plaats ?? null,
         postal_code: adres.postcode ?? null,
-        address_line1: adres.volledigAdres ?? [adres.straatnaam, adres.huisnummer].filter(Boolean).join(" ") || null,
+        address_line1: adres.volledigAdres ?? ([adres.straatnaam, adres.huisnummer].filter(Boolean).join(" ") || null),
         industry: r.spiActiviteiten?.[0]?.sbiOmschrijving ?? null,
         sbi_code: r.spiActiviteiten?.[0]?.sbiCode ?? null,
         legal_form: r.rechtsvorm ?? null,
