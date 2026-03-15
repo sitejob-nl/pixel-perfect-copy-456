@@ -15,7 +15,6 @@ import { Card } from "@/components/ui/card";
 import DemoTypeSelector, { type PlatformType } from "./DemoTypeSelector";
 import DemoEditor from "./DemoEditor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
