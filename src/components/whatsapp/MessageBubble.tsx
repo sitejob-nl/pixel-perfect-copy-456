@@ -16,9 +16,9 @@ interface MessageBubbleProps {
 function StatusIcon({ status }: { status: string | null }) {
   switch (status) {
     case "sent":
-      return <Check className="w-3.5 h-3.5 text-erp-text3" />;
+      return <Check className="w-3.5 h-3.5 text-white/60" />;
     case "delivered":
-      return <CheckCheck className="w-3.5 h-3.5 text-erp-text3" />;
+      return <CheckCheck className="w-3.5 h-3.5 text-white/60" />;
     case "read":
       return <CheckCheck className="w-3.5 h-3.5" style={{ color: "hsl(200, 80%, 55%)" }} />;
     case "failed":
@@ -75,15 +75,15 @@ export default function MessageBubble({
       <div
         className={`max-w-[75%] rounded-xl px-3 py-2 ${
           isOutbound
-            ? "bg-[hsl(142,50%,18%)] text-erp-text0 rounded-br-sm"
+            ? "bg-[hsl(142,50%,18%)] text-white rounded-br-sm"
             : "bg-erp-bg3 text-erp-text0 rounded-bl-sm"
         }`}
       >
         {/* Template label */}
         {isTemplate && template_name && (
           <div className="flex items-center gap-1 mb-1">
-            <FileText className="w-3 h-3 text-erp-text3" />
-            <span className="text-[10px] text-erp-text3 font-medium">Template: {template_name}</span>
+            <FileText className="w-3 h-3 opacity-60" />
+            <span className="text-[10px] opacity-60 font-medium">Template: {template_name}</span>
           </div>
         )}
 
@@ -148,7 +148,7 @@ export default function MessageBubble({
 
         {/* Timestamp + status */}
         <div className={`flex items-center gap-1 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
-          <span className="text-[10px] text-erp-text3">{formatTime(created_at)}</span>
+          <span className={`text-[10px] ${isOutbound ? "text-white/60" : "text-erp-text3"}`}>{formatTime(created_at)}</span>
           {isOutbound && <StatusIcon status={status} />}
         </div>
       </div>
