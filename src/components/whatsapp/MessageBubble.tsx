@@ -16,9 +16,9 @@ interface MessageBubbleProps {
 function StatusIcon({ status }: { status: string | null }) {
   switch (status) {
     case "sent":
-      return <Check className="w-3.5 h-3.5 text-erp-text3" />;
+      return <Check className="w-3.5 h-3.5 text-white/60" />;
     case "delivered":
-      return <CheckCheck className="w-3.5 h-3.5 text-erp-text3" />;
+      return <CheckCheck className="w-3.5 h-3.5 text-white/60" />;
     case "read":
       return <CheckCheck className="w-3.5 h-3.5" style={{ color: "hsl(200, 80%, 55%)" }} />;
     case "failed":
