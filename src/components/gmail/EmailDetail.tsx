@@ -80,10 +80,19 @@ export default function EmailDetail({ thread, emails, isLoading, connectionId, o
       return;
     }
     setExpandedEmails(prev => new Set(prev).add(id));
-    if (!emailBodies[id] && connectionId) {
+
+    // If we already have the body from the DB, use it
+    if (email.body_html) {
+      setEmailBodies(prev => ({ ...prev, [id]: email.body_html! }));
+      return;
+    }
+
+    // Otherwise fetch from Gmail API using the email's own connection_id as fallback
+    const connId = connectionId || email.connection_id;
+    if (!emailBodies[id] && connId && email.gmail_message_id) {
       setLoadingBodies(prev => new Set(prev).add(id));
       try {
-        const detail = await callApi(connectionId, "get_message", { message_id: id });
+        const detail = await callApi(connId, "get_message", { message_id: email.gmail_message_id });
         setEmailBodies(prev => ({ ...prev, [id]: detail.bodyHtml || detail.bodyText || "" }));
       } catch {
         // use snippet as fallback

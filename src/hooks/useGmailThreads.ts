@@ -23,7 +23,9 @@ export interface EmailThread {
 
 export interface ThreadEmail {
   id: string;
+  gmail_message_id: string;
   thread_id: string;
+  connection_id: string;
   subject: string;
   from_address: string;
   from_name: string | null;
@@ -89,11 +91,31 @@ export function useThreadEmails(threadId: string | null) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("google_emails")
-        .select("*")
+        .select("id, gmail_message_id, thread_id, connection_id, subject, snippet, from_email, from_name, to_emails, received_at, body_html, body_preview, direction, has_attachments, is_read, ai_processed, contact_id, company_id")
         .eq("thread_id", threadId)
         .order("received_at", { ascending: true });
       if (error) throw error;
-      return (data || []) as ThreadEmail[];
+      // Map DB column names to interface names
+      return ((data || []) as any[]).map(e => ({
+        id: e.id,
+        gmail_message_id: e.gmail_message_id,
+        thread_id: e.thread_id,
+        connection_id: e.connection_id,
+        subject: e.subject,
+        from_address: e.from_email,
+        from_name: e.from_name,
+        to_addresses: e.to_emails || [],
+        received_at: e.received_at,
+        snippet: e.snippet || e.body_preview || "",
+        body_text: e.body_preview,
+        body_html: e.body_html,
+        direction: e.direction,
+        has_attachments: e.has_attachments || false,
+        is_read: e.is_read ?? true,
+        ai_processed: e.ai_processed ?? false,
+        matched_contact_id: e.contact_id,
+        matched_company_id: e.company_id,
+      })) as ThreadEmail[];
     },
   });
 }
