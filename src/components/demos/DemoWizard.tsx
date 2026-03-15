@@ -39,13 +39,11 @@ interface PageConfig {
   enabled: boolean;
 }
 
-const DEFAULT_PAGES: PageConfig[] = [
+const FALLBACK_PAGES: PageConfig[] = [
   { title: "Home", slug: "home", description: "Hero, diensten overzicht, testimonials, CTA", enabled: true },
   { title: "Over Ons", slug: "over-ons", description: "Bedrijfsverhaal, team, missie en visie", enabled: true },
   { title: "Diensten", slug: "diensten", description: "Alle diensten met uitleg en voordelen", enabled: true },
   { title: "Contact", slug: "contact", description: "Contactformulier, adres, openingstijden", enabled: true },
-  { title: "Prijzen", slug: "prijzen", description: "Pakketten, tarieven, vergelijkingstabel", enabled: false },
-  { title: "Blog", slug: "blog", description: "Nieuwsoverzicht met recente artikelen", enabled: false },
 ];
 
 const DEVICES = [
