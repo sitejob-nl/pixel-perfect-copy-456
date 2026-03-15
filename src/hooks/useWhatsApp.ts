@@ -140,7 +140,7 @@ export function useWhatsAppConversations() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("whatsapp_messages")
-        .select("*, contacts(first_name, last_name, avatar_url, whatsapp_opt_in, companies(name))")
+        .select("*, contacts(first_name, last_name, avatar_url, whatsapp_opt_in, companies:companies!contacts_company_id_fkey(name))")
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false })
         .limit(500);
