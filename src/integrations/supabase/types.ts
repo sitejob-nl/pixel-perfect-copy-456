@@ -3388,6 +3388,7 @@ export type Database = {
         Row: {
           created_at: string
           demo_id: string
+          description: string | null
           generation_status: string | null
           html_content: string
           id: string
@@ -3402,6 +3403,7 @@ export type Database = {
         Insert: {
           created_at?: string
           demo_id: string
+          description?: string | null
           generation_status?: string | null
           html_content?: string
           id?: string
@@ -3416,6 +3418,7 @@ export type Database = {
         Update: {
           created_at?: string
           demo_id?: string
+          description?: string | null
           generation_status?: string | null
           html_content?: string
           id?: string
