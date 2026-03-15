@@ -6337,17 +6337,26 @@ export type Database = {
           created_at: string
           id: string
           mod_ai_agent: boolean
+          mod_ai_assistant: boolean
+          mod_bookings: boolean
+          mod_calendar: boolean
+          mod_calls: boolean
           mod_content_calendar: boolean
           mod_contracts: boolean
           mod_data_sources: boolean
           mod_demos: boolean
           mod_email_accounts: boolean
+          mod_email_drafts: boolean
+          mod_gmail: boolean
           mod_invoices: boolean
+          mod_knowledgebase: boolean
           mod_lead_scoring: boolean
           mod_outreach: boolean
           mod_portal: boolean
           mod_projects: boolean
+          mod_prospecting: boolean
           mod_quotes: boolean
+          mod_reports: boolean
           mod_snelstart: boolean
           mod_subscriptions: boolean
           mod_webhooks: boolean
@@ -6360,17 +6369,26 @@ export type Database = {
           created_at?: string
           id?: string
           mod_ai_agent?: boolean
+          mod_ai_assistant?: boolean
+          mod_bookings?: boolean
+          mod_calendar?: boolean
+          mod_calls?: boolean
           mod_content_calendar?: boolean
           mod_contracts?: boolean
           mod_data_sources?: boolean
           mod_demos?: boolean
           mod_email_accounts?: boolean
+          mod_email_drafts?: boolean
+          mod_gmail?: boolean
           mod_invoices?: boolean
+          mod_knowledgebase?: boolean
           mod_lead_scoring?: boolean
           mod_outreach?: boolean
           mod_portal?: boolean
           mod_projects?: boolean
+          mod_prospecting?: boolean
           mod_quotes?: boolean
+          mod_reports?: boolean
           mod_snelstart?: boolean
           mod_subscriptions?: boolean
           mod_webhooks?: boolean
@@ -6383,17 +6401,26 @@ export type Database = {
           created_at?: string
           id?: string
           mod_ai_agent?: boolean
+          mod_ai_assistant?: boolean
+          mod_bookings?: boolean
+          mod_calendar?: boolean
+          mod_calls?: boolean
           mod_content_calendar?: boolean
           mod_contracts?: boolean
           mod_data_sources?: boolean
           mod_demos?: boolean
           mod_email_accounts?: boolean
+          mod_email_drafts?: boolean
+          mod_gmail?: boolean
           mod_invoices?: boolean
+          mod_knowledgebase?: boolean
           mod_lead_scoring?: boolean
           mod_outreach?: boolean
           mod_portal?: boolean
           mod_projects?: boolean
+          mod_prospecting?: boolean
           mod_quotes?: boolean
+          mod_reports?: boolean
           mod_snelstart?: boolean
           mod_subscriptions?: boolean
           mod_webhooks?: boolean

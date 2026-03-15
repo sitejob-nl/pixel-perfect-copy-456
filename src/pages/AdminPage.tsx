@@ -16,22 +16,36 @@ const tabs = [
 type TabKey = (typeof tabs)[number]["key"];
 
 const toggleableModules = [
+  // Sales
+  { key: "mod_prospecting", label: "Prospecting" },
+  { key: "mod_lead_scoring", label: "Lead Scoring" },
+  { key: "mod_outreach", label: "Outreach" },
+  // Projecten
   { key: "mod_projects", label: "Projecten" },
   { key: "mod_quotes", label: "Offertes" },
   { key: "mod_invoices", label: "Facturen" },
   { key: "mod_contracts", label: "Contracten" },
   { key: "mod_subscriptions", label: "Abonnementen" },
-  { key: "mod_content_calendar", label: "Content Kalender" },
-  { key: "mod_whatsapp", label: "WhatsApp" },
-  { key: "mod_email_accounts", label: "Email Accounts" },
-  { key: "mod_outreach", label: "Outreach" },
-  { key: "mod_lead_scoring", label: "Lead Scoring" },
-  { key: "mod_data_sources", label: "Data Sources" },
+  { key: "mod_knowledgebase", label: "Kennisbank" },
+  // Intelligence
+  { key: "mod_ai_assistant", label: "AI Assistent" },
+  { key: "mod_ai_agent", label: "AI Agent" },
+  { key: "mod_data_sources", label: "Data Sources / Scrapers" },
   { key: "mod_website_scraping", label: "Website Scraping" },
   { key: "mod_demos", label: "Demo Generator" },
-  { key: "mod_ai_agent", label: "AI Agent" },
-  { key: "mod_webhooks", label: "Webhooks" },
+  { key: "mod_content_calendar", label: "Content Kalender" },
+  { key: "mod_reports", label: "Rapportages" },
+  // Communicatie
+  { key: "mod_gmail", label: "Gmail" },
+  { key: "mod_calendar", label: "Agenda" },
+  { key: "mod_bookings", label: "Boekingen" },
+  { key: "mod_calls", label: "Gesprekken" },
+  { key: "mod_email_accounts", label: "Email Builder" },
+  { key: "mod_email_drafts", label: "Email Drafts" },
+  { key: "mod_whatsapp", label: "WhatsApp" },
   { key: "mod_portal", label: "Klantportaal" },
+  // Integraties
+  { key: "mod_webhooks", label: "Webhooks" },
   { key: "mod_snelstart", label: "SnelStart" },
 ] as const;
 
