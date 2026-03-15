@@ -273,7 +273,7 @@ export function useGenerateDemo() {
       model?: string;
       organization_id: string;
       scrape_id?: string;
-      pages?: { title: string; slug: string; description: string }[];
+      page_config?: { title: string; slug: string; description: string }[];
       extra_instructions?: string;
       branding?: any;
     }) => {
