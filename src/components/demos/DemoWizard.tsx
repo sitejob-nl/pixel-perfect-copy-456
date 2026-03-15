@@ -259,7 +259,7 @@ export default function DemoWizard({ onClose }: Props) {
         demo_type: demoType,
         model,
         organization_id: orgId,
-        pages: enabledPages.map((p) => ({ title: p.title, slug: p.slug, description: p.description })),
+        page_config: enabledPages.map((p) => ({ title: p.title, slug: p.slug, description: p.description })),
         extra_instructions: extraInstructions || undefined,
         branding: {
           primary_color: primaryColor,
