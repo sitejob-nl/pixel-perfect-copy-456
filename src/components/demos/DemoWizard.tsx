@@ -86,7 +86,6 @@ export default function DemoWizard({ onClose }: Props) {
 
   // Step 3 state
   const [demoType, setDemoType] = useState("website");
-  const [selectedTypeData, setSelectedTypeData] = useState<PlatformType | null>(null);
   const [pages, setPages] = useState<PageConfig[]>(FALLBACK_PAGES);
   const [model, setModel] = useState("");
   const [extraInstructions, setExtraInstructions] = useState("");
@@ -105,6 +104,35 @@ export default function DemoWizard({ onClose }: Props) {
   const [activePage, setActivePage] = useState("home");
   const [device, setDevice] = useState("desktop");
   const [shareOpen, setShareOpen] = useState(false);
+
+  // Platform types query (single source of truth for page defaults)
+  const { data: platformTypes } = useQuery({
+    queryKey: ["platform-types"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("demo_platform_types")
+        .select("id, naam, beschrijving, categorie, default_pages, sort_order")
+        .eq("is_active", true)
+        .order("sort_order");
+      return (data || []) as PlatformType[];
+    },
+  });
+
+  // Reset pages when demoType changes — driven by state, not callbacks
+  useEffect(() => {
+    if (!platformTypes) return;
+    const selected = platformTypes.find((t) => t.id === demoType);
+    if (selected?.default_pages && Array.isArray(selected.default_pages) && selected.default_pages.length > 0) {
+      setPages(selected.default_pages.map((p: any) => ({
+        title: p.title || "",
+        slug: p.slug || p.title?.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "",
+        description: p.description || "",
+        enabled: true,
+      })));
+    } else {
+      setPages(FALLBACK_PAGES);
+    }
+  }, [demoType, platformTypes]);
 
   // Data queries
   const { data: klanten } = useQuery({
@@ -165,18 +193,7 @@ export default function DemoWizard({ onClose }: Props) {
     }
   }, [klantId, klanten]);
 
-  // Handle platform type change — reset pages to default_pages of selected type
-  const handleTypeChange = (id: string) => {
-    setDemoType(id);
-  };
-  const handleTypeData = (type: PlatformType | null) => {
-    setSelectedTypeData(type);
-    if (type?.default_pages && Array.isArray(type.default_pages) && type.default_pages.length > 0) {
-      setPages(type.default_pages.map((p: any) => ({ ...p, enabled: true })));
-    } else {
-      setPages(FALLBACK_PAGES);
-    }
-  };
+  const selectedTypeData = platformTypes?.find((t) => t.id === demoType) || null;
 
 
   useEffect(() => {
@@ -553,7 +570,7 @@ export default function DemoWizard({ onClose }: Props) {
 
             <div className="space-y-2">
               <Label>Demo type</Label>
-              <DemoTypeSelector value={demoType} onChange={handleTypeChange} onTypeData={handleTypeData} />
+              <DemoTypeSelector value={demoType} onChange={setDemoType} />
             </div>
 
             {selectedTypeData && ["platform", "portal"].includes(selectedTypeData.categorie) && (
