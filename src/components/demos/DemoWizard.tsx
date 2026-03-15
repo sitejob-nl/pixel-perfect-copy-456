@@ -553,8 +553,19 @@ export default function DemoWizard({ onClose }: Props) {
 
             <div className="space-y-2">
               <Label>Demo type</Label>
-              <DemoTypeSelector value={demoType} onChange={setDemoType} />
+              <DemoTypeSelector value={demoType} onChange={handleTypeChange} onTypeData={handleTypeData} />
             </div>
+
+            {selectedTypeData && ["platform", "portal"].includes(selectedTypeData.categorie) && (
+              <Alert className="border-erp-purple/30 bg-erp-purple/5">
+                <Info className="h-4 w-4 text-erp-purple" />
+                <AlertDescription className="text-xs text-muted-foreground">
+                  {selectedTypeData.categorie === "platform"
+                    ? "Dit genereert een applicatie-dashboard met sidebar navigatie, niet een publieke website."
+                    : "Dit genereert een self-service portaal met inlog en klantgerichte interface."}
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="space-y-2">
               <Label>Pagina's</Label>
