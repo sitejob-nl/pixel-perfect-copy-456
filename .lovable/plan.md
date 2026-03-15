@@ -1,22 +1,53 @@
 
 
-## Probleem
+# ✅ LinkedIn Integratie: Posts Plaatsen
 
-Field name mismatch: de wizard stuurt `pages` maar de backend verwacht `page_config`.
+## Wat is gebouwd
 
-- `DemoWizard.tsx` regel 262: stuurt `pages: enabledPages.map(...)`
-- `useDemos.ts` regel 276: type definitie heeft `pages?: { title: string; slug: string; description: string }[]`
-- `callDemoService` op regel 280 stuurt de payload 1-op-1 door naar de edge function met `{ action: "generate", ...payload }` — dus het veld komt als `pages` binnen bij de backend, niet als `page_config`
+### Database
+- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
 
-## Fix
+### Edge Functions
+- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
+- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
 
-### 1. `useDemos.ts` — Rename type en payload field
+### Frontend
+- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
+- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
 
-Regel 276: rename `pages` naar `page_config` in de type definitie.
+### Secrets
+- `LINKEDIN_CLIENT_ID` — opgeslagen
+- `LINKEDIN_CLIENT_SECRET` — opgeslagen
 
-### 2. `DemoWizard.tsx` — Rename property in de generate call
+## ⚠️ Actie vereist
 
-Regel 262: verander `pages:` naar `page_config:`.
+Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
+```
 
-Dat is alles — twee regels, zelfde data, correcte field name.
+---
 
+# ✅ LinkedIn Webhooks: Real-time Notificaties
+
+## Wat is gebouwd
+
+### Database
+- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
+
+### Edge Function
+- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
+
+### Frontend
+- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
+
+### Webhook URL
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
+```
+
+## ⚠️ Actie vereist
+
+1. Vraag een webhook use case aan in je LinkedIn Developer Portal
+2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
+3. LinkedIn valideert automatisch via de challenge-response flow
