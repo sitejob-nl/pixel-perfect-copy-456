@@ -91,7 +91,7 @@ export function useThreadEmails(threadId: string | null) {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("google_emails")
-        .select("id, thread_id, connection_id, subject, snippet, from_email, from_name, to_emails, received_at, body_html, body_preview, direction, has_attachments, is_read, ai_processed, contact_id, company_id")
+        .select("id, gmail_message_id, thread_id, connection_id, subject, snippet, from_email, from_name, to_emails, received_at, body_html, body_preview, direction, has_attachments, is_read, ai_processed, contact_id, company_id")
         .eq("thread_id", threadId)
         .order("received_at", { ascending: true });
       if (error) throw error;
