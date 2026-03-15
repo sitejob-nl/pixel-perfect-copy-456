@@ -20,7 +20,7 @@ export default function GmailPage() {
   const orgId = org?.organization_id;
   const allConns = connections.filter((c) => c.is_active);
   const [activeConnId, setActiveConnId] = useState<string | null>(null);
-  const selectedConn = activeConnId || allConns[0]?.id || null;
+  const selectedConn = activeConnId || null;
   const isMobile = useIsMobile();
 
   const [category, setCategory] = useState("alle");
@@ -31,7 +31,7 @@ export default function GmailPage() {
   const [replyTo, setReplyTo] = useState<string | undefined>();
   const [replySubject, setReplySubject] = useState<string | undefined>();
 
-  const { data: threads = [], isLoading: threadsLoading } = useEmailThreads(category);
+  const { data: threads = [], isLoading: threadsLoading } = useEmailThreads(category, selectedConn);
   const { data: threadEmails = [], isLoading: emailsLoading } = useThreadEmails(selectedThread?.thread_id || null);
   const { data: pendingEmailIds = new Set() } = usePendingSuggestionsByThread(orgId);
   const sync = useSyncGoogle();
@@ -107,12 +107,13 @@ export default function GmailPage() {
           {sync.isPending && <span className="text-[11px] text-erp-text3">Synchroniseren...</span>}
         </div>
         <div className="flex items-center gap-2">
-          {allConns.length > 1 && (
+          {allConns.length >= 1 && (
             <select
               value={selectedConn || ""}
-              onChange={(e) => setActiveConnId(e.target.value)}
+              onChange={(e) => setActiveConnId(e.target.value || null)}
               className="bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-1.5 text-[12px] text-erp-text0"
             >
+              <option value="">Alle accounts</option>
               {allConns.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.email} ({c.connection_level === "organization" ? "Org" : "Persoonlijk"})

@@ -54,12 +54,12 @@ export interface AiSuggestion {
   created_at: string;
 }
 
-export function useEmailThreads(category?: string) {
+export function useEmailThreads(category?: string, connectionId?: string | null) {
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
 
   return useQuery({
-    queryKey: ["email-threads", orgId, category],
+    queryKey: ["email-threads", orgId, category, connectionId],
     enabled: !!orgId,
     refetchInterval: 60000,
     queryFn: async () => {
@@ -71,6 +71,9 @@ export function useEmailThreads(category?: string) {
         .limit(100);
       if (category && category !== "alle") {
         query = query.eq("category", category);
+      }
+      if (connectionId) {
+        query = query.eq("connection_id", connectionId);
       }
       const { data, error } = await query;
       if (error) throw error;
