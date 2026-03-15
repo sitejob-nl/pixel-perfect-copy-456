@@ -24,6 +24,7 @@ interface NavSection {
   l: string;
   items: NavItem[];
   collapsible?: boolean;
+  showFirst?: number;
 }
 
 /* ── Navigation structure ─────────────────────────────────────────── */
