@@ -3261,6 +3261,27 @@ export type Database = {
           },
         ]
       }
+      debug_log: {
+        Row: {
+          action: string | null
+          created_at: string | null
+          id: number
+          payload: Json | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string | null
+          id?: number
+          payload?: Json | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string | null
+          id?: number
+          payload?: Json | null
+        }
+        Relationships: []
+      }
       demo_dashboard_modules: {
         Row: {
           acties: string[] | null
@@ -3422,6 +3443,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      demo_platform_types: {
+        Row: {
+          beschrijving: string | null
+          categorie: string
+          created_at: string | null
+          default_pages: Json
+          generation_prompt: string | null
+          id: string
+          is_active: boolean | null
+          naam: string
+          sort_order: number | null
+          ui_guidelines: Json | null
+        }
+        Insert: {
+          beschrijving?: string | null
+          categorie?: string
+          created_at?: string | null
+          default_pages?: Json
+          generation_prompt?: string | null
+          id: string
+          is_active?: boolean | null
+          naam: string
+          sort_order?: number | null
+          ui_guidelines?: Json | null
+        }
+        Update: {
+          beschrijving?: string | null
+          categorie?: string
+          created_at?: string | null
+          default_pages?: Json
+          generation_prompt?: string | null
+          id?: string
+          is_active?: boolean | null
+          naam?: string
+          sort_order?: number | null
+          ui_guidelines?: Json | null
+        }
+        Relationships: []
       }
       demo_versions: {
         Row: {
@@ -11822,6 +11882,14 @@ export type Database = {
         Returns: undefined
       }
       fn_daily_digest: { Args: { p_org_id: string }; Returns: Json }
+      fn_demo_system_prompt: {
+        Args: {
+          p_company_name: string
+          p_demo_type: string
+          p_page_title: string
+        }
+        Returns: Json
+      }
       fn_email_generate_suggestions: {
         Args: { p_email_id: string }
         Returns: undefined
@@ -11860,6 +11928,7 @@ export type Database = {
           project_number: string
         }[]
       }
+      fn_get_platform_type: { Args: { p_type: string }; Returns: Json }
       fn_kvk_enrich_company: {
         Args: { p_company_id: string; p_org_id: string }
         Returns: number

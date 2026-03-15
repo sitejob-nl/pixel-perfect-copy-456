@@ -12,13 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import DemoTypeSelector from "./DemoTypeSelector";
+import DemoTypeSelector, { type PlatformType } from "./DemoTypeSelector";
 import DemoEditor from "./DemoEditor";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Globe, Check, Loader2, X, GripVertical,
-  Plus, Monitor, Tablet, Smartphone, ExternalLink, Copy, Share2,
+  Plus, Monitor, Tablet, Smartphone, ExternalLink, Copy, Share2, Info,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -37,13 +38,11 @@ interface PageConfig {
   enabled: boolean;
 }
 
-const DEFAULT_PAGES: PageConfig[] = [
+const FALLBACK_PAGES: PageConfig[] = [
   { title: "Home", slug: "home", description: "Hero, diensten overzicht, testimonials, CTA", enabled: true },
   { title: "Over Ons", slug: "over-ons", description: "Bedrijfsverhaal, team, missie en visie", enabled: true },
   { title: "Diensten", slug: "diensten", description: "Alle diensten met uitleg en voordelen", enabled: true },
   { title: "Contact", slug: "contact", description: "Contactformulier, adres, openingstijden", enabled: true },
-  { title: "Prijzen", slug: "prijzen", description: "Pakketten, tarieven, vergelijkingstabel", enabled: false },
-  { title: "Blog", slug: "blog", description: "Nieuwsoverzicht met recente artikelen", enabled: false },
 ];
 
 const DEVICES = [
@@ -87,7 +86,8 @@ export default function DemoWizard({ onClose }: Props) {
 
   // Step 3 state
   const [demoType, setDemoType] = useState("website");
-  const [pages, setPages] = useState<PageConfig[]>(DEFAULT_PAGES);
+  const [selectedTypeData, setSelectedTypeData] = useState<PlatformType | null>(null);
+  const [pages, setPages] = useState<PageConfig[]>(FALLBACK_PAGES);
   const [model, setModel] = useState("");
   const [extraInstructions, setExtraInstructions] = useState("");
   const [addingPage, setAddingPage] = useState(false);
@@ -165,7 +165,20 @@ export default function DemoWizard({ onClose }: Props) {
     }
   }, [klantId, klanten]);
 
-  // Handle crawl completion
+  // Handle platform type change — reset pages to default_pages of selected type
+  const handleTypeChange = (id: string) => {
+    setDemoType(id);
+  };
+  const handleTypeData = (type: PlatformType | null) => {
+    setSelectedTypeData(type);
+    if (type?.default_pages && Array.isArray(type.default_pages) && type.default_pages.length > 0) {
+      setPages(type.default_pages.map((p: any) => ({ ...p, enabled: true })));
+    } else {
+      setPages(FALLBACK_PAGES);
+    }
+  };
+
+
   useEffect(() => {
     if (!crawlStatus) return;
     if (crawlStatus.status === "completed" && crawlStatus.analysis) {
@@ -540,8 +553,19 @@ export default function DemoWizard({ onClose }: Props) {
 
             <div className="space-y-2">
               <Label>Demo type</Label>
-              <DemoTypeSelector value={demoType} onChange={setDemoType} />
+              <DemoTypeSelector value={demoType} onChange={handleTypeChange} onTypeData={handleTypeData} />
             </div>
+
+            {selectedTypeData && ["platform", "portal"].includes(selectedTypeData.categorie) && (
+              <Alert className="border-erp-purple/30 bg-erp-purple/5">
+                <Info className="h-4 w-4 text-erp-purple" />
+                <AlertDescription className="text-xs text-muted-foreground">
+                  {selectedTypeData.categorie === "platform"
+                    ? "Dit genereert een applicatie-dashboard met sidebar navigatie, niet een publieke website."
+                    : "Dit genereert een self-service portaal met inlog en klantgerichte interface."}
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="space-y-2">
               <Label>Pagina's</Label>

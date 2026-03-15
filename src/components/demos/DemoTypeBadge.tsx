@@ -2,20 +2,30 @@ import { cn } from "@/lib/utils";
 
 const TYPE_STYLES: Record<string, string> = {
   website: "bg-erp-blue/15 text-erp-blue",
-  dashboard: "bg-erp-green/15 text-erp-green",
-  client_portal: "bg-erp-purple/15 text-erp-purple",
-  employee_portal: "bg-erp-amber/15 text-erp-amber",
-  crm: "bg-erp-cyan/15 text-erp-cyan",
-  erp: "bg-erp-orange/15 text-erp-orange",
+  webshop: "bg-erp-blue/15 text-erp-blue",
+  landing: "bg-erp-blue/15 text-erp-blue",
+  erp: "bg-erp-purple/15 text-erp-purple",
+  crm: "bg-erp-purple/15 text-erp-purple",
+  werkbon: "bg-erp-purple/15 text-erp-purple",
+  planning: "bg-erp-purple/15 text-erp-purple",
+  hrm: "bg-erp-purple/15 text-erp-purple",
+  boekhouding: "bg-erp-purple/15 text-erp-purple",
+  portal: "bg-erp-green/15 text-erp-green",
+  reservering: "bg-erp-green/15 text-erp-green",
 };
 
 const TYPE_LABELS: Record<string, string> = {
   website: "Website",
-  dashboard: "Dashboard",
-  client_portal: "Klantportaal",
-  employee_portal: "Medewerkersportaal",
-  crm: "CRM",
+  webshop: "Webshop",
+  landing: "Landing Page",
   erp: "ERP",
+  crm: "CRM",
+  werkbon: "Werkbon",
+  planning: "Planning",
+  hrm: "HRM",
+  boekhouding: "Boekhouding",
+  portal: "Klantportaal",
+  reservering: "Reservering",
 };
 
 export default function DemoTypeBadge({ type }: { type: string }) {
