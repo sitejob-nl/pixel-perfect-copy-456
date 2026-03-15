@@ -423,6 +423,7 @@ export default function ProspectPoolDetailPage() {
               onSelect={v => toggleSelect(lead.id, v)}
               expanded={expandedId === lead.id}
               onExpand={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
+              onEditEmail={() => setEditingLead(lead)}
             />
           ))
         )}
