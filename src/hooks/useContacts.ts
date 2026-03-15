@@ -20,7 +20,7 @@ export function useContacts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(name, industry, city)")
+        .select("*, companies:companies!contacts_company_id_fkey(name, industry, city)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as ContactWithCompany[];

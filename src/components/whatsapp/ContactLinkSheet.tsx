@@ -36,7 +36,7 @@ export default function ContactLinkSheet({ open, onOpenChange, phoneNumber }: Pr
       const q = searchQuery.trim();
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, first_name, last_name, phone, mobile, email, company_id, companies(name)")
+        .select("id, first_name, last_name, phone, mobile, email, company_id, companies:companies!contacts_company_id_fkey(name)")
         .eq("organization_id", orgId!)
         .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,phone.ilike.%${q}%,mobile.ilike.%${q}%,email.ilike.%${q}%`)
         .limit(10);

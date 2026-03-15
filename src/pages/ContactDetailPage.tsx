@@ -82,7 +82,7 @@ export default function ContactDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies(name, industry, city)")
+        .select("*, companies:companies!contacts_company_id_fkey(name, industry, city)")
         .eq("id", id!)
         .single();
       if (error) throw error;
