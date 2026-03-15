@@ -148,7 +148,7 @@ export default function MessageBubble({
 
         {/* Timestamp + status */}
         <div className={`flex items-center gap-1 mt-0.5 ${isOutbound ? "justify-end" : "justify-start"}`}>
-          <span className="text-[10px] text-erp-text3">{formatTime(created_at)}</span>
+          <span className={`text-[10px] ${isOutbound ? "text-white/60" : "text-erp-text3"}`}>{formatTime(created_at)}</span>
           {isOutbound && <StatusIcon status={status} />}
         </div>
       </div>
