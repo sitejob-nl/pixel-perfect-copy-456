@@ -46,8 +46,8 @@ const PIPELINE_STEPS = [
 ];
 
 // --- Lead card ---
-function LeadCard({ lead, selected, onSelect, onExpand, expanded }: {
-  lead: any; selected: boolean; onSelect: (v: boolean) => void; onExpand: () => void; expanded: boolean;
+function LeadCard({ lead, selected, onSelect, onExpand, expanded, onEditEmail }: {
+  lead: any; selected: boolean; onSelect: (v: boolean) => void; onExpand: () => void; expanded: boolean; onEditEmail?: () => void;
 }) {
   const cfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new;
   const score = lead.score ?? 0;
@@ -173,9 +173,17 @@ function LeadCard({ lead, selected, onSelect, onExpand, expanded }: {
           {/* Email */}
           {lead.email_subject && (
             <div className="bg-erp-bg3 rounded-lg p-3">
-              <div className="text-[11px] font-semibold text-erp-text2 mb-1.5">Email</div>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="text-[11px] font-semibold text-erp-text2">Email</div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onEditEmail?.(); }}
+                  className="text-[11px] text-erp-blue hover:underline"
+                >
+                  Bewerken
+                </button>
+              </div>
               <p className="text-[12px] text-erp-text1 font-medium">{lead.email_subject}</p>
-              <p className="text-[12px] text-erp-text2 mt-1 line-clamp-3 whitespace-pre-wrap">{lead.email_body}</p>
+              <p className="text-[12px] text-erp-text2 mt-1 whitespace-pre-wrap">{lead.email_body}</p>
             </div>
           )}
         </div>
@@ -415,6 +423,7 @@ export default function ProspectPoolDetailPage() {
               onSelect={v => toggleSelect(lead.id, v)}
               expanded={expandedId === lead.id}
               onExpand={() => setExpandedId(expandedId === lead.id ? null : lead.id)}
+              onEditEmail={() => setEditingLead(lead)}
             />
           ))
         )}
