@@ -20,7 +20,7 @@ export default function GmailPage() {
   const orgId = org?.organization_id;
   const allConns = connections.filter((c) => c.is_active);
   const [activeConnId, setActiveConnId] = useState<string | null>(null);
-  const selectedConn = activeConnId || allConns[0]?.id || null;
+  const selectedConn = activeConnId || null;
   const isMobile = useIsMobile();
 
   const [category, setCategory] = useState("alle");
