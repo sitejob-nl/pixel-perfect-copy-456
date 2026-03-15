@@ -176,7 +176,7 @@ function LeadCard({ lead, selected, onSelect, onExpand, expanded, onEditEmail }:
               <div className="flex items-center justify-between mb-1.5">
                 <div className="text-[11px] font-semibold text-erp-text2">Email</div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); setEditingLead(lead); }}
+                  onClick={(e) => { e.stopPropagation(); onEditEmail?.(); }}
                   className="text-[11px] text-erp-blue hover:underline"
                 >
                   Bewerken
