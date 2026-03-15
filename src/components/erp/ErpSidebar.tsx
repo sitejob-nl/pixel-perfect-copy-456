@@ -24,6 +24,7 @@ interface NavSection {
   l: string;
   items: NavItem[];
   collapsible?: boolean;
+  showFirst?: number;
 }
 
 /* ── Navigation structure ─────────────────────────────────────────── */
@@ -51,6 +52,8 @@ const nav: NavSection[] = [
       { k: "invoices", l: "Facturen", i: "Receipt" },
       { k: "contracts", l: "Contracten", i: "Pen" },
     ],
+    collapsible: true,
+    showFirst: 2,
   },
   {
     l: "Communicatie",
@@ -63,6 +66,7 @@ const nav: NavSection[] = [
       { k: "portals", l: "Klantenportaal", i: "Portal" },
     ],
     collapsible: true,
+    showFirst: 3,
   },
   {
     l: "Tools",
@@ -80,6 +84,7 @@ const nav: NavSection[] = [
       { k: "webhooks", l: "Webhooks", i: "Zap" },
     ],
     collapsible: true,
+    showFirst: 3,
   },
 ];
 
@@ -237,11 +242,21 @@ export default function ErpSidebar() {
 
           const hasActive = sectionHasActive(visibleItems);
 
-          /* Collapsible section: show first 3 items, rest behind toggle */
-          if (sec.collapsible && visibleItems.length > 3) {
-            const alwaysShow = visibleItems.slice(0, 3);
-            const collapsedItems = visibleItems.slice(3);
+          /* Collapsible section */
+          if (sec.collapsible) {
+            const n = sec.showFirst ?? 3;
+            const alwaysShow = visibleItems.slice(0, n);
+            const collapsedItems = visibleItems.slice(n);
             const collapsedHasActive = sectionHasActive(collapsedItems);
+
+            if (collapsedItems.length === 0) {
+              return (
+                <div key={sec.l} className="mb-[14px]">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">{sec.l}</div>
+                  {alwaysShow.map(renderItem)}
+                </div>
+              );
+            }
 
             return (
               <div key={sec.l} className="mb-[14px]">
