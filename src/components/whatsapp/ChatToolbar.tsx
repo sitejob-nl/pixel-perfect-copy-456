@@ -497,12 +497,22 @@ export function TemplateSheet({ open, onOpenChange, phone, contactId, onSending,
         templateComponents.push({ type: "body", parameters: bodyParams });
       }
 
+      // Build preview text with resolved variables
+      let previewText = bodyComp?.text || "";
+      const bodyVarMatches = previewText.match(/\{\{([^}]+)\}\}/g) || [];
+      let pIdx = headerVars.length; // body params start after header params
+      bodyVarMatches.forEach((match: string) => {
+        previewText = previewText.replace(match, resolvedParams[pIdx] || "");
+        pIdx++;
+      });
+
       const sendBody: any = {
         to: phone,
         message_type: "template",
         template_name: selected.name,
         contact_id: contactId || undefined,
         template_language: selected.language,
+        template_preview: previewText,
       };
       if (templateComponents.length > 0) {
         sendBody.template_params = templateComponents;
