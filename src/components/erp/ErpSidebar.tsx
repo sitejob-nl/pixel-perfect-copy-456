@@ -249,6 +249,15 @@ export default function ErpSidebar() {
             const collapsedItems = visibleItems.slice(n);
             const collapsedHasActive = sectionHasActive(collapsedItems);
 
+            if (collapsedItems.length === 0) {
+              return (
+                <div key={sec.l} className="mb-[14px]">
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">{sec.l}</div>
+                  {alwaysShow.map(renderItem)}
+                </div>
+              );
+            }
+
             return (
               <div key={sec.l} className="mb-[14px]">
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">
