@@ -23,6 +23,7 @@ export interface EmailThread {
 
 export interface ThreadEmail {
   id: string;
+  gmail_message_id: string;
   thread_id: string;
   connection_id: string;
   subject: string;
