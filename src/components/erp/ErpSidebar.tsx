@@ -84,18 +84,28 @@ const nav: NavSection[] = [
 ];
 
 const moduleMap: Record<string, string> = {
+  prospecting: "mod_prospecting",
   projects: "mod_projects",
   quotes: "mod_quotes",
   invoices: "mod_invoices",
   contracts: "mod_contracts",
+  knowledgebase: "mod_knowledgebase",
   content: "mod_content_calendar",
   whatsapp: "mod_whatsapp",
   dataintel: "mod_data_sources",
   scrapers: "mod_data_sources",
   aiagent: "mod_ai_agent",
+  ai: "mod_ai_assistant",
   demos: "mod_demos",
-  webhooks: "mod_webhooks",
+  reports: "mod_reports",
+  gmail: "mod_gmail",
+  calendar: "mod_calendar",
+  bookings: "mod_bookings",
+  calls: "mod_calls",
   email: "mod_email_accounts",
+  drafts: "mod_email_drafts",
+  portals: "mod_portal",
+  webhooks: "mod_webhooks",
 };
 
 const entityRouteMap: Record<string, string> = {
