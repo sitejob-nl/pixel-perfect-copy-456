@@ -12,8 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
-import DemoTypeSelector from "./DemoTypeSelector";
+import DemoTypeSelector, { type PlatformType } from "./DemoTypeSelector";
 import DemoEditor from "./DemoEditor";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
