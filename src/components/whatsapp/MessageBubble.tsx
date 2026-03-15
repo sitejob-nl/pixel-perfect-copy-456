@@ -82,8 +82,8 @@ export default function MessageBubble({
         {/* Template label */}
         {isTemplate && template_name && (
           <div className="flex items-center gap-1 mb-1">
-            <FileText className="w-3 h-3 text-erp-text3" />
-            <span className="text-[10px] text-erp-text3 font-medium">Template: {template_name}</span>
+            <FileText className="w-3 h-3 opacity-60" />
+            <span className="text-[10px] opacity-60 font-medium">Template: {template_name}</span>
           </div>
         )}
 
