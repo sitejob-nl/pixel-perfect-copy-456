@@ -86,7 +86,6 @@ export default function DemoWizard({ onClose }: Props) {
 
   // Step 3 state
   const [demoType, setDemoType] = useState("website");
-  const [selectedTypeData, setSelectedTypeData] = useState<PlatformType | null>(null);
   const [pages, setPages] = useState<PageConfig[]>(FALLBACK_PAGES);
   const [model, setModel] = useState("");
   const [extraInstructions, setExtraInstructions] = useState("");
