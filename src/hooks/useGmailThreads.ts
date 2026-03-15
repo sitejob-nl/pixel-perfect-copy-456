@@ -98,6 +98,7 @@ export function useThreadEmails(threadId: string | null) {
       // Map DB column names to interface names
       return ((data || []) as any[]).map(e => ({
         id: e.id,
+        gmail_message_id: e.gmail_message_id,
         thread_id: e.thread_id,
         connection_id: e.connection_id,
         subject: e.subject,
