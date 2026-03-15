@@ -107,12 +107,13 @@ export default function GmailPage() {
           {sync.isPending && <span className="text-[11px] text-erp-text3">Synchroniseren...</span>}
         </div>
         <div className="flex items-center gap-2">
-          {allConns.length > 1 && (
+          {allConns.length >= 1 && (
             <select
               value={selectedConn || ""}
-              onChange={(e) => setActiveConnId(e.target.value)}
+              onChange={(e) => setActiveConnId(e.target.value || null)}
               className="bg-erp-bg2 border border-erp-border0 rounded-lg px-3 py-1.5 text-[12px] text-erp-text0"
             >
+              <option value="">Alle accounts</option>
               {allConns.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.email} ({c.connection_level === "organization" ? "Org" : "Persoonlijk"})
