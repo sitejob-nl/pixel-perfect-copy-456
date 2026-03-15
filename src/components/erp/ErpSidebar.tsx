@@ -242,10 +242,11 @@ export default function ErpSidebar() {
 
           const hasActive = sectionHasActive(visibleItems);
 
-          /* Collapsible section: show first 3 items, rest behind toggle */
-          if (sec.collapsible && visibleItems.length > 3) {
-            const alwaysShow = visibleItems.slice(0, 3);
-            const collapsedItems = visibleItems.slice(3);
+          /* Collapsible section */
+          if (sec.collapsible) {
+            const n = sec.showFirst ?? 3;
+            const alwaysShow = visibleItems.slice(0, n);
+            const collapsedItems = visibleItems.slice(n);
             const collapsedHasActive = sectionHasActive(collapsedItems);
 
             return (
