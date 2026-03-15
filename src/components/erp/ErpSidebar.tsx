@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
 import { usePendingSuggestionCount } from "@/hooks/useGmailThreads";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface NavItem {
   k: string;
@@ -22,64 +23,63 @@ interface NavItem {
 interface NavSection {
   l: string;
   items: NavItem[];
+  collapsible?: boolean;
 }
 
+/* ── Navigation structure ─────────────────────────────────────────── */
 const nav: NavSection[] = [
-  { l: "Overzicht", items: [
-    { k: "dashboard", l: "Dashboard", i: "Home" },
-    { k: "tasks", l: "Taken", i: "CheckSquare" },
-  ] },
   {
-    l: "Sales", items: [
-      { k: "prospecting", l: "Prospecting", i: "Crosshair" },
-    ]
+    l: "Overzicht",
+    items: [
+      { k: "dashboard", l: "Dashboard", i: "Home" },
+      { k: "tasks", l: "Taken", i: "CheckSquare" },
+    ],
   },
   {
-    l: "CRM", items: [
+    l: "CRM & Sales",
+    items: [
       { k: "klanten", l: "Klanten", i: "Building" },
       { k: "pipeline", l: "Pipeline", i: "Kanban", b: "7" },
-    ]
+      { k: "prospecting", l: "Prospecting", i: "Crosshair" },
+    ],
   },
   {
-    l: "Projecten", items: [
+    l: "Werk",
+    items: [
       { k: "projects", l: "Projecten", i: "Folder" },
       { k: "quotes", l: "Offertes", i: "File" },
       { k: "invoices", l: "Facturen", i: "Receipt" },
       { k: "contracts", l: "Contracten", i: "Pen" },
-      { k: "knowledgebase", l: "Kennisbank", i: "Book" },
-    ]
+    ],
   },
   {
-    l: "Intelligence", items: [
+    l: "Communicatie",
+    items: [
+      { k: "gmail", l: "Gmail", i: "Mail" },
+      { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
+      { k: "calendar", l: "Agenda", i: "Calendar" },
+      { k: "calls", l: "Gesprekken", i: "Phone" },
+      { k: "bookings", l: "Boekingen", i: "Calendar" },
+      { k: "portals", l: "Klantenportaal", i: "Portal" },
+    ],
+    collapsible: true,
+  },
+  {
+    l: "Tools",
+    items: [
       { k: "ai", l: "AI Assistent", i: "Bot", dot: true },
+      { k: "knowledgebase", l: "Kennisbank", i: "Book" },
       { k: "dataintel", l: "Data Intelligence", i: "Zap", dot: true },
       { k: "scrapers", l: "Scrapers", i: "Search" },
       { k: "aiagent", l: "AI Agent", i: "Bot" },
       { k: "demos", l: "Demo's", i: "Globe" },
       { k: "content", l: "Content", i: "Calendar" },
-    ]
-  },
-  {
-    l: "Inzichten", items: [
-      { k: "reports", l: "Rapportages", i: "BarChart" },
-    ]
-  },
-  {
-    l: "Communicatie", items: [
-      { k: "gmail", l: "Gmail", i: "Mail" },
-      { k: "calendar", l: "Agenda", i: "Calendar" },
-      { k: "bookings", l: "Boekingen", i: "Calendar" },
-      { k: "calls", l: "Gesprekken", i: "Phone" },
       { k: "email", l: "Email Builder", i: "Send" },
       { k: "drafts", l: "Email Drafts", i: "Send" },
-      { k: "portals", l: "Klantenportaal", i: "Portal" },
-      { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
-    ]
-  },
-  {
-    l: "Integraties", items: [
+      { k: "reports", l: "Rapportages", i: "BarChart" },
       { k: "webhooks", l: "Webhooks", i: "Zap" },
-    ]
+    ],
+    collapsible: true,
   },
 ];
 
@@ -125,6 +125,7 @@ const iconNameMap: Record<string, IconName> = {
   calendar: "Calendar", book: "Book", star: "Zap",
 };
 
+/* ── Component ────────────────────────────────────────────────────── */
 export default function ErpSidebar() {
   const [hov, setHov] = useState<string | null>(null);
   const { data: modules } = useOrgModules();
@@ -149,8 +150,7 @@ export default function ErpSidebar() {
     },
   });
 
-  const pathSegment = location.pathname.split("/")[1] || "dashboard";
-  const activePage = pathSegment;
+  const activePage = location.pathname.split("/")[1] || "dashboard";
 
   const orgName = brandOrg?.name || "SiteJob";
   const orgLogo = brandOrg?.logo_url;
@@ -160,22 +160,51 @@ export default function ErpSidebar() {
 
   const isModuleEnabled = (pageKey: string) => {
     const moduleKey = moduleMap[pageKey];
-    if (!moduleKey) return true;
-    if (!modules) return true;
+    if (!moduleKey || !modules) return true;
     return (modules as any)[moduleKey] === true;
   };
 
-  const handleNavigate = (key: string) => {
-    navigate(`/${key}`);
-  };
+  const handleNavigate = (key: string) => navigate(`/${key}`);
 
   const handleViewClick = (view: any) => {
     const route = entityRouteMap[view.entity_type] || "/dashboard";
     const params = new URLSearchParams();
-    if (view.filters) {
-      params.set("view", view.id);
-    }
+    if (view.filters) params.set("view", view.id);
     navigate(params.toString() ? `${route}?${params}` : route);
+  };
+
+  /* Check if any item in a collapsible section is active */
+  const sectionHasActive = (items: NavItem[]) => items.some((it) => activePage === it.k);
+
+  /* Render a single nav item */
+  const renderItem = (it: NavItem) => {
+    const active = activePage === it.k;
+    const hover = hov === it.k && !active;
+    const Icon = Icons[it.i];
+    return (
+      <div
+        key={it.k}
+        onClick={() => handleNavigate(it.k)}
+        onMouseEnter={() => setHov(it.k)}
+        onMouseLeave={() => setHov(null)}
+        className={cn(
+          "flex items-center gap-[9px] px-[10px] py-[7px] rounded-lg cursor-pointer text-[13px] transition-all duration-100",
+          active ? "text-erp-text0 bg-erp-bg3 font-medium" : hover ? "text-erp-text1 bg-erp-hover" : "text-erp-text2"
+        )}
+      >
+        <Icon className="w-[18px] h-[18px]" />
+        <span className="flex-1">{it.l}</span>
+        {(it.b || (it.k === "gmail" && pendingSuggestionCount > 0)) && (
+          <span className={cn(
+            "text-[10.5px] font-semibold px-[7px] py-[1px] rounded-[10px]",
+            active ? "bg-erp-blue/10 text-erp-blue" : "bg-erp-bg4 text-erp-text3"
+          )}>
+            {it.k === "gmail" && pendingSuggestionCount > 0 ? String(pendingSuggestionCount) : it.b}
+          </span>
+        )}
+        {it.dot && <Dot color="hsl(160, 67%, 52%)" size={6} />}
+      </div>
+    );
   };
 
   return (
@@ -202,46 +231,52 @@ export default function ErpSidebar() {
 
       {/* Nav */}
       <nav className="flex-1 p-[10px_8px] overflow-y-auto">
-        {nav.map(sec => {
-          const visibleItems = sec.items.filter(it => isModuleEnabled(it.k));
+        {nav.map((sec) => {
+          const visibleItems = sec.items.filter((it) => isModuleEnabled(it.k));
           if (visibleItems.length === 0) return null;
+
+          const hasActive = sectionHasActive(visibleItems);
+
+          /* Collapsible section: show first 3 items, rest behind toggle */
+          if (sec.collapsible && visibleItems.length > 3) {
+            const alwaysShow = visibleItems.slice(0, 3);
+            const collapsedItems = visibleItems.slice(3);
+            const collapsedHasActive = sectionHasActive(collapsedItems);
+
+            return (
+              <div key={sec.l} className="mb-[14px]">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">
+                  {sec.l}
+                </div>
+                {alwaysShow.map(renderItem)}
+                <Collapsible defaultOpen={collapsedHasActive}>
+                  <CollapsibleContent>
+                    {collapsedItems.map(renderItem)}
+                  </CollapsibleContent>
+                  <CollapsibleTrigger className="w-full flex items-center gap-[9px] px-[10px] py-[5px] rounded-lg text-[12px] text-erp-text3 hover:text-erp-text1 transition-colors group">
+                    <Icons.ChevRight className="w-3.5 h-3.5 transition-transform group-data-[state=open]:rotate-90" />
+                    <span className="group-data-[state=open]:hidden">Meer tonen…</span>
+                    <span className="hidden group-data-[state=open]:inline">Minder tonen</span>
+                  </CollapsibleTrigger>
+                </Collapsible>
+              </div>
+            );
+          }
+
+          /* Standard section */
           return (
-            <div key={sec.l} className="mb-[18px]">
-              <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">{sec.l}</div>
-              {visibleItems.map(it => {
-                const active = activePage === it.k;
-                const hover = hov === it.k && !active;
-                const Icon = Icons[it.i];
-                return (
-                  <div
-                    key={it.k}
-                    onClick={() => handleNavigate(it.k)}
-                    onMouseEnter={() => setHov(it.k)}
-                    onMouseLeave={() => setHov(null)}
-                    className={cn(
-                      "flex items-center gap-[9px] px-[10px] py-[7px] rounded-lg cursor-pointer text-[13px] transition-all duration-100",
-                      active ? "text-erp-text0 bg-erp-bg3 font-medium" : hover ? "text-erp-text1 bg-erp-hover" : "text-erp-text2"
-                    )}
-                  >
-                    <Icon className="w-[18px] h-[18px]" />
-                    <span className="flex-1">{it.l}</span>
-                    {(it.b || (it.k === "gmail" && pendingSuggestionCount > 0)) && (
-                      <span className={cn(
-                        "text-[10.5px] font-semibold px-[7px] py-[1px] rounded-[10px]",
-                        active ? "bg-erp-blue/10 text-erp-blue" : "bg-erp-bg4 text-erp-text3"
-                      )}>{it.k === "gmail" && pendingSuggestionCount > 0 ? String(pendingSuggestionCount) : it.b}</span>
-                    )}
-                    {it.dot && <Dot color="hsl(160, 67%, 52%)" size={6} />}
-                  </div>
-                );
-              })}
+            <div key={sec.l} className="mb-[14px]">
+              <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">
+                {sec.l}
+              </div>
+              {visibleItems.map(renderItem)}
             </div>
           );
         })}
 
         {/* Saved Views */}
         {savedViews.length > 0 && (
-          <div className="mb-[18px]">
+          <div className="mb-[14px]">
             <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">Saved Views</div>
             {savedViews.map((view: any) => {
               const iconKey = (view.icon || "folder").toLowerCase();
@@ -267,9 +302,9 @@ export default function ErpSidebar() {
           </div>
         )}
 
-        {/* Super Admin link */}
+        {/* Super Admin */}
         {isSuperAdmin && (
-          <div className="mb-[18px]">
+          <div className="mb-[14px]">
             <div className="text-[10px] font-semibold uppercase tracking-widest text-erp-text3 px-[10px] mb-[5px]">Admin</div>
             <div
               onClick={() => handleNavigate("admin")}
@@ -304,7 +339,9 @@ export default function ErpSidebar() {
           <div className="text-[13px] font-semibold">{orgName}</div>
           <div className="text-[10.5px] text-erp-text3">Professional</div>
         </div>
-        <span className="text-erp-text3 cursor-pointer flex" onClick={() => handleNavigate("settings")}><Icons.Settings className="w-[17px] h-[17px]" /></span>
+        <span className="text-erp-text3 cursor-pointer flex" onClick={() => handleNavigate("settings")}>
+          <Icons.Settings className="w-[17px] h-[17px]" />
+        </span>
       </div>
     </aside>
   );
