@@ -193,18 +193,7 @@ export default function DemoWizard({ onClose }: Props) {
     }
   }, [klantId, klanten]);
 
-  // Handle platform type change — reset pages to default_pages of selected type
-  const handleTypeChange = (id: string) => {
-    setDemoType(id);
-  };
-  const handleTypeData = (type: PlatformType | null) => {
-    setSelectedTypeData(type);
-    if (type?.default_pages && Array.isArray(type.default_pages) && type.default_pages.length > 0) {
-      setPages(type.default_pages.map((p: any) => ({ ...p, enabled: true })));
-    } else {
-      setPages(FALLBACK_PAGES);
-    }
-  };
+  const selectedTypeData = platformTypes?.find((t) => t.id === demoType) || null;
 
 
   useEffect(() => {
