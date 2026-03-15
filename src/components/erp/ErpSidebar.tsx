@@ -51,6 +51,8 @@ const nav: NavSection[] = [
       { k: "invoices", l: "Facturen", i: "Receipt" },
       { k: "contracts", l: "Contracten", i: "Pen" },
     ],
+    collapsible: true,
+    showFirst: 2,
   },
   {
     l: "Communicatie",
@@ -63,6 +65,7 @@ const nav: NavSection[] = [
       { k: "portals", l: "Klantenportaal", i: "Portal" },
     ],
     collapsible: true,
+    showFirst: 3,
   },
   {
     l: "Tools",
@@ -80,6 +83,7 @@ const nav: NavSection[] = [
       { k: "webhooks", l: "Webhooks", i: "Zap" },
     ],
     collapsible: true,
+    showFirst: 3,
   },
 ];
 
