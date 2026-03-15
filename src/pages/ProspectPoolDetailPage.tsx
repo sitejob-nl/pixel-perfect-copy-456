@@ -74,6 +74,9 @@ function LeadCard({ lead, selected, onSelect, onExpand, expanded }: {
           <div className="flex items-center gap-2">
             <span className="text-[14px] font-semibold text-erp-text0 truncate">{lead.company_name}</span>
             {lead.demo_viewed_at && <span className="text-[10px] bg-orange-500/10 text-orange-500 font-semibold px-1.5 py-0.5 rounded">🔥 Demo bekeken</span>}
+            {lead.demo_url && !lead.demo_viewed_at && (
+              <span className="text-[10px] bg-green-500/10 text-green-500 font-semibold px-1.5 py-0.5 rounded">✅ Demo klaar</span>
+            )}
           </div>
           <div className="text-[11px] text-erp-text3 mt-0.5 flex items-center gap-1.5 flex-wrap">
             {lead.website_url && <span>{new URL(lead.website_url).hostname}</span>}
@@ -88,9 +91,17 @@ function LeadCard({ lead, selected, onSelect, onExpand, expanded }: {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5" style={{ color: cfg.color }}>
-          {cfg.icon}
-          <span className="text-[11px] font-medium">{cfg.label}</span>
+        <div className="flex items-center gap-2">
+          {lead.demo_url && (
+            <a href={lead.demo_url} target="_blank" rel="noopener" onClick={e => e.stopPropagation()}
+               className="text-[11px] text-erp-blue hover:underline flex items-center gap-1">
+              <Eye className="w-3 h-3" /> Demo
+            </a>
+          )}
+          <div className="flex items-center gap-1.5" style={{ color: cfg.color }}>
+            {cfg.icon}
+            <span className="text-[11px] font-medium">{cfg.label}</span>
+          </div>
         </div>
       </div>
 
