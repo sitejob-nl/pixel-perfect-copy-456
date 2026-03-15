@@ -150,6 +150,12 @@ function LeadCard({ lead, selected, onSelect, onExpand, expanded }: {
           )}
 
           {/* Demo */}
+          {lead.status === "demo_building" && !lead.demo_url && (
+            <div className="bg-erp-bg3 rounded-lg p-3 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-erp-blue" />
+              <span className="text-[12px] text-erp-text2">Demo wordt gebouwd...</span>
+            </div>
+          )}
           {lead.demo_url && (
             <div className="bg-erp-bg3 rounded-lg p-3">
               <div className="text-[11px] font-semibold text-erp-text2 mb-1.5">Demo</div>
