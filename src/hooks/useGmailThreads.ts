@@ -24,6 +24,7 @@ export interface EmailThread {
 export interface ThreadEmail {
   id: string;
   thread_id: string;
+  connection_id: string;
   subject: string;
   from_address: string;
   from_name: string | null;

@@ -80,10 +80,12 @@ export default function EmailDetail({ thread, emails, isLoading, connectionId, o
       return;
     }
     setExpandedEmails(prev => new Set(prev).add(id));
-    if (!emailBodies[id] && connectionId) {
+    // Use the email's own connection_id if no specific connection is selected
+    const connId = connectionId || email.connection_id;
+    if (!emailBodies[id] && connId) {
       setLoadingBodies(prev => new Set(prev).add(id));
       try {
-        const detail = await callApi(connectionId, "get_message", { message_id: id });
+        const detail = await callApi(connId, "get_message", { message_id: id });
         setEmailBodies(prev => ({ ...prev, [id]: detail.bodyHtml || detail.bodyText || "" }));
       } catch {
         // use snippet as fallback
