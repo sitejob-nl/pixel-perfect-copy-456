@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   ArrowLeft, ArrowRight, Globe, Check, Loader2, X, GripVertical,
-  Plus, Monitor, Tablet, Smartphone, ExternalLink, Copy, Share2,
+  Plus, Monitor, Tablet, Smartphone, ExternalLink, Copy, Share2, Info,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
