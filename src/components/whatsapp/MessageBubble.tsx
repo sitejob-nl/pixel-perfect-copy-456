@@ -75,7 +75,7 @@ export default function MessageBubble({
       <div
         className={`max-w-[75%] rounded-xl px-3 py-2 ${
           isOutbound
-            ? "bg-[hsl(142,50%,18%)] text-erp-text0 rounded-br-sm"
+            ? "bg-[hsl(142,50%,18%)] text-white rounded-br-sm"
             : "bg-erp-bg3 text-erp-text0 rounded-bl-sm"
         }`}
       >
