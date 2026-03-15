@@ -46,8 +46,8 @@ const PIPELINE_STEPS = [
 ];
 
 // --- Lead card ---
-function LeadCard({ lead, selected, onSelect, onExpand, expanded }: {
-  lead: any; selected: boolean; onSelect: (v: boolean) => void; onExpand: () => void; expanded: boolean;
+function LeadCard({ lead, selected, onSelect, onExpand, expanded, onEditEmail }: {
+  lead: any; selected: boolean; onSelect: (v: boolean) => void; onExpand: () => void; expanded: boolean; onEditEmail?: () => void;
 }) {
   const cfg = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new;
   const score = lead.score ?? 0;
