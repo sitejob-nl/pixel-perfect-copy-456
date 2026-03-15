@@ -11162,6 +11162,7 @@ export type Database = {
         Row: {
           category: string | null
           company_id: string | null
+          connection_id: string | null
           contact_id: string | null
           has_unread: boolean | null
           last_message_at: string | null
@@ -11175,6 +11176,13 @@ export type Database = {
           thread_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "google_emails_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "google_connections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "google_emails_organization_id_fkey"
             columns: ["organization_id"]
