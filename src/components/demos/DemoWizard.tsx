@@ -570,7 +570,7 @@ export default function DemoWizard({ onClose }: Props) {
 
             <div className="space-y-2">
               <Label>Demo type</Label>
-              <DemoTypeSelector value={demoType} onChange={handleTypeChange} onTypeData={handleTypeData} />
+              <DemoTypeSelector value={demoType} onChange={setDemoType} />
             </div>
 
             {selectedTypeData && ["platform", "portal"].includes(selectedTypeData.categorie) && (
