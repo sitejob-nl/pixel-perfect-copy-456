@@ -31,7 +31,7 @@ export default function GmailPage() {
   const [replyTo, setReplyTo] = useState<string | undefined>();
   const [replySubject, setReplySubject] = useState<string | undefined>();
 
-  const { data: threads = [], isLoading: threadsLoading } = useEmailThreads(category);
+  const { data: threads = [], isLoading: threadsLoading } = useEmailThreads(category, selectedConn);
   const { data: threadEmails = [], isLoading: emailsLoading } = useThreadEmails(selectedThread?.thread_id || null);
   const { data: pendingEmailIds = new Set() } = usePendingSuggestionsByThread(orgId);
   const sync = useSyncGoogle();
