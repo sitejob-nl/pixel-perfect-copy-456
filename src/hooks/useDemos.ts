@@ -64,7 +64,7 @@ export function useDemo(id: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("demos")
-        .select("*, contacts(first_name, last_name, email, company_id, companies(name))")
+        .select("*, contacts(first_name, last_name, email, company_id, companies:companies!contacts_company_id_fkey(name))")
         .eq("id", id!)
         .single();
       if (error) throw error;
