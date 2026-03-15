@@ -105,6 +105,35 @@ export default function DemoWizard({ onClose }: Props) {
   const [device, setDevice] = useState("desktop");
   const [shareOpen, setShareOpen] = useState(false);
 
+  // Platform types query (single source of truth for page defaults)
+  const { data: platformTypes } = useQuery({
+    queryKey: ["platform-types"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("demo_platform_types")
+        .select("id, naam, beschrijving, categorie, default_pages, sort_order")
+        .eq("is_active", true)
+        .order("sort_order");
+      return (data || []) as PlatformType[];
+    },
+  });
+
+  // Reset pages when demoType changes — driven by state, not callbacks
+  useEffect(() => {
+    if (!platformTypes) return;
+    const selected = platformTypes.find((t) => t.id === demoType);
+    if (selected?.default_pages && Array.isArray(selected.default_pages) && selected.default_pages.length > 0) {
+      setPages(selected.default_pages.map((p: any) => ({
+        title: p.title || "",
+        slug: p.slug || p.title?.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "",
+        description: p.description || "",
+        enabled: true,
+      })));
+    } else {
+      setPages(FALLBACK_PAGES);
+    }
+  }, [demoType, platformTypes]);
+
   // Data queries
   const { data: klanten } = useQuery({
     queryKey: ["klanten-select"],
