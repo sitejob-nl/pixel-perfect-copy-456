@@ -156,7 +156,7 @@ export function useDeleteProspectLead() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("prospect_leads").delete().eq("id", id);
+      const { error } = await supabase.from("prospect_leads" as any).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
