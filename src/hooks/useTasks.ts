@@ -23,7 +23,7 @@ export interface TaskWithRelations {
   contacts: { first_name: string; last_name: string | null } | null;
   companies: { name: string } | null;
   deals: { title: string } | null;
-  profiles: { full_name: string | null; email: string | null } | null;
+  assigned_profile?: { full_name: string | null; email: string | null } | null;
 }
 
 export function useTasks() {
