@@ -32,6 +32,7 @@ export default function KlantDetailPage() {
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [dealDialogOpen, setDealDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
   const qc = useQueryClient();
