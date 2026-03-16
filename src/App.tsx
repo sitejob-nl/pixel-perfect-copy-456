@@ -53,6 +53,9 @@ import CallsPage from "./pages/CallsPage";
 import AiAssistantPage from "./pages/AiAssistantPage";
 import ProspectingPage from "./pages/ProspectingPage";
 import ProspectPoolDetailPage from "./pages/ProspectPoolDetailPage";
+import ProjectPlansPage from "./pages/ProjectPlansPage";
+import ProjectPlanBuilderPage from "./pages/ProjectPlanBuilderPage";
+import ProjectPlanPublicPage from "./pages/ProjectPlanPublicPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
