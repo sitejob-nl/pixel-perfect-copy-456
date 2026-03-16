@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -7,7 +7,8 @@ import { Icons } from "@/components/erp/ErpIcons";
 import { format, formatDistanceToNow, isAfter, startOfWeek, endOfWeek } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
-import { Copy, ExternalLink, Loader2 } from "lucide-react";
+import { Copy, ExternalLink, Loader2, Settings } from "lucide-react";
+import BookingPageSettings from "@/components/bookings/BookingPageSettings";
 
 const sb = supabase as any;
 
