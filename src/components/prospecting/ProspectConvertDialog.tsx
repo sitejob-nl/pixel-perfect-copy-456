@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ErpButton } from "@/components/erp/ErpPrimitives";
 import { useConvertProspect } from "@/hooks/useProspectKanban";
 import { usePipelineStages } from "@/hooks/useDeals";
-import { useTeamMembers } from "@/hooks/useTeam";
+import { useOrgMembers } from "@/hooks/useTeam";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import type { ProspectLead } from "@/hooks/useProspectKanban";
