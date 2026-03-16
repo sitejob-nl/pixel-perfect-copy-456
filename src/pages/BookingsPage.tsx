@@ -115,9 +115,7 @@ export default function BookingsPage() {
 
       {tab === "settings" ? (
         <BookingPageSettings />
-      ) : (
-
-      {isLoading ? (
+      ) : isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-erp-text3" /></div>
       ) : bookings.length === 0 ? (
         <div className="text-center py-12 text-erp-text3 text-sm">Geen boekingen gevonden</div>
