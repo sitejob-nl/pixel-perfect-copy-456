@@ -113,6 +113,15 @@ export default function KlantDetailPage() {
     toast.success("Primair contact gewijzigd");
   };
 
+  const saveContactField = async (contactId: string, field: string, value: any) => {
+    const { error } = await supabase.from("contacts").update({ [field]: value }).eq("id", contactId);
+    if (error) { toast.error("Fout bij opslaan"); throw error; }
+    qc.invalidateQueries({ queryKey: ["company-contacts", id] });
+    qc.invalidateQueries({ queryKey: ["contacts"] });
+    qc.invalidateQueries({ queryKey: ["klanten"] });
+    toast.success("Opgeslagen");
+  };
+
   if (isLoading) return <ErpCard className="p-8 text-center text-erp-text2 text-sm">Laden...</ErpCard>;
   if (!company) return <ErpCard className="p-8 text-center text-erp-text3 text-sm">Klant niet gevonden</ErpCard>;
 
