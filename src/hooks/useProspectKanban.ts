@@ -122,7 +122,7 @@ export function useUpdateProspectLead() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; [key: string]: any }) => {
       const { error } = await supabase
-        .from("prospect_leads")
+        .from("prospect_leads" as any)
         .update(updates as any)
         .eq("id", id);
       if (error) throw error;
