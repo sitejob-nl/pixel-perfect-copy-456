@@ -173,7 +173,8 @@ const App = () => (
               <Route path="companies/:id" element={<Navigate to="/klanten" replace />} />
               <Route path="klanten" element={<KlantenPage />} />
               <Route path="klanten/:id" element={<KlantDetailPage />} />
-              <Route path="pipeline" element={<PipelinePage />} />
+              <Route path="pipeline" element={<DealsPage />} />
+              <Route path="deals" element={<DealsPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="projects/:id" element={<ProjectDetailPage />} />
               <Route path="invoices" element={<InvoicesPage />} />

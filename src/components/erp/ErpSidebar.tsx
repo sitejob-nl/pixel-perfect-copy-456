@@ -40,7 +40,7 @@ const nav: NavSection[] = [
     l: "CRM & Sales",
     items: [
       { k: "klanten", l: "Klanten", i: "Building" },
-      { k: "pipeline", l: "Pipeline", i: "Kanban", b: "7" },
+      { k: "deals", l: "Deals", i: "Kanban" },
       { k: "prospecting", l: "Prospecting", i: "Crosshair" },
     ],
   },
