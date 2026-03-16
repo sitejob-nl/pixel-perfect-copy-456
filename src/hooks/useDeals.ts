@@ -8,9 +8,11 @@ type DealInsert = Database["public"]["Tables"]["deals"]["Insert"];
 type StageRow = Database["public"]["Tables"]["pipeline_stages"]["Row"];
 
 export interface DealWithRelations extends DealRow {
-  pipeline_stages: { name: string; color: string | null; sort_order: number; is_won: boolean | null; is_lost: boolean | null } | null;
-  contacts: { first_name: string; last_name: string | null } | null;
+  pipeline_stages: { name: string; color: string | null; sort_order: number; is_won: boolean | null; is_lost: boolean | null; probability: number | null } | null;
+  contacts: { first_name: string; last_name: string | null; email: string | null; phone: string | null; linkedin_url: string | null } | null;
   companies: { name: string } | null;
+  profiles: { full_name: string | null; avatar_url: string | null; email: string | null } | null;
+  _task_count?: number;
 }
 
 export function usePipelineStages() {
@@ -41,10 +43,26 @@ export function useDeals() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
-        .select("*, pipeline_stages(name, color, sort_order, is_won, is_lost), contacts(first_name, last_name), companies(name)")
+        .select("*, pipeline_stages(name, color, sort_order, is_won, is_lost, probability), contacts(first_name, last_name, email, phone, linkedin_url), companies(name), profiles(full_name, avatar_url, email)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as DealWithRelations[];
+    },
+  });
+}
+
+export function useDealTasks(dealId: string | null) {
+  return useQuery({
+    queryKey: ["deal-tasks", dealId],
+    enabled: !!dealId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("deal_id", dealId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
     },
   });
 }
