@@ -84,7 +84,7 @@ export function useUpdateProspectStatus() {
   return useMutation({
     mutationFn: async ({ leadId, status }: { leadId: string; status: string }) => {
       const { error } = await supabase
-        .from("prospect_leads")
+        .from("prospect_leads" as any)
         .update({ status } as any)
         .eq("id", leadId);
       if (error) throw error;
