@@ -20,7 +20,8 @@ interface Props {
 export default function ProspectConvertDialog({ lead, open, onClose }: Props) {
   const convertMutation = useConvertProspect();
   const { data: stages } = usePipelineStages();
-  const { data: members } = useTeamMembers();
+  const { data: membersData } = useOrgMembers();
+  const members = (membersData as any)?.members || [];
 
   const [dealValue, setDealValue] = useState("");
   const [stageId, setStageId] = useState<string>("");

@@ -68,9 +68,9 @@ export function useProspectKanban(poolId?: string) {
     queryKey: ["prospect-kanban", orgId, poolId],
     enabled: !!orgId,
     queryFn: async () => {
-      const params: Record<string, any> = { p_organization_id: orgId };
-      if (poolId) params.p_pool_id = poolId;
-      const { data, error } = await supabase.rpc("get_prospect_kanban", params);
+      const rpcParams: { p_organization_id: string; p_pool_id?: string } = { p_organization_id: orgId! };
+      if (poolId) rpcParams.p_pool_id = poolId;
+      const { data, error } = await supabase.rpc("get_prospect_kanban" as any, rpcParams);
       if (error) throw error;
       return data as unknown as KanbanData;
     },
