@@ -142,7 +142,7 @@ export function useProspectPools() {
     enabled: !!orgId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospect_pools")
+        .from("prospect_pools" as any)
         .select("id, name, source, status, total_leads")
         .order("created_at", { ascending: false });
       if (error) throw error;
