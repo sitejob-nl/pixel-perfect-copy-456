@@ -15,7 +15,7 @@ import DashboardPage from "./pages/DashboardPage";
 import ContactsPage from "./pages/ContactsPage";
 import ContactDetailPage from "./pages/ContactDetailPage";
 import CompaniesPage from "./pages/CompaniesPage";
-import PipelinePage from "./pages/PipelinePage";
+import DealsPage from "./pages/DealsPage";
 import KlantenPage from "./pages/KlantenPage";
 import KlantDetailPage from "./pages/KlantDetailPage";
 import EmailDraftsPage from "./pages/EmailDraftsPage";
