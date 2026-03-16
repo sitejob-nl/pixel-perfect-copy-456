@@ -52,6 +52,7 @@ const nav: NavSection[] = [
       { k: "quotes", l: "Offertes", i: "File" },
       { k: "invoices", l: "Facturen", i: "Receipt" },
       { k: "contracts", l: "Contracten", i: "Pen" },
+      { k: "project-plans", l: "Projectplannen", i: "File" },
     ],
     collapsible: true,
     showFirst: 2,

@@ -53,6 +53,9 @@ import CallsPage from "./pages/CallsPage";
 import AiAssistantPage from "./pages/AiAssistantPage";
 import ProspectingPage from "./pages/ProspectingPage";
 import ProspectPoolDetailPage from "./pages/ProspectPoolDetailPage";
+import ProjectPlansPage from "./pages/ProjectPlansPage";
+import ProjectPlanBuilderPage from "./pages/ProjectPlanBuilderPage";
+import ProjectPlanPublicPage from "./pages/ProjectPlanPublicPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -160,6 +163,7 @@ const App = () => (
             <Route path="/book/:slug" element={<BookingPage />} />
             <Route path="/portal" element={<ClientPortalPage />} />
             <Route path="/demo/:slug" element={<PublicDemoPage />} />
+            <Route path="/plan/:slug" element={<ProjectPlanPublicPage />} />
             <Route path="/onboarding" element={<OnboardingRoute><OnboardingPage /></OnboardingRoute>} />
 
             {/* Protected layout with sidebar */}
@@ -180,6 +184,8 @@ const App = () => (
               <Route path="invoices" element={<InvoicesPage />} />
               <Route path="quotes" element={<QuotesPage />} />
               <Route path="contracts" element={<ContractsPage />} />
+              <Route path="project-plans" element={<ProjectPlansPage />} />
+              <Route path="project-plans/:id" element={<ProjectPlanBuilderPage />} />
               <Route path="knowledgebase" element={<KnowledgeBasePage />} />
               <Route path="dataintel" element={<DataIntelPage />} />
               <Route path="scrapers" element={<ScrapersPage />} />
