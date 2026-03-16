@@ -8072,6 +8072,7 @@ export type Database = {
           address: string | null
           analysis: Json | null
           analyzed_at: string | null
+          assigned_to: string | null
           city: string | null
           company_id: string | null
           company_name: string
@@ -8105,6 +8106,10 @@ export type Database = {
           google_review_count: number | null
           id: string
           kvk_number: string | null
+          last_contact_channel: string | null
+          last_contacted_at: string | null
+          linkedin_message_draft: string | null
+          notes: string | null
           organization_id: string
           phone: string | null
           pool_id: string
@@ -8119,6 +8124,7 @@ export type Database = {
           address?: string | null
           analysis?: Json | null
           analyzed_at?: string | null
+          assigned_to?: string | null
           city?: string | null
           company_id?: string | null
           company_name: string
@@ -8152,6 +8158,10 @@ export type Database = {
           google_review_count?: number | null
           id?: string
           kvk_number?: string | null
+          last_contact_channel?: string | null
+          last_contacted_at?: string | null
+          linkedin_message_draft?: string | null
+          notes?: string | null
           organization_id: string
           phone?: string | null
           pool_id: string
@@ -8166,6 +8176,7 @@ export type Database = {
           address?: string | null
           analysis?: Json | null
           analyzed_at?: string | null
+          assigned_to?: string | null
           city?: string | null
           company_id?: string | null
           company_name?: string
@@ -8199,6 +8210,10 @@ export type Database = {
           google_review_count?: number | null
           id?: string
           kvk_number?: string | null
+          last_contact_channel?: string | null
+          last_contacted_at?: string | null
+          linkedin_message_draft?: string | null
+          notes?: string | null
           organization_id?: string
           phone?: string | null
           pool_id?: string
@@ -8327,6 +8342,63 @@ export type Database = {
             columns: ["pool_id"]
             isOneToOne: false
             referencedRelation: "prospect_pools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_pipeline_config: {
+        Row: {
+          auto_advance_on: string | null
+          color: string
+          created_at: string
+          icon: string | null
+          id: string
+          is_positive: boolean | null
+          is_terminal: boolean
+          label: string
+          organization_id: string
+          sort_order: number
+          status_key: string
+        }
+        Insert: {
+          auto_advance_on?: string | null
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_positive?: boolean | null
+          is_terminal?: boolean
+          label: string
+          organization_id: string
+          sort_order?: number
+          status_key: string
+        }
+        Update: {
+          auto_advance_on?: string | null
+          color?: string
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_positive?: boolean | null
+          is_terminal?: boolean
+          label?: string
+          organization_id?: string
+          sort_order?: number
+          status_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_pipeline_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prospect_pipeline_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -11842,6 +11914,15 @@ export type Database = {
     }
     Functions: {
       cleanup_expired_raw_leads: { Args: never; Returns: number }
+      convert_prospect_to_deal: {
+        Args: {
+          p_assigned_to?: string
+          p_deal_stage_id?: string
+          p_deal_value?: number
+          p_prospect_lead_id: string
+        }
+        Returns: Json
+      }
       fn_ai_deal_signals: {
         Args: { p_org_id: string }
         Returns: {
@@ -12136,6 +12217,10 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      get_prospect_kanban: {
+        Args: { p_organization_id: string; p_pool_id?: string }
+        Returns: Json
       }
       increment_demo_views: { Args: { p_demo_id: string }; Returns: undefined }
       increment_email_clicks: {
