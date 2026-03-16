@@ -64,7 +64,7 @@ function DroppableColumn({ id, label, color, tasks, onClick }: {
                 {t.due_date ? (
                   <span className="text-[11px] text-erp-text3">{format(new Date(t.due_date), "d MMM", { locale: nl })}</span>
                 ) : <span />}
-                {t.profiles?.full_name && <Avatar name={t.profiles.full_name} size={22} />}
+                {t.assigned_profile?.full_name && <Avatar name={t.assigned_profile.full_name} size={22} />}
               </div>
             </div>
           );

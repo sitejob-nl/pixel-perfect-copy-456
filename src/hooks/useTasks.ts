@@ -36,11 +36,26 @@ export function useTasks() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("*, contacts(first_name, last_name), companies(name), deals(title), profiles!tasks_assigned_to_fkey(full_name, email)")
+        .select("*, contacts(first_name, last_name), companies(name), deals(title)")
         .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as TaskWithRelations[];
+
+      // Fetch assigned profiles
+      const userIds = [...new Set((data ?? []).map(t => t.assigned_to).filter(Boolean))] as string[];
+      let profileMap: Record<string, { full_name: string | null; email: string | null }> = {};
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+        (profiles ?? []).forEach(p => { profileMap[p.id] = p; });
+      }
+
+      return (data ?? []).map(t => ({
+        ...t,
+        assigned_profile: t.assigned_to ? profileMap[t.assigned_to] || null : null,
+      })) as TaskWithRelations[];
     },
   });
 }

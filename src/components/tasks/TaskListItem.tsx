@@ -59,8 +59,8 @@ export default function TaskListItem({ task, onToggle, onClick }: Props) {
             {format(new Date(task.due_date), "d MMM", { locale: nl })}
           </span>
         )}
-        {task.profiles?.full_name && (
-          <Avatar name={task.profiles.full_name} size={24} />
+        {task.assigned_profile?.full_name && (
+          <Avatar name={task.assigned_profile.full_name} size={24} />
         )}
       </div>
     </div>
