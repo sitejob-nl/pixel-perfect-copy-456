@@ -7726,6 +7726,403 @@ export type Database = {
           },
         ]
       }
+      project_plan_section_library: {
+        Row: {
+          category: string | null
+          content_html: string | null
+          content_json: Json | null
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          organization_id: string
+          section_type: string
+          title: string
+          updated_at: string
+          use_count: number | null
+        }
+        Insert: {
+          category?: string | null
+          content_html?: string | null
+          content_json?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          organization_id: string
+          section_type: string
+          title: string
+          updated_at?: string
+          use_count?: number | null
+        }
+        Update: {
+          category?: string | null
+          content_html?: string | null
+          content_json?: Json | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          organization_id?: string
+          section_type?: string
+          title?: string
+          updated_at?: string
+          use_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_plan_section_library_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plan_section_library_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_plan_sections: {
+        Row: {
+          content_html: string | null
+          content_json: Json | null
+          created_at: string
+          id: string
+          is_page_break_before: boolean
+          is_visible: boolean
+          organization_id: string
+          plan_id: string
+          section_type: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content_html?: string | null
+          content_json?: Json | null
+          created_at?: string
+          id?: string
+          is_page_break_before?: boolean
+          is_visible?: boolean
+          organization_id: string
+          plan_id: string
+          section_type: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content_html?: string | null
+          content_json?: Json | null
+          created_at?: string
+          id?: string
+          is_page_break_before?: boolean
+          is_visible?: boolean
+          organization_id?: string
+          plan_id?: string
+          section_type?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_plan_sections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plan_sections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plan_sections_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "project_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_plan_templates: {
+        Row: {
+          category: string | null
+          created_at: string
+          created_by: string | null
+          default_payment_structure: Json | null
+          default_timeline_weeks: number | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          sections: Json
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_payment_structure?: Json | null
+          default_timeline_weeks?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          sections?: Json
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          default_payment_structure?: Json | null
+          default_timeline_weeks?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          sections?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_plan_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plan_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_plans: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          client_address: string | null
+          client_company: string | null
+          client_email: string | null
+          client_kvk: string | null
+          client_name: string | null
+          company_id: string | null
+          contact_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          deal_id: string | null
+          estimated_start: string | null
+          estimated_weeks: number | null
+          id: string
+          organization_id: string
+          payment_structure: Json | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          project_id: string | null
+          public_password_hash: string | null
+          public_slug: string | null
+          sent_at: string | null
+          signature_url: string | null
+          status: string
+          template_id: string | null
+          title: string
+          total_amount: number | null
+          updated_at: string
+          vat_rate: number | null
+          version: number
+          view_count: number | null
+          viewed_at: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          client_address?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_kvk?: string | null
+          client_name?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          deal_id?: string | null
+          estimated_start?: string | null
+          estimated_weeks?: number | null
+          id?: string
+          organization_id: string
+          payment_structure?: Json | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          project_id?: string | null
+          public_password_hash?: string | null
+          public_slug?: string | null
+          sent_at?: string | null
+          signature_url?: string | null
+          status?: string
+          template_id?: string | null
+          title: string
+          total_amount?: number | null
+          updated_at?: string
+          vat_rate?: number | null
+          version?: number
+          view_count?: number | null
+          viewed_at?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          client_address?: string | null
+          client_company?: string | null
+          client_email?: string | null
+          client_kvk?: string | null
+          client_name?: string | null
+          company_id?: string | null
+          contact_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          deal_id?: string | null
+          estimated_start?: string | null
+          estimated_weeks?: number | null
+          id?: string
+          organization_id?: string
+          payment_structure?: Json | null
+          pdf_generated_at?: string | null
+          pdf_url?: string | null
+          project_id?: string | null
+          public_password_hash?: string | null
+          public_slug?: string | null
+          sent_at?: string | null
+          signature_url?: string | null
+          status?: string
+          template_id?: string | null
+          title?: string
+          total_amount?: number | null
+          updated_at?: string
+          vat_rate?: number | null
+          version?: number
+          view_count?: number | null
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "project_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "v_deal_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_plans_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "project_plan_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_status_changes: {
         Row: {
           changed_at: string
@@ -12168,6 +12565,18 @@ export type Database = {
         Args: { p_entity: string; p_org_id: string; p_prefix: string }
         Returns: string
       }
+      generate_project_plan: {
+        Args: {
+          p_company_id?: string
+          p_contact_id?: string
+          p_deal_id?: string
+          p_organization_id: string
+          p_project_id?: string
+          p_template_id: string
+          p_title?: string
+        }
+        Returns: Json
+      }
       generate_webhook_api_key: {
         Args: { p_endpoint_id: string }
         Returns: string
@@ -12218,6 +12627,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_project_plan: { Args: { p_plan_id: string }; Returns: Json }
       get_prospect_kanban: {
         Args: { p_organization_id: string; p_pool_id?: string }
         Returns: Json
