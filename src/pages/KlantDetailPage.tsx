@@ -32,6 +32,7 @@ export default function KlantDetailPage() {
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [dealDialogOpen, setDealDialogOpen] = useState(false);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
   const qc = useQueryClient();
@@ -110,6 +111,15 @@ export default function KlantDetailPage() {
     if (error) { toast.error("Fout"); return; }
     qc.invalidateQueries({ queryKey: ["company-detail", id] });
     toast.success("Primair contact gewijzigd");
+  };
+
+  const saveContactField = async (contactId: string, field: string, value: any) => {
+    const { error } = await supabase.from("contacts").update({ [field]: value }).eq("id", contactId);
+    if (error) { toast.error("Fout bij opslaan"); throw error; }
+    qc.invalidateQueries({ queryKey: ["company-contacts", id] });
+    qc.invalidateQueries({ queryKey: ["contacts"] });
+    qc.invalidateQueries({ queryKey: ["klanten"] });
+    toast.success("Opgeslagen");
   };
 
   if (isLoading) return <ErpCard className="p-8 text-center text-erp-text2 text-sm">Laden...</ErpCard>;
@@ -223,19 +233,14 @@ export default function KlantDetailPage() {
             {contacts.length === 0 && <ErpCard className="p-8 text-center text-erp-text3 text-sm">Geen contactpersonen</ErpCard>}
             {contacts.map((c: any) => {
               const isPrimary = c.id === company.primary_contact_id;
+              const isEditing = editingContactId === c.id;
               return (
                 <ErpCard key={c.id} className="p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-3">
                       {isPrimary && <span title="Primair contact" className="text-erp-amber">⭐</span>}
-                      <div>
-                        <div className="text-[13px] font-medium text-erp-text0">
-                          {c.first_name} {c.last_name ?? ""}
-                          {c.job_title && <span className="text-erp-text3 font-normal ml-2">· {c.job_title}</span>}
-                        </div>
-                        <div className="text-[11px] text-erp-text3 mt-0.5">
-                          {c.email ?? ""}{c.phone ? ` · ${c.phone}` : ""}
-                        </div>
+                      <div className="text-[13px] font-medium text-erp-text0">
+                        {c.first_name} {c.last_name ?? ""}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -245,6 +250,12 @@ export default function KlantDetailPage() {
                       {c.lead_score != null && (
                         <Chip>Score: {c.lead_score}</Chip>
                       )}
+                      <button
+                        onClick={() => setEditingContactId(isEditing ? null : c.id)}
+                        className="text-[11px] text-erp-text3 hover:text-erp-blue transition-colors bg-transparent border-none cursor-pointer"
+                      >
+                        {isEditing ? "Sluiten" : "Bewerken"}
+                      </button>
                       {!isPrimary && (
                         <button
                           onClick={() => setPrimaryContact(c.id)}
@@ -255,6 +266,33 @@ export default function KlantDetailPage() {
                       )}
                     </div>
                   </div>
+                  {isEditing ? (
+                    <div className="grid grid-cols-3 gap-3 mt-3">
+                      {[
+                        ["Voornaam", "first_name"],
+                        ["Achternaam", "last_name"],
+                        ["E-mail", "email"],
+                        ["Telefoon", "phone"],
+                        ["Functie", "job_title"],
+                        ["LinkedIn", "linkedin_url", "url"],
+                      ].map(([label, field, type]) => (
+                        <div key={field}>
+                          <div className="text-[11px] text-erp-text3 mb-1">{label}</div>
+                          <InlineEditField
+                            value={c[field!]}
+                            field={field!}
+                            type={type as any}
+                            onSave={(f, v) => saveContactField(c.id, f, v)}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-erp-text3 mt-0.5 ml-8">
+                      {c.job_title && <span>{c.job_title} · </span>}
+                      {c.email ?? ""}{c.phone ? ` · ${c.phone}` : ""}
+                    </div>
+                  )}
                 </ErpCard>
               );
             })}
