@@ -108,10 +108,14 @@ export default function BookingsPage() {
       )}
 
       <ErpTabs
-        items={[["upcoming", "Aankomend"], ["past", "Afgelopen"], ["cancelled", "Geannuleerd"]]}
+        items={[["upcoming", "Aankomend"], ["past", "Afgelopen"], ["cancelled", "Geannuleerd"], ["settings", "⚙ Instellingen"]]}
         active={tab}
         onChange={setTab}
       />
+
+      {tab === "settings" ? (
+        <BookingPageSettings />
+      ) : (
 
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-erp-text3" /></div>
