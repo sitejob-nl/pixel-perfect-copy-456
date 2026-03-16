@@ -1,613 +1,339 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PageHeader, ErpButton, ErpCard, Badge, Dot, Chip, Avatar } from "@/components/erp/ErpPrimitives";
+import { useOrganization } from "@/hooks/useOrganization";
+import { useAuth } from "@/contexts/AuthContext";
+import { ErpCard, ErpButton, ErpTabs, Badge, Dot, Chip, Avatar, fmt } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
+import InlineEditField from "@/components/erp/InlineEditField";
+import QuickActionBar from "@/components/shared/QuickActionBar";
+import CommunicationTimeline from "@/components/shared/CommunicationTimeline";
+import AddTaskDialog from "@/components/shared/AddTaskDialog";
+import { useActivities, useCreateActivity } from "@/hooks/useActivities";
 import { stageColors, stageLabels, tierColors } from "@/data/mockData";
 import type { ContactWithCompany } from "@/hooks/useContacts";
-import { useAuth } from "@/contexts/AuthContext";
-import { useOrganization } from "@/hooks/useOrganization";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import ContactWhatsAppTab from "@/components/whatsapp/ContactWhatsAppTab";
 
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-2 py-1">
-      <span className="text-erp-text3 w-36 shrink-0 text-sm">{label}</span>
-      <span className="text-erp-text0 text-sm truncate">{value}</span>
-    </div>
-  );
-}
-
-function LinkRow({ label, href, display }: { label: string; href: string; display: string }) {
-  return (
-    <div className="flex gap-2 py-1">
-      <span className="text-erp-text3 w-36 shrink-0 text-sm">{label}</span>
-      <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm truncate">
-        {display}
-      </a>
-    </div>
-  );
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider mb-2">{children}</div>
-  );
-}
-
-const activityIcon = (type: string) => {
-  switch (type) {
-    case "call": return "📞";
-    case "email": return "📧";
-    case "meeting": return "🤝";
-    case "note": return "📝";
-    default: return "⚡";
-  }
-};
+const ACTIVITY_TYPES = ["call", "email", "meeting", "note", "task"];
+const activityIcon = (type: string) => ({ call: "📞", email: "📧", meeting: "🤝", note: "📝", task: "⚡" }[type] ?? "⚡");
 
 export default function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { user } = useAuth();
   const { data: org } = useOrganization();
-  const [editing, setEditing] = useState(false);
+  const [tab, setTab] = useState("activities");
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [actDialogOpen, setActDialogOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
-  const [activeTab, setActiveTab] = useState<"details" | "whatsapp">("details");
-  const [form, setForm] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    phone: "",
-    job_title: "",
-    temperature: "warm",
-    source: "",
-    lifecycle_stage: "lead",
-    company_id: null as string | null,
-  });
+  const [actType, setActType] = useState("note");
+  const [actSubject, setActSubject] = useState("");
+  const [actDesc, setActDesc] = useState("");
+  const [actOutcome, setActOutcome] = useState("");
 
-  // Fetch single contact
-  const { data: contact, isLoading, error } = useQuery({
+  const { data: contact, isLoading } = useQuery({
     queryKey: ["contact", id],
     enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contacts")
-        .select("*, companies:companies!contacts_company_id_fkey(name, industry, city)")
+        .select("*, companies:companies!contacts_company_id_fkey(id, name, industry, city)")
         .eq("id", id!)
         .single();
       if (error) throw error;
-      return data as ContactWithCompany;
+      return data as ContactWithCompany & { companies: { id: string; name: string; industry: string | null; city: string | null } | null };
     },
   });
 
-  useEffect(() => {
-    if (contact) {
-      setForm({
-        first_name: contact.first_name,
-        last_name: contact.last_name ?? "",
-        email: contact.email ?? "",
-        phone: contact.phone ?? "",
-        job_title: contact.job_title ?? "",
-        temperature: contact.temperature ?? "warm",
-        source: contact.source ?? "",
-        lifecycle_stage: contact.lifecycle_stage ?? "lead",
-        company_id: contact.company_id,
-      });
-      setEditing(false);
-    }
-  }, [contact]);
+  const { data: activities = [] } = useActivities({ contactId: id!, limit: 30 });
+  const createActivity = useCreateActivity();
 
-  // Companies for linking
-  const { data: companies = [] } = useQuery({
-    queryKey: ["companies-select"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("companies").select("id, name").order("name");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Activities
-  const { data: activities = [] } = useQuery({
-    queryKey: ["contact-activities", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("activities")
-        .select("id, subject, activity_type, created_at, description")
-        .eq("contact_id", id!)
-        .order("created_at", { ascending: false })
-        .limit(20);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!id,
-  });
-
-  // Deals linked to contact
   const { data: deals = [] } = useQuery({
     queryKey: ["contact-deals", id],
+    enabled: !!id && tab === "deals",
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("deals")
-        .select("id, title, value, stage_id, created_at")
-        .eq("contact_id", id!)
-        .order("created_at", { ascending: false })
-        .limit(10);
+      const { data, error } = await supabase.from("deals").select("*, pipeline_stages(name, color)").eq("contact_id", id!).order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
-    enabled: !!id,
   });
 
-  // Internal notes with author info
   const { data: notes = [] } = useQuery({
     queryKey: ["contact-notes", id],
+    enabled: !!id && tab === "notes",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contact_notes")
-        .select("id, content, created_at, updated_at, user_id, profiles:user_id(full_name, email)")
+        .select("id, content, created_at, user_id, profiles:user_id(full_name, email)")
         .eq("contact_id", id!)
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as Array<{
-        id: string;
-        content: string;
-        created_at: string;
-        updated_at: string;
-        user_id: string;
-        profiles: { full_name: string | null; email: string | null } | null;
-      }>;
+      return data as any[];
     },
-    enabled: !!id,
   });
 
-  const addNoteMutation = useMutation({
+  const { data: tasks = [] } = useQuery({
+    queryKey: ["contact-tasks", id],
+    enabled: !!id && tab === "tasks",
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tasks").select("*").eq("contact_id", id!).order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const addNote = useMutation({
     mutationFn: async (content: string) => {
       if (!user || !org) throw new Error("Niet ingelogd");
       const { error } = await supabase.from("contact_notes").insert({
-        contact_id: id!,
-        organization_id: org.organization_id,
-        user_id: user.id,
-        content,
+        contact_id: id!, organization_id: org.organization_id, user_id: user.id, content,
       });
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-notes", id] });
-      setNoteText("");
-      toast.success("Notitie toegevoegd");
-    },
-    onError: (err) => toast.error(`Fout: ${err.message}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["contact-notes", id] }); setNoteText(""); toast.success("Notitie toegevoegd"); },
   });
 
-  const deleteNoteMutation = useMutation({
+  const deleteNote = useMutation({
     mutationFn: async (noteId: string) => {
       const { error } = await supabase.from("contact_notes").delete().eq("id", noteId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contact-notes", id] });
-      toast.success("Notitie verwijderd");
-    },
-    onError: (err) => toast.error(`Fout: ${err.message}`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["contact-notes", id] }); toast.success("Verwijderd"); },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: async () => {
-      if (!contact) return;
-      const { error } = await supabase
-        .from("contacts")
-        .update({
-          first_name: form.first_name.trim(),
-          last_name: form.last_name.trim() || null,
-          email: form.email.trim() || null,
-          phone: form.phone.trim() || null,
-          job_title: form.job_title.trim() || null,
-          temperature: form.temperature,
-          source: form.source.trim() || null,
-          lifecycle_stage: form.lifecycle_stage,
-          company_id: form.company_id,
-        })
-        .eq("id", contact.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      queryClient.invalidateQueries({ queryKey: ["contact", id] });
-      toast.success("Contact bijgewerkt!");
-      setEditing(false);
-    },
-    onError: (err) => toast.error(`Fout: ${err.message}`),
-  });
+  const saveField = async (field: string, value: any) => {
+    const { error } = await supabase.from("contacts").update({ [field]: value }).eq("id", id!);
+    if (error) { toast.error("Fout"); throw error; }
+    qc.invalidateQueries({ queryKey: ["contact", id] });
+    qc.invalidateQueries({ queryKey: ["contacts"] });
+    toast.success("Opgeslagen");
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      if (!contact) return;
-      const { error } = await supabase.from("contacts").delete().eq("id", contact.id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["contacts"] });
-      toast.success("Contact verwijderd");
-      navigate("/contacts");
-    },
-    onError: (err) => toast.error(`Fout: ${err.message}`),
-  });
+  const handleAddActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!org?.organization_id || !actSubject.trim()) return;
+    await createActivity.mutateAsync({
+      organization_id: org.organization_id, user_id: user?.id ?? null,
+      contact_id: id!, company_id: contact?.company_id ?? null,
+      activity_type: actType, subject: actSubject.trim(),
+      description: actDesc || null, outcome: actOutcome || null, status: "completed",
+    });
+    toast.success("Activiteit gelogd");
+    setActDialogOpen(false); setActSubject(""); setActDesc(""); setActOutcome("");
+  };
 
-  if (isLoading) {
-    return (
-      <div className="animate-fade-up max-w-[1000px]">
-        <ErpCard className="p-8 text-center text-erp-text2 text-sm">Contact laden...</ErpCard>
-      </div>
-    );
-  }
+  const toggleTask = async (taskId: string, completed: boolean) => {
+    const updates = completed
+      ? { status: "done" as const, completed_at: new Date().toISOString(), completed_by: user?.id }
+      : { status: "todo" as const, completed_at: null, completed_by: null };
+    await supabase.from("tasks").update(updates).eq("id", taskId);
+    qc.invalidateQueries({ queryKey: ["contact-tasks", id] });
+  };
 
-  if (error || !contact) {
-    return (
-      <div className="animate-fade-up max-w-[1000px]">
-        <ErpCard className="p-8 text-center text-erp-text3 text-sm">
-          Contact niet gevonden.
-          <div className="mt-3">
-            <ErpButton onClick={() => navigate("/contacts")}>← Terug naar contacten</ErpButton>
-          </div>
-        </ErpCard>
-      </div>
-    );
-  }
+  if (isLoading) return <ErpCard className="p-8 text-center text-erp-text2 text-sm">Laden...</ErpCard>;
+  if (!contact) return <ErpCard className="p-8 text-center text-erp-text3 text-sm">Contact niet gevonden</ErpCard>;
 
   const tier = contact.temperature ?? "warm";
   const stage = contact.lifecycle_stage ?? "lead";
+  const inputClass = "w-full bg-erp-bg3 border border-erp-border0 rounded-lg px-3 py-2 text-sm text-erp-text0 placeholder:text-erp-text3 outline-none focus:border-erp-blue transition-colors";
 
   return (
     <div className="animate-fade-up max-w-[1000px]">
+      {/* Breadcrumb */}
+      <button onClick={() => navigate("/contacts")} className="text-xs text-erp-text3 hover:text-erp-text1 mb-2 flex items-center gap-1 transition-colors">
+        <Icons.ChevDown className="w-3.5 h-3.5 rotate-90" /> Contacten
+      </button>
+
       {/* Header */}
-      <div className="mb-6">
-        <button
-          onClick={() => navigate("/contacts")}
-          className="text-xs text-erp-text3 hover:text-erp-text0 mb-3 flex items-center gap-1 transition-colors"
-        >
-          <Icons.ChevDown className="w-3.5 h-3.5 rotate-90" /> Contacten
-        </button>
-        <div className="flex items-center gap-4">
-          <Avatar name={`${contact.first_name} ${contact.last_name ?? ""}`} id={contact.id.charCodeAt(0)} size={48} />
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-semibold text-erp-text0">
-              {contact.first_name} {contact.last_name}
-            </h1>
-            <div className="text-sm text-erp-text3 mt-0.5">
-              {contact.email ?? "Geen e-mail"}
-              {contact.job_title && ` · ${contact.job_title}`}
-              {contact.companies?.name && ` · ${contact.companies.name}`}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Badge color={tierColors[tier] ?? "#6b7280"}>
-              <Dot color={tierColors[tier] ?? "#6b7280"} /> {tier}
-            </Badge>
-            <Badge color={stageColors[stage] ?? "#6b7280"}>
-              <Dot color={stageColors[stage] ?? "#6b7280"} size={5} />
-              {stageLabels[stage] ?? stage}
-            </Badge>
+      <div className="flex items-center gap-4 mb-3">
+        <Avatar name={`${contact.first_name} ${contact.last_name ?? ""}`} id={contact.id.charCodeAt(0)} size={48} />
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-bold text-erp-text0">{contact.first_name} {contact.last_name}</h1>
+          <div className="text-sm text-erp-text2 mt-0.5">
+            {contact.job_title && <span>{contact.job_title}</span>}
+            {contact.companies?.name && (
+              <span> @ <button onClick={() => navigate(`/companies/${contact.companies!.id}`)} className="text-erp-blue hover:underline">{contact.companies.name}</button></span>
+            )}
           </div>
         </div>
+        <div className="flex gap-2 flex-wrap">
+          <Badge color={stageColors[stage] ?? "#6b7280"}><Dot color={stageColors[stage] ?? "#6b7280"} size={5} />{stageLabels[stage] ?? stage}</Badge>
+          {contact.lead_status && <Chip>{contact.lead_status}</Chip>}
+          <Badge color={tierColors[tier] ?? "#6b7280"}>{tier} · {contact.lead_score ?? 0}</Badge>
+        </div>
       </div>
+
+      {/* Quick actions */}
+      <div className="mb-5">
+        <QuickActionBar
+          phone={contact.phone}
+          mobile={contact.mobile}
+          email={contact.email}
+          linkedinUrl={contact.linkedin_url}
+        />
+      </div>
+
+      {/* Info section */}
+      <ErpCard className="p-5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div><div className="text-[11px] text-erp-text3 mb-1">Email</div><InlineEditField value={contact.email} field="email" onSave={saveField} /></div>
+          <div><div className="text-[11px] text-erp-text3 mb-1">Telefoon</div><InlineEditField value={contact.phone} field="phone" onSave={saveField} /></div>
+          <div><div className="text-[11px] text-erp-text3 mb-1">Mobiel</div><InlineEditField value={contact.mobile} field="mobile" onSave={saveField} /></div>
+          <div><div className="text-[11px] text-erp-text3 mb-1">LinkedIn</div><InlineEditField value={contact.linkedin_url} field="linkedin_url" type="url" onSave={saveField} /></div>
+          <div><div className="text-[11px] text-erp-text3 mb-1">Functie</div><InlineEditField value={contact.job_title} field="job_title" onSave={saveField} /></div>
+          <div><div className="text-[11px] text-erp-text3 mb-1">Bron</div><InlineEditField value={contact.source} field="source" onSave={saveField} /></div>
+          <div><div className="text-[11px] text-erp-text3 mb-1">Klant sinds</div><InlineEditField value={contact.customer_since} field="customer_since" type="date" onSave={saveField} /></div>
+          <div><div className="text-[11px] text-erp-text3 mb-1">Volgende follow-up</div><InlineEditField value={contact.next_follow_up_at} field="next_follow_up_at" type="date" onSave={saveField} /></div>
+        </div>
+      </ErpCard>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4">
-        {[
-          { key: "details" as const, label: "Details" },
-          { key: "whatsapp" as const, label: "💬 WhatsApp" },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              "px-4 py-2 rounded-lg text-[13px] font-medium transition-colors",
-              activeTab === tab.key
-                ? "bg-erp-bg3 text-erp-text0 border border-erp-border0"
-                : "text-erp-text3 hover:text-erp-text1"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <ErpTabs
+        items={[
+          ["activities", "Activiteiten"],
+          ["communication", "Communicatie"],
+          ["deals", "Deals"],
+          ["notes", "Notities"],
+          ["tasks", "Taken"],
+        ]}
+        active={tab}
+        onChange={setTab}
+      />
 
-      {activeTab === "whatsapp" ? (
-        <ErpCard className="p-0 overflow-hidden">
-          <ContactWhatsAppTab
-            contactId={contact.id}
-            contactPhone={contact.phone}
-            contactMobile={contact.mobile}
-            whatsappOptIn={contact.whatsapp_opt_in ?? false}
-          />
-        </ErpCard>
-      ) : (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left column: Details + Edit */}
-        <div className="lg:col-span-2 space-y-4">
-          {editing ? (
-            <ErpCard className="p-5">
-              <SectionTitle>Contact bewerken</SectionTitle>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-erp-text2 text-xs">Voornaam *</Label>
-                    <Input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-erp-text2 text-xs">Achternaam</Label>
-                    <Input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-erp-text2 text-xs">E-mail</Label>
-                  <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-erp-text2 text-xs">Telefoon</Label>
-                  <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-erp-text2 text-xs">Functietitel</Label>
-                  <Input value={form.job_title} onChange={e => setForm(f => ({ ...f, job_title: e.target.value }))} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-erp-text2 text-xs">Temperatuur</Label>
-                    <Select value={form.temperature} onValueChange={v => setForm(f => ({ ...f, temperature: v }))}>
-                      <SelectTrigger className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-erp-bg2 border-erp-border0">
-                        <SelectItem value="hot">🔥 Hot</SelectItem>
-                        <SelectItem value="warm">🟡 Warm</SelectItem>
-                        <SelectItem value="cold">❄️ Cold</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-erp-text2 text-xs">Status</Label>
-                    <Select value={form.lifecycle_stage} onValueChange={v => setForm(f => ({ ...f, lifecycle_stage: v }))}>
-                      <SelectTrigger className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm"><SelectValue /></SelectTrigger>
-                      <SelectContent className="bg-erp-bg2 border-erp-border0">
-                        <SelectItem value="lead">Lead</SelectItem>
-                        <SelectItem value="contacted">Gecontacteerd</SelectItem>
-                        <SelectItem value="qualified">Gekwalificeerd</SelectItem>
-                        <SelectItem value="opportunity">Kans</SelectItem>
-                        <SelectItem value="customer">Klant</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-erp-text2 text-xs">Bedrijf</Label>
-                  <Select value={form.company_id ?? "none"} onValueChange={v => setForm(f => ({ ...f, company_id: v === "none" ? null : v }))}>
-                    <SelectTrigger className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm"><SelectValue /></SelectTrigger>
-                    <SelectContent className="bg-erp-bg2 border-erp-border0">
-                      <SelectItem value="none">— Geen bedrijf —</SelectItem>
-                      {companies.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-erp-text2 text-xs">Bron</Label>
-                  <Input value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm" />
-                </div>
-                <div className="flex justify-end gap-2 pt-2">
-                  <ErpButton onClick={() => setEditing(false)}>Annuleren</ErpButton>
-                  <ErpButton primary onClick={() => updateMutation.mutate()}>
-                    {updateMutation.isPending ? "Opslaan..." : "Opslaan"}
-                  </ErpButton>
+      {/* === TAB: Activiteiten === */}
+      {tab === "activities" && (
+        <div className="space-y-3">
+          <ErpButton onClick={() => setActDialogOpen(true)}>
+            <Plus className="w-3.5 h-3.5" /> Activiteit toevoegen
+          </ErpButton>
+          {activities.length === 0 && <p className="text-sm text-erp-text3 py-4">Nog geen activiteiten</p>}
+          <div className="space-y-0">
+            {activities.map((a, i) => (
+              <div key={a.id} className={`flex gap-3 py-3 ${i < activities.length - 1 ? "border-b border-erp-border0" : ""}`}>
+                <span className="text-base pt-0.5">{activityIcon(a.activity_type)}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium text-erp-text0">{a.subject}</div>
+                  {a.description && <div className="text-xs text-erp-text2 mt-0.5 truncate">{a.description}</div>}
+                  {a.outcome && <div className="text-xs text-erp-green mt-0.5">Uitkomst: {a.outcome}</div>}
+                  <div className="text-[10px] text-erp-text3 mt-1">{formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: nl })}</div>
                 </div>
               </div>
-            </ErpCard>
-          ) : (
-            <>
-              {/* Contact details card */}
-              <ErpCard className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <SectionTitle>Contactgegevens</SectionTitle>
-                  <div className="flex gap-2">
-                    <ErpButton onClick={() => setEditing(true)}>
-                      <Icons.Edit className="w-3.5 h-3.5" /> Bewerken
-                    </ErpButton>
-                    <ErpButton onClick={() => {
-                      if (confirm("Weet je zeker dat je dit contact wilt verwijderen?")) {
-                        deleteMutation.mutate();
-                      }
-                    }}>
-                      <Icons.Trash className="w-3.5 h-3.5" /> Verwijderen
-                    </ErpButton>
-                  </div>
-                </div>
-                {contact.phone && <DetailRow label="Telefoon" value={contact.phone} />}
-                {contact.mobile && <DetailRow label="Mobiel" value={contact.mobile} />}
-                {contact.job_title && <DetailRow label="Functie" value={contact.job_title} />}
-                {contact.companies?.name && <DetailRow label="Bedrijf" value={`${contact.companies.name}${contact.companies.industry ? ` · ${contact.companies.industry}` : ""}${contact.companies.city ? ` · ${contact.companies.city}` : ""}`} />}
-                {contact.linkedin_url && (
-                  <LinkRow
-                    label="LinkedIn"
-                    href={contact.linkedin_url}
-                    display={contact.linkedin_url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, "").replace(/\/$/, "") || contact.linkedin_url}
-                  />
-                )}
-              </ErpCard>
-
-              {/* Lead info card */}
-              <ErpCard className="p-5">
-                <SectionTitle>Lead informatie</SectionTitle>
-                <DetailRow label="Score" value={String(contact.lead_score ?? 0)} />
-                {contact.score_tier && <DetailRow label="Score tier" value={contact.score_tier} />}
-                {contact.lead_status && <DetailRow label="Lead status" value={contact.lead_status} />}
-                {contact.source && <DetailRow label="Bron" value={contact.source} />}
-                {contact.enrichment_status && <DetailRow label="Verrijking" value={contact.enrichment_status} />}
-              </ErpCard>
-
-              {/* UTM */}
-              {(contact.utm_source || contact.utm_medium || contact.utm_campaign) && (
-                <ErpCard className="p-5">
-                  <SectionTitle>UTM / Campagne</SectionTitle>
-                  {contact.utm_source && <DetailRow label="UTM Source" value={contact.utm_source} />}
-                  {contact.utm_medium && <DetailRow label="UTM Medium" value={contact.utm_medium} />}
-                  {contact.utm_campaign && <DetailRow label="UTM Campaign" value={contact.utm_campaign} />}
-                </ErpCard>
-              )}
-
-              {/* Tags */}
-              {contact.tags && contact.tags.length > 0 && (
-                <ErpCard className="p-5">
-                  <SectionTitle>Tags</SectionTitle>
-                  <div className="flex flex-wrap gap-1.5">
-                    {contact.tags.map((tag, i) => (
-                      <Chip key={i}>{tag}</Chip>
-                    ))}
-                  </div>
-                </ErpCard>
-              )}
-
-              {/* Custom fields */}
-              {contact.custom_fields && typeof contact.custom_fields === "object" && Object.keys(contact.custom_fields as Record<string, unknown>).length > 0 && (
-                <ErpCard className="p-5">
-                  <SectionTitle>Extra velden</SectionTitle>
-                  {Object.entries(contact.custom_fields as Record<string, unknown>).map(([key, val]) => (
-                    <DetailRow key={key} label={key} value={val != null ? String(val) : "—"} />
-                  ))}
-                </ErpCard>
-              )}
-
-              {/* Dates & preferences */}
-              <ErpCard className="p-5">
-                <SectionTitle>Datums & voorkeuren</SectionTitle>
-                {contact.customer_since && <DetailRow label="Klant sinds" value={new Date(contact.customer_since).toLocaleDateString("nl-NL")} />}
-                {contact.last_contacted_at && <DetailRow label="Laatst gecontacteerd" value={formatDistanceToNow(new Date(contact.last_contacted_at), { addSuffix: true, locale: nl })} />}
-                {contact.last_activity_at && <DetailRow label="Laatste activiteit" value={formatDistanceToNow(new Date(contact.last_activity_at), { addSuffix: true, locale: nl })} />}
-                {contact.next_follow_up_at && <DetailRow label="Follow-up" value={new Date(contact.next_follow_up_at).toLocaleDateString("nl-NL")} />}
-                <DetailRow label="Aangemaakt" value={new Date(contact.created_at).toLocaleDateString("nl-NL")} />
-                <DetailRow label="E-mail opt-out" value={contact.email_opt_out ? "Ja" : "Nee"} />
-                <DetailRow label="WhatsApp opt-in" value={contact.whatsapp_opt_in ? "Ja" : "Nee"} />
-              </ErpCard>
-            </>
-          )}
+            ))}
+          </div>
         </div>
-
-        {/* Right column: Activities & Deals */}
-        <div className="space-y-4">
-          {/* Deals */}
-          {deals.length > 0 && (
-            <ErpCard className="p-5">
-              <SectionTitle>Deals</SectionTitle>
-              <div className="space-y-2">
-                {deals.map(d => (
-                  <div key={d.id} className="flex items-center justify-between py-1.5 border-b border-erp-border0 last:border-0">
-                    <span className="text-sm text-erp-text0 truncate">{d.title}</span>
-                    {d.value != null && (
-                      <span className="text-xs text-erp-text2 shrink-0 ml-2">
-                        €{d.value.toLocaleString("nl-NL")}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ErpCard>
-          )}
-
-          {/* Activities */}
-          <ErpCard className="p-5">
-            <SectionTitle>Activiteiten</SectionTitle>
-            {activities.length === 0 && (
-              <div className="text-xs text-erp-text3">Geen activiteiten gevonden.</div>
-            )}
-            <div className="space-y-0">
-              {activities.map((a, i) => (
-                <div key={a.id} className={`flex items-start gap-2.5 py-2.5 ${i < activities.length - 1 ? "border-b border-erp-border0" : ""}`}>
-                  <span className="text-sm mt-0.5">{activityIcon(a.activity_type)}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm text-erp-text0 truncate">{a.subject}</div>
-                    {a.description && (
-                      <div className="text-xs text-erp-text3 mt-0.5 line-clamp-2">{a.description}</div>
-                    )}
-                    <div className="text-[11px] text-erp-text3 mt-0.5">
-                      {formatDistanceToNow(new Date(a.created_at), { addSuffix: true, locale: nl })}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </ErpCard>
-
-          {/* Internal Notes */}
-          <ErpCard className="p-5">
-            <SectionTitle>Interne notities</SectionTitle>
-            <div className="mb-3">
-              <Textarea
-                value={noteText}
-                onChange={e => setNoteText(e.target.value)}
-                placeholder="Schrijf een interne notitie..."
-                className="bg-erp-bg3 border-erp-border1 text-erp-text0 text-sm min-h-[60px] resize-none"
-                rows={2}
-              />
-              <div className="flex justify-end mt-2">
-                <ErpButton
-                  primary
-                  onClick={() => {
-                    if (noteText.trim()) addNoteMutation.mutate(noteText.trim());
-                  }}
-                  disabled={!noteText.trim() || addNoteMutation.isPending}
-                >
-                  {addNoteMutation.isPending ? "Toevoegen..." : "Notitie toevoegen"}
-                </ErpButton>
-              </div>
-            </div>
-            {notes.length === 0 && (
-              <div className="text-xs text-erp-text3">Nog geen notities.</div>
-            )}
-            <div className="space-y-0">
-              {notes.map((n, i) => {
-                const authorName = n.profiles?.full_name || n.profiles?.email || "Onbekend";
-                const isOwn = n.user_id === user?.id;
-                return (
-                  <div key={n.id} className={`py-2.5 ${i < notes.length - 1 ? "border-b border-erp-border0" : ""}`}>
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-1.5">
-                        <Avatar name={authorName} id={n.user_id.charCodeAt(0)} size={20} />
-                        <span className="text-xs font-medium text-erp-text0">{authorName}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[11px] text-erp-text3">
-                          {formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: nl })}
-                        </span>
-                        {isOwn && (
-                          <button
-                            onClick={() => deleteNoteMutation.mutate(n.id)}
-                            className="text-erp-text3 hover:text-erp-red transition-colors ml-1"
-                            title="Verwijderen"
-                          >
-                            <Icons.Trash className="w-3 h-3" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-sm text-erp-text1 whitespace-pre-wrap">{n.content}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </ErpCard>
-        </div>
-      </div>
       )}
+
+      {/* === TAB: Communicatie === */}
+      {tab === "communication" && <CommunicationTimeline contactId={id} />}
+
+      {/* === TAB: Deals === */}
+      {tab === "deals" && (
+        <div className="space-y-2">
+          {deals.length === 0 && <p className="text-sm text-erp-text3 py-4">Geen deals</p>}
+          {deals.map((d: any) => (
+            <ErpCard key={d.id} className="p-4 flex items-center justify-between" hover onClick={() => navigate("/deals")}>
+              <div>
+                <div className="text-[13px] font-semibold text-erp-text0">{d.title}</div>
+                {d.pipeline_stages && <Badge color={d.pipeline_stages.color ?? "#6b7280"}><Dot color={d.pipeline_stages.color ?? "#6b7280"} size={5} />{d.pipeline_stages.name}</Badge>}
+              </div>
+              <span className="text-sm font-bold text-erp-text0">€{fmt(Number(d.value ?? 0))}</span>
+            </ErpCard>
+          ))}
+        </div>
+      )}
+
+      {/* === TAB: Notities === */}
+      {tab === "notes" && (
+        <div className="space-y-3">
+          <div>
+            <Textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Schrijf een notitie..." className="bg-erp-bg3 border-erp-border0 text-erp-text0 text-sm min-h-[60px]" />
+            <div className="flex justify-end mt-2">
+              <ErpButton primary onClick={() => noteText.trim() && addNote.mutate(noteText.trim())} disabled={!noteText.trim()}>
+                Notitie toevoegen
+              </ErpButton>
+            </div>
+          </div>
+          {notes.length === 0 && <p className="text-sm text-erp-text3">Nog geen notities</p>}
+          {notes.map((n: any) => (
+            <div key={n.id} className="bg-erp-bg3 rounded-lg p-3 border border-erp-border0">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1.5">
+                  <Avatar name={n.profiles?.full_name ?? "?"} id={n.user_id?.charCodeAt(0) ?? 0} size={20} />
+                  <span className="text-xs font-medium text-erp-text0">{n.profiles?.full_name ?? n.profiles?.email ?? "—"}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-erp-text3">{formatDistanceToNow(new Date(n.created_at), { addSuffix: true, locale: nl })}</span>
+                  {n.user_id === user?.id && (
+                    <button onClick={() => deleteNote.mutate(n.id)} className="text-erp-text3 hover:text-erp-red transition-colors">
+                      <Icons.Trash className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="text-sm text-erp-text1 whitespace-pre-wrap">{n.content}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* === TAB: Taken === */}
+      {tab === "tasks" && (
+        <div className="space-y-3">
+          <ErpButton onClick={() => setTaskDialogOpen(true)}>
+            <Plus className="w-3.5 h-3.5" /> Nieuwe taak
+          </ErpButton>
+          {tasks.length === 0 && <p className="text-sm text-erp-text3 py-4">Geen taken</p>}
+          <div className="space-y-1">
+            {tasks.map((t: any) => (
+              <div key={t.id} className="flex items-center gap-2 bg-erp-bg3 rounded-lg p-2.5 border border-erp-border0">
+                <input type="checkbox" checked={t.status === "done"} onChange={e => toggleTask(t.id, e.target.checked)} className="rounded border-erp-border1 accent-erp-blue" />
+                <div className="flex-1 min-w-0">
+                  <span className={cn("text-[13px]", t.status === "done" ? "line-through text-erp-text3" : "text-erp-text0")}>{t.title}</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className={cn("text-[10px] font-medium uppercase", t.priority === "high" ? "text-erp-red" : t.priority === "low" ? "text-erp-text3" : "text-erp-orange")}>{t.priority}</span>
+                    {t.due_date && <span className="text-[10px] text-erp-text3">{format(new Date(t.due_date), "d MMM", { locale: nl })}</span>}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <AddTaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} contactId={id} />
+        </div>
+      )}
+
+      {/* Add Activity Dialog */}
+      <Dialog open={actDialogOpen} onOpenChange={setActDialogOpen}>
+        <DialogContent className="bg-erp-bg2 border-erp-border0 text-erp-text0 max-w-sm">
+          <DialogHeader><DialogTitle className="text-erp-text0">Activiteit toevoegen</DialogTitle></DialogHeader>
+          <form onSubmit={handleAddActivity} className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-erp-text1 mb-1">Type</label>
+              <Select value={actType} onValueChange={setActType}>
+                <SelectTrigger className="bg-erp-bg3 border-erp-border0 text-erp-text0 text-sm focus:ring-0"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-erp-bg3 border-erp-border0">
+                  {ACTIVITY_TYPES.map(t => <SelectItem key={t} value={t} className="text-erp-text0 text-sm focus:bg-erp-hover capitalize">{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div><label className="block text-xs font-medium text-erp-text1 mb-1">Onderwerp</label><input value={actSubject} onChange={e => setActSubject(e.target.value)} required className={inputClass} /></div>
+            <div><label className="block text-xs font-medium text-erp-text1 mb-1">Beschrijving</label><Textarea value={actDesc} onChange={e => setActDesc(e.target.value)} className="bg-erp-bg3 border-erp-border0 text-erp-text0 text-sm" /></div>
+            <div><label className="block text-xs font-medium text-erp-text1 mb-1">Uitkomst</label><input value={actOutcome} onChange={e => setActOutcome(e.target.value)} className={inputClass} /></div>
+            <button type="submit" disabled={createActivity.isPending} className="w-full bg-erp-blue hover:brightness-110 text-white font-medium text-sm rounded-lg py-2.5 transition-colors disabled:opacity-50">
+              {createActivity.isPending ? "Opslaan..." : "Opslaan"}
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
