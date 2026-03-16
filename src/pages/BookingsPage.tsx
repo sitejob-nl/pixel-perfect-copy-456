@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, lazy, Suspense } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "@/hooks/useOrganization";
@@ -7,7 +7,8 @@ import { Icons } from "@/components/erp/ErpIcons";
 import { format, formatDistanceToNow, isAfter, startOfWeek, endOfWeek } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
-import { Copy, ExternalLink, Loader2 } from "lucide-react";
+import { Copy, ExternalLink, Loader2, Settings } from "lucide-react";
+import BookingPageSettings from "@/components/bookings/BookingPageSettings";
 
 const sb = supabase as any;
 
@@ -107,12 +108,14 @@ export default function BookingsPage() {
       )}
 
       <ErpTabs
-        items={[["upcoming", "Aankomend"], ["past", "Afgelopen"], ["cancelled", "Geannuleerd"]]}
+        items={[["upcoming", "Aankomend"], ["past", "Afgelopen"], ["cancelled", "Geannuleerd"], ["settings", "⚙ Instellingen"]]}
         active={tab}
         onChange={setTab}
       />
 
-      {isLoading ? (
+      {tab === "settings" ? (
+        <BookingPageSettings />
+      ) : isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-erp-text3" /></div>
       ) : bookings.length === 0 ? (
         <div className="text-center py-12 text-erp-text3 text-sm">Geen boekingen gevonden</div>
