@@ -167,12 +167,12 @@ const App = () => (
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="tasks" element={<TasksPage />} />
-              <Route path="contacts" element={<Navigate to="/klanten" replace />} />
-              <Route path="contacts/:id" element={<Navigate to="/klanten" replace />} />
-              <Route path="companies" element={<Navigate to="/klanten" replace />} />
-              <Route path="companies/:id" element={<Navigate to="/klanten" replace />} />
-              <Route path="klanten" element={<KlantenPage />} />
-              <Route path="klanten/:id" element={<KlantDetailPage />} />
+              <Route path="contacts" element={<ContactsPage />} />
+              <Route path="contacts/:id" element={<ContactDetailPage />} />
+              <Route path="companies" element={<CompaniesPage />} />
+              <Route path="companies/:id" element={<CompanyDetailPage />} />
+              <Route path="klanten" element={<CompaniesPage />} />
+              <Route path="klanten/:id" element={<CompanyDetailPage />} />
               <Route path="pipeline" element={<DealsPage />} />
               <Route path="deals" element={<DealsPage />} />
               <Route path="projects" element={<ProjectsPage />} />
