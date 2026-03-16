@@ -105,7 +105,7 @@ export function useConvertProspect() {
       p_deal_value?: number;
       p_assigned_to?: string;
     }) => {
-      const { data, error } = await supabase.rpc("convert_prospect_to_deal", params);
+      const { data, error } = await supabase.rpc("convert_prospect_to_deal" as any, params);
       if (error) throw error;
       return data as unknown as { success: boolean; company_id: string; contact_id: string; deal_id: string };
     },
