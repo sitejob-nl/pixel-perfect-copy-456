@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.prospect-engine]
 verify_jwt = false
+
+[functions.generate-plan-section]
+verify_jwt = false
