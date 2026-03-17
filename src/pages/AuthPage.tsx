@@ -1,9 +1,13 @@
 import { useState } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Icons } from "@/components/erp/ErpIcons";
 
 export default function AuthPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const redirect = searchParams.get("redirect");
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +21,8 @@ export default function AuthPage() {
     setLoading(false);
     if (error) {
       toast.error(error.message);
+    } else if (redirect) {
+      navigate(redirect, { replace: true });
     }
   };
 
@@ -28,7 +34,7 @@ export default function AuthPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirect ? `${window.location.origin}/auth?redirect=${encodeURIComponent(redirect)}` : window.location.origin,
       },
     });
     setLoading(false);

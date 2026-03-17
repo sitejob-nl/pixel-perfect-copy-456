@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useIsSuperAdmin } from "@/hooks/useSuperAdmin";
@@ -122,6 +122,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
+  const [searchParams] = useSearchParams();
 
   if (loading) {
     return (
@@ -132,7 +133,8 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (session) {
-    return <Navigate to="/dashboard" replace />;
+    const redirect = searchParams.get("redirect");
+    return <Navigate to={redirect || "/dashboard"} replace />;
   }
 
   return <>{children}</>;
