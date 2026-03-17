@@ -1,53 +1,39 @@
 
 
-# ✅ LinkedIn Integratie: Posts Plaatsen
+## Problem Analysis
 
-## Wat is gebouwd
+When Jens clicks the invite link, the following broken flow occurs:
 
-### Database
-- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
+1. `/accept-invite?invite_token=xxx` → not logged in → redirects to `/auth?redirect=/accept-invite?invite_token=xxx`
+2. Jens logs in or signs up on `/auth`
+3. `AuthRoute` sees a session → **always redirects to `/dashboard`** (ignores `?redirect=` param)
+4. `ProtectedRoute` on `/dashboard` checks org membership → no membership → redirects to `/onboarding`
+5. Jens sees "Maak je organisatie aan" instead of accepting the invite
 
-### Edge Functions
-- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
-- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
+Three fixes needed:
 
-### Frontend
-- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
-- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
+## Fix 1: `AuthRoute` — Respect redirect parameter
 
-### Secrets
-- `LINKEDIN_CLIENT_ID` — opgeslagen
-- `LINKEDIN_CLIENT_SECRET` — opgeslagen
+In `src/App.tsx`, the `AuthRoute` component currently does `<Navigate to="/dashboard" />` when there's a session. Change it to read the `redirect` search param and navigate there instead if present.
 
-## ⚠️ Actie vereist
+## Fix 2: `AuthPage` — Preserve redirect param after login/signup
 
-Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
-```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
-```
+In `src/pages/AuthPage.tsx`:
+- Read `redirect` from `useSearchParams`
+- After successful login (`signInWithPassword`), navigate to the redirect URL if present
+- For signup `emailRedirectTo`, append the redirect param so the email confirmation link brings them back to the right place
+- After successful login, use `navigate(redirect || '/dashboard')` instead of relying on `AuthRoute`
 
----
+## Fix 3: `AuthPage` — Navigate on auth state change
 
-# ✅ LinkedIn Webhooks: Real-time Notificaties
+Since `AuthRoute` redirects on session presence, the login flow should work if Fix 1 is applied. But to be safe, after `signInWithPassword` succeeds, explicitly navigate to the redirect URL.
 
-## Wat is gebouwd
+## Summary of changes
 
-### Database
-- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
+| File | Change |
+|------|--------|
+| `src/App.tsx` (`AuthRoute`) | Read `?redirect=` search param, navigate there instead of hardcoded `/dashboard` |
+| `src/pages/AuthPage.tsx` | Read `?redirect=` param, preserve it in `emailRedirectTo` for signup, and navigate to it after login |
 
-### Edge Function
-- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
+No database or edge function changes needed — the `accept-invite` edge function and `AcceptInvitePage` work correctly already. The issue is purely in the auth routing.
 
-### Frontend
-- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
-
-### Webhook URL
-```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
-```
-
-## ⚠️ Actie vereist
-
-1. Vraag een webhook use case aan in je LinkedIn Developer Portal
-2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
-3. LinkedIn valideert automatisch via de challenge-response flow
