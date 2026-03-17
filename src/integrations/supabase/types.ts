@@ -5489,6 +5489,69 @@ export type Database = {
           },
         ]
       }
+      linkedin_message_templates: {
+        Row: {
+          avg_reply_rate: number | null
+          created_at: string | null
+          example_message: string | null
+          id: string
+          is_active: boolean | null
+          max_length: number | null
+          message_type: string
+          name: string
+          organization_id: string
+          template_prompt: string
+          tone: string | null
+          updated_at: string | null
+          use_count: number | null
+        }
+        Insert: {
+          avg_reply_rate?: number | null
+          created_at?: string | null
+          example_message?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_length?: number | null
+          message_type: string
+          name: string
+          organization_id: string
+          template_prompt: string
+          tone?: string | null
+          updated_at?: string | null
+          use_count?: number | null
+        }
+        Update: {
+          avg_reply_rate?: number | null
+          created_at?: string | null
+          example_message?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_length?: number | null
+          message_type?: string
+          name?: string
+          organization_id?: string
+          template_prompt?: string
+          tone?: string | null
+          updated_at?: string | null
+          use_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_message_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "linkedin_message_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       linkedin_webhook_events: {
         Row: {
           contact_id: string | null
@@ -12331,6 +12394,14 @@ export type Database = {
       }
     }
     Functions: {
+      build_linkedin_prompt: {
+        Args: {
+          p_extra_instructions?: string
+          p_prospect_lead_id: string
+          p_template_id: string
+        }
+        Returns: Json
+      }
       cleanup_expired_raw_leads: { Args: never; Returns: number }
       convert_prospect_to_deal: {
         Args: {
@@ -12648,6 +12719,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_linkedin_message_context: {
+        Args: { p_prospect_lead_id: string }
+        Returns: Json
+      }
       get_project_plan: { Args: { p_plan_id: string }; Returns: Json }
       get_prospect_kanban: {
         Args: { p_organization_id: string; p_pool_id?: string }
@@ -12849,6 +12924,14 @@ export type Database = {
           p_org_id: string
           p_project_id?: string
           p_quote_id?: string
+        }
+        Returns: Json
+      }
+      save_linkedin_message: {
+        Args: {
+          p_message: string
+          p_prospect_lead_id: string
+          p_template_id?: string
         }
         Returns: Json
       }
