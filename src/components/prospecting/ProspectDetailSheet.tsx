@@ -53,8 +53,55 @@ export default function ProspectDetailSheet({ lead, stages, open, onClose, onCon
   const [localNotes, setLocalNotes] = useState("");
   const [contactChannel, setContactChannel] = useState<string | null>(null);
 
+  // LinkedIn AI state
+  const { data: templates } = useLinkedInTemplates();
+  const generateMessage = useGenerateLinkedInMessage();
+  const saveMessage = useSaveLinkedInMessage();
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [extraInstructions, setExtraInstructions] = useState("");
+  const [showExtraInstructions, setShowExtraInstructions] = useState(false);
+  const [generatedMessage, setGeneratedMessage] = useState("");
+  const [maxLength, setMaxLength] = useState(300);
+
   // Sync notes when lead changes
   const notes = lead?.notes || "";
+
+  // Smart default template selection based on prospect status
+  useEffect(() => {
+    if (!templates?.length || selectedTemplateId) return;
+    const status = lead?.status || "";
+    const typeMap: Record<string, string> = {
+      new: "intro", analyzed: "intro", demo_ready: "intro",
+      demo_sent: "demo_share", demo_viewed: "after_view",
+      contacted: "follow_up",
+    };
+    const targetType = typeMap[status] || "intro";
+    const match = templates.find(t => t.message_type === targetType) || templates[0];
+    if (match) {
+      setSelectedTemplateId(match.id);
+      setMaxLength(match.max_length);
+    }
+  }, [templates, lead?.status, selectedTemplateId]);
+
+  // Pre-fill with existing draft
+  useEffect(() => {
+    if (lead?.linkedin_message_draft && !generatedMessage) {
+      setGeneratedMessage(lead.linkedin_message_draft);
+    }
+  }, [lead?.id]);
+
+  // Reset state when lead changes
+  useEffect(() => {
+    setGeneratedMessage(lead?.linkedin_message_draft || "");
+    setSelectedTemplateId("");
+    setExtraInstructions("");
+    setShowExtraInstructions(false);
+  }, [lead?.id]);
+
+  const selectedTemplate = useMemo(
+    () => templates?.find(t => t.id === selectedTemplateId),
+    [templates, selectedTemplateId]
+  );
 
   if (!lead) return null;
 
@@ -108,6 +155,40 @@ export default function ProspectDetailSheet({ lead, stages, open, onClose, onCon
     }
     setDeleteConfirm(false);
   };
+
+  const handleGenerate = async () => {
+    if (!selectedTemplateId) {
+      toast.error("Kies eerst een template");
+      return;
+    }
+    try {
+      const result = await generateMessage.mutateAsync({
+        prospectLeadId: lead.id,
+        templateId: selectedTemplateId,
+        extraInstructions: extraInstructions || undefined,
+      });
+      setGeneratedMessage(result.message);
+      if (result.maxLength) setMaxLength(result.maxLength);
+    } catch (err: any) {
+      toast.error(err?.message || "Fout bij genereren");
+    }
+  };
+
+  const handleSaveMessage = async () => {
+    if (!generatedMessage.trim()) return;
+    await saveMessage.mutateAsync({
+      prospectLeadId: lead.id,
+      message: generatedMessage,
+      templateId: selectedTemplateId || undefined,
+    });
+  };
+
+  const charCount = generatedMessage.length;
+  const isOverLimit = charCount > maxLength;
+
+  // Context indicators
+  const hasAnalysis = !!(lead as any).analysis || !!(lead as any).fit_summary;
+  const hasWebsite = !!lead.website_url;
 
   return (
     <>
@@ -264,22 +345,139 @@ export default function ProspectDetailSheet({ lead, stages, open, onClose, onCon
               </div>
             </TabsContent>
 
-            {/* LinkedIn */}
-            <TabsContent value="linkedin" className="space-y-4 mt-3">
-              {lead.linkedin_message_draft ? (
+            {/* LinkedIn AI */}
+            <TabsContent value="linkedin" className="space-y-3 mt-3">
+              {/* Context indicators */}
+              <div className="flex flex-wrap gap-1.5">
+                {hasAnalysis && (
+                  <span className="text-[10px] bg-erp-bg3 text-erp-text2 px-2 py-0.5 rounded-full">📊 Analyse beschikbaar</span>
+                )}
+                {hasWebsite && (
+                  <span className="text-[10px] bg-erp-bg3 text-erp-text2 px-2 py-0.5 rounded-full">🌐 Website bekend</span>
+                )}
+                {lead.contact_name && (
+                  <span className="text-[10px] bg-erp-bg3 text-erp-text2 px-2 py-0.5 rounded-full">👤 Contact bekend</span>
+                )}
+              </div>
+
+              {/* Template selection */}
+              <div>
+                <div className="text-[11px] font-semibold text-erp-text2 mb-1.5">Template</div>
+                <Select
+                  value={selectedTemplateId}
+                  onValueChange={id => {
+                    setSelectedTemplateId(id);
+                    const t = templates?.find(t => t.id === id);
+                    if (t) setMaxLength(t.max_length);
+                  }}
+                >
+                  <SelectTrigger className="bg-erp-bg3 border-erp-border0 text-erp-text0 text-[12px] h-8">
+                    <SelectValue placeholder="Kies template..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-erp-bg2 border-erp-border0">
+                    {templates?.map(t => (
+                      <SelectItem key={t.id} value={t.id} className="text-erp-text0 text-[12px]">
+                        {t.name} · {t.max_length} tekens · {t.tone}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Extra instructions toggle */}
+              <div>
+                <button
+                  onClick={() => setShowExtraInstructions(!showExtraInstructions)}
+                  className="flex items-center gap-1 text-[11px] text-erp-text2 hover:text-erp-text1"
+                >
+                  <ChevronDown className={cn("w-3 h-3 transition-transform", showExtraInstructions && "rotate-180")} />
+                  Extra instructies
+                </button>
+                {showExtraInstructions && (
+                  <Textarea
+                    value={extraInstructions}
+                    onChange={e => setExtraInstructions(e.target.value)}
+                    placeholder="Bijv. 'Focus op hun Excel-probleem' of 'Noem dat we ook voor makelaars werken'"
+                    className="bg-erp-bg3 border-erp-border0 text-erp-text0 text-[12px] min-h-[60px] mt-1.5"
+                  />
+                )}
+              </div>
+
+              {/* Generate button */}
+              <ErpButton
+                primary
+                onClick={handleGenerate}
+                disabled={generateMessage.isPending || !selectedTemplateId}
+              >
+                {generateMessage.isPending ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Genereren...
+                  </span>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" /> Genereer bericht
+                  </>
+                )}
+              </ErpButton>
+
+              {/* Message area */}
+              {(generatedMessage || generateMessage.isPending) && (
                 <div className="space-y-2">
-                  <div className="text-[11px] font-semibold text-erp-text2">LinkedIn bericht</div>
-                  <div className="bg-erp-bg3 rounded-lg p-3">
-                    <pre className="text-[12px] text-erp-text0 whitespace-pre-wrap font-sans">{lead.linkedin_message_draft}</pre>
+                  <div className="text-[11px] font-semibold text-erp-text2">
+                    {lead.linkedin_message_draft && generatedMessage === lead.linkedin_message_draft
+                      ? "Opgeslagen bericht"
+                      : "Gegenereerd bericht"}
                   </div>
-                  <ErpButton onClick={() => { navigator.clipboard.writeText(lead.linkedin_message_draft!); toast.success("Gekopieerd!"); }}>
-                    <Copy className="w-3.5 h-3.5" /> Kopieer
-                  </ErpButton>
+                  {generateMessage.isPending ? (
+                    <div className="bg-erp-bg3 rounded-lg p-3 space-y-2 animate-pulse">
+                      <div className="h-3 bg-erp-bg4 rounded w-3/4" />
+                      <div className="h-3 bg-erp-bg4 rounded w-full" />
+                      <div className="h-3 bg-erp-bg4 rounded w-2/3" />
+                    </div>
+                  ) : (
+                    <>
+                      <Textarea
+                        value={generatedMessage}
+                        onChange={e => setGeneratedMessage(e.target.value)}
+                        className="bg-erp-bg3 border-erp-border0 text-erp-text0 text-[12px] min-h-[120px] font-sans"
+                      />
+                      <div className="flex items-center justify-between">
+                        <span className={cn(
+                          "text-[10px] font-medium",
+                          isOverLimit ? "text-red-500" : "text-green-500"
+                        )}>
+                          {charCount} / {maxLength} tekens
+                        </span>
+                        <div className="flex gap-1.5">
+                          <button
+                            onClick={() => { navigator.clipboard.writeText(generatedMessage); toast.success("Gekopieerd!"); }}
+                            className="flex items-center gap-1 text-[11px] text-erp-text1 bg-erp-bg3 px-2 py-1 rounded hover:bg-erp-hover"
+                          >
+                            <Copy className="w-3 h-3" /> Kopieer
+                          </button>
+                          <button
+                            onClick={handleGenerate}
+                            disabled={generateMessage.isPending}
+                            className="flex items-center gap-1 text-[11px] text-erp-text1 bg-erp-bg3 px-2 py-1 rounded hover:bg-erp-hover"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Opnieuw
+                          </button>
+                          <button
+                            onClick={handleSaveMessage}
+                            disabled={saveMessage.isPending}
+                            className="flex items-center gap-1 text-[11px] text-white bg-erp-blue px-2 py-1 rounded hover:bg-erp-blue/90"
+                          >
+                            <Save className="w-3 h-3" /> Opslaan
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-              ) : (
-                <div className="text-[12px] text-erp-text3 text-center py-6">Geen LinkedIn bericht beschikbaar</div>
               )}
 
+              {/* Open LinkedIn profile */}
               {lead.contact_linkedin_url && (
                 <a href={lead.contact_linkedin_url} target="_blank" rel="noopener"
                    className="flex items-center gap-1.5 text-[12px] text-erp-blue hover:underline">
