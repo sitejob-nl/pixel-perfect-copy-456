@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,10 +7,11 @@ import { ErpButton, Badge } from "@/components/erp/ErpPrimitives";
 import ProspectStatusBadge from "./ProspectStatusBadge";
 import { useUpdateProspectLead, useDeleteProspectLead } from "@/hooks/useProspectKanban";
 import type { ProspectLead, KanbanStage } from "@/hooks/useProspectKanban";
+import { useLinkedInTemplates, useGenerateLinkedInMessage, useSaveLinkedInMessage } from "@/hooks/useLinkedInGenerator";
 import { toast } from "sonner";
 import {
   ExternalLink, Phone, Linkedin, Globe, Eye, MessageCircle, Mail,
-  Copy, Trash2, Clock,
+  Copy, Trash2, Clock, Sparkles, RefreshCw, Save, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
