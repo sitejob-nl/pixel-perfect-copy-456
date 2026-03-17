@@ -7788,6 +7788,10 @@ export type Database = {
       }
       project_plan_sections: {
         Row: {
+          ai_generated: boolean | null
+          ai_generated_at: string | null
+          ai_model: string | null
+          ai_prompt: string | null
           content_html: string | null
           content_json: Json | null
           created_at: string
@@ -7802,6 +7806,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_generated?: boolean | null
+          ai_generated_at?: string | null
+          ai_model?: string | null
+          ai_prompt?: string | null
           content_html?: string | null
           content_json?: Json | null
           created_at?: string
@@ -7816,6 +7824,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_generated?: boolean | null
+          ai_generated_at?: string | null
+          ai_model?: string | null
+          ai_prompt?: string | null
           content_html?: string | null
           content_json?: Json | null
           created_at?: string
@@ -7917,6 +7929,7 @@ export type Database = {
         Row: {
           accepted_at: string | null
           accepted_by: string | null
+          ai_context: Json | null
           client_address: string | null
           client_company: string | null
           client_email: string | null
@@ -7930,6 +7943,8 @@ export type Database = {
           deal_id: string | null
           estimated_start: string | null
           estimated_weeks: number | null
+          generation_error: string | null
+          generation_status: string | null
           id: string
           organization_id: string
           payment_structure: Json | null
@@ -7953,6 +7968,7 @@ export type Database = {
         Insert: {
           accepted_at?: string | null
           accepted_by?: string | null
+          ai_context?: Json | null
           client_address?: string | null
           client_company?: string | null
           client_email?: string | null
@@ -7966,6 +7982,8 @@ export type Database = {
           deal_id?: string | null
           estimated_start?: string | null
           estimated_weeks?: number | null
+          generation_error?: string | null
+          generation_status?: string | null
           id?: string
           organization_id: string
           payment_structure?: Json | null
@@ -7989,6 +8007,7 @@ export type Database = {
         Update: {
           accepted_at?: string | null
           accepted_by?: string | null
+          ai_context?: Json | null
           client_address?: string | null
           client_company?: string | null
           client_email?: string | null
@@ -8002,6 +8021,8 @@ export type Database = {
           deal_id?: string | null
           estimated_start?: string | null
           estimated_weeks?: number | null
+          generation_error?: string | null
+          generation_status?: string | null
           id?: string
           organization_id?: string
           payment_structure?: Json | null
