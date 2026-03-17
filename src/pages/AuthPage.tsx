@@ -5,6 +5,9 @@ import { toast } from "sonner";
 import { Icons } from "@/components/erp/ErpIcons";
 
 export default function AuthPage() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const redirect = searchParams.get("redirect");
   const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
