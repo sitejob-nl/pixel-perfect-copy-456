@@ -38,6 +38,7 @@ const statusColors: Record<string, string> = {
 export default function ProjectPlanBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: plan, isLoading, refetch } = useProjectPlan(id);
   const updatePlan = useUpdateProjectPlan();
   const updateSec = useUpdateSection();
@@ -47,6 +48,7 @@ export default function ProjectPlanBuilderPage() {
   const { org: brandOrg } = useBranding();
   const { user } = useAuth();
   const { progress, generateFullPlan, rewriteSection, abort } = useAIGeneration();
+  const autoGenerateTriggered = useRef(false);
 
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
@@ -64,6 +66,17 @@ export default function ProjectPlanBuilderPage() {
       setLocalSections(plan.project_plan_sections);
     }
   }, [plan]);
+
+  // Auto-generate with AI when navigating from wizard with flag
+  useEffect(() => {
+    const state = location.state as { autoGenerate?: boolean } | null;
+    if (state?.autoGenerate && plan && org?.organization_id && localSections && !autoGenerateTriggered.current && !progress.isGenerating) {
+      autoGenerateTriggered.current = true;
+      // Clear navigation state
+      window.history.replaceState({}, document.title);
+      handleGenerateFullPlan();
+    }
+  }, [plan, org, localSections]);
 
   const handleReorder = async (newOrder: SectionRow[]) => {
     setLocalSections(newOrder);
