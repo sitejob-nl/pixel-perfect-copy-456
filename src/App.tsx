@@ -122,6 +122,7 @@ function OnboardingRoute({ children }: { children: React.ReactNode }) {
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
+  const [searchParams] = useSearchParams();
 
   if (loading) {
     return (
@@ -132,7 +133,8 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (session) {
-    return <Navigate to="/dashboard" replace />;
+    const redirect = searchParams.get("redirect");
+    return <Navigate to={redirect || "/dashboard"} replace />;
   }
 
   return <>{children}</>;

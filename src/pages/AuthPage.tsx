@@ -34,7 +34,7 @@ export default function AuthPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirect ? `${window.location.origin}/auth?redirect=${encodeURIComponent(redirect)}` : window.location.origin,
       },
     });
     setLoading(false);
