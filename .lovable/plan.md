@@ -1,26 +1,53 @@
 
 
-## Problem
+# ✅ LinkedIn Integratie: Posts Plaatsen
 
-In `useLinkedInGenerator.ts` line 78, when none of the chained optional accesses find a string value, `String(aiResult)` produces `"[object Object]"` — but in some edge cases `aiResult` itself could be `null`/`undefined`, and downstream code calls `.trim()` on the result without checking.
+## Wat is gebouwd
 
-## Fix
+### Database
+- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
 
-In `src/hooks/useLinkedInGenerator.ts`, add a safety check on line 72-78:
+### Edge Functions
+- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
+- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
 
-```typescript
-const raw = aiResult;
-const message =
-  typeof raw === "string"
-    ? raw
-    : raw?.content?.[0]?.text ||
-      raw?.choices?.[0]?.message?.content ||  // OpenAI-style response format
-      raw?.message ||
-      raw?.text ||
-      "";
+### Frontend
+- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
+- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
+
+### Secrets
+- `LINKEDIN_CLIENT_ID` — opgeslagen
+- `LINKEDIN_CLIENT_SECRET` — opgeslagen
+
+## ⚠️ Actie vereist
+
+Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
 ```
 
-Key change: add `raw?.choices?.[0]?.message?.content` (the `ask-sitejob` function likely returns an OpenAI-compatible response format), and fallback to empty string `""` instead of `String(aiResult)` which produces non-trimmable objects.
+---
 
-Single file edit, ~3 lines changed.
+# ✅ LinkedIn Webhooks: Real-time Notificaties
 
+## Wat is gebouwd
+
+### Database
+- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
+
+### Edge Function
+- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
+
+### Frontend
+- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
+
+### Webhook URL
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
+```
+
+## ⚠️ Actie vereist
+
+1. Vraag een webhook use case aan in je LinkedIn Developer Portal
+2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
+3. LinkedIn valideert automatisch via de challenge-response flow

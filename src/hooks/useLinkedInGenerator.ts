@@ -69,13 +69,15 @@ export function useGenerateLinkedInMessage() {
         });
       if (aiError) throw aiError;
 
+      const raw = aiResult;
       const message =
-        typeof aiResult === "string"
-          ? aiResult
-          : aiResult?.content?.[0]?.text ||
-            aiResult?.message ||
-            aiResult?.text ||
-            String(aiResult);
+        typeof raw === "string"
+          ? raw
+          : raw?.content?.[0]?.text ||
+            raw?.choices?.[0]?.message?.content ||
+            raw?.message ||
+            raw?.text ||
+            "";
 
       return {
         message: message.trim(),
