@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +22,57 @@ Over SiteJob:
 - Gevestigd in Best, Nederland. KvK: 94498083
 - Eigenaar: Kas van de Meulengraaf`;
 
+function buildCommunicationContext(ctx: any): { callContext: string; emailContext: string; whatsappContext: string; instruction: string } {
+  let callContext = "";
+  if (ctx.calls?.length) {
+    const callSummaries = ctx.calls
+      .filter((c: any) => c.ai_summary || c.transcription_summary || c.transcription_text)
+      .map((c: any) => {
+        const date = new Date(c.started_at).toLocaleDateString("nl-NL");
+        const duration = c.duration_seconds ? `${Math.round(c.duration_seconds / 60)} min` : "";
+        const summary = c.ai_summary || c.transcription_summary || (c.transcription_text?.substring(0, 1000) ?? "");
+        const actions = c.ai_action_items ? JSON.stringify(c.ai_action_items) : "";
+        const sentiment = c.sentiment || "";
+        const notes = c.notes || "";
+        return `[${date}, ${duration}${sentiment ? ", sentiment: " + sentiment : ""}]\nSamenvatting: ${summary}${actions ? "\nActiepunten: " + actions : ""}${notes ? "\nNotities: " + notes : ""}`;
+      });
+    if (callSummaries.length) {
+      callContext = `\n\nTelefoongesprekken met deze klant (${callSummaries.length} gesprekken):\n${callSummaries.join("\n---\n")}`;
+    }
+  }
+
+  let emailContext = "";
+  if (ctx.emails?.length) {
+    const emailSummaries = ctx.emails
+      .slice(0, 10)
+      .map((e: any) => {
+        const date = new Date(e.received_at).toLocaleDateString("nl-NL");
+        const dir = e.direction === "inbound" ? "←" : "→";
+        return `${dir} [${date}] ${e.subject || "(geen onderwerp)"}${e.ai_summary ? " — " + e.ai_summary : ""}`;
+      });
+    emailContext = `\n\nEmail communicatie (laatste ${emailSummaries.length}):\n${emailSummaries.join("\n")}`;
+  }
+
+  let whatsappContext = "";
+  if (ctx.whatsapp?.length) {
+    const waMsgs = ctx.whatsapp
+      .slice(0, 10)
+      .map((w: any) => {
+        const date = new Date(w.created_at).toLocaleDateString("nl-NL");
+        const dir = w.direction === "inbound" ? "←" : "→";
+        return `${dir} [${date}] ${(w.content || "").substring(0, 200)}`;
+      });
+    whatsappContext = `\n\nWhatsApp berichten (laatste ${waMsgs.length}):\n${waMsgs.join("\n")}`;
+  }
+
+  const hasCommunication = callContext || emailContext || whatsappContext;
+  const instruction = hasCommunication
+    ? `\n\nBELANGRIJK: Gebruik de informatie uit de telefoongesprekken, emails en WhatsApp-berichten om het projectplan zo specifiek mogelijk te maken. Verwijs naar concrete behoeften, afspraken, pijnpunten of wensen die in deze communicatie naar voren kwamen. Als er in gesprekken specifieke functionaliteiten of problemen zijn besproken, neem die op in de scope.`
+    : "";
+
+  return { callContext, emailContext, whatsappContext, instruction };
+}
+
 function buildSectionPrompt(
   sectionType: string,
   title: string,
@@ -42,6 +92,9 @@ Website: ${c.website || "Geen"}
 ${ctx.websiteAnalysis?.summary ? `Website analyse: ${ctx.websiteAnalysis.summary}` : ""}
 ${ctx.enrichment?.ai_company_summary ? `Bedrijfsprofiel: ${ctx.enrichment.ai_company_summary}` : ""}
 ${ctx.enrichment?.ai_pain_points ? `Pijnpunten: ${ctx.enrichment.ai_pain_points}` : ""}
+${ctx.enrichment?.tech_stack ? `Huidige tech: ${ctx.enrichment.tech_stack}` : ""}
+${ctx.enrichment?.has_crm ? `Heeft al CRM: ${ctx.enrichment.has_crm}` : ""}
+${ctx.enrichment?.has_erp ? `Heeft al ERP: ${ctx.enrichment.has_erp}` : ""}
 ${ctx.prospect?.fit_summary ? `Fit analyse: ${ctx.prospect.fit_summary}` : ""}
 ${ctx.deal?.description ? `Deal context: ${ctx.deal.description}` : ""}
 ${c.notes ? `Notities: ${c.notes}` : ""}
@@ -52,6 +105,9 @@ Projecttitel: ${plan.title || "Onbekend"}
 ${plan.totalAmount ? `Budget: €${plan.totalAmount}` : ""}
 ${plan.estimatedWeeks ? `Doorlooptijd: ${plan.estimatedWeeks} weken` : ""}`.trim();
 
+  const { callContext, emailContext, whatsappContext, instruction: communicationInstruction } = buildCommunicationContext(ctx);
+  const communicationContext = callContext + emailContext + whatsappContext;
+
   const previousContext = existing?.length
     ? `\n\nEerder gegenereerde secties van dit plan:\n${existing.map(s => `[${s.type}]: ${s.content.substring(0, 500)}`).join("\n")}`
     : "";
@@ -59,19 +115,25 @@ ${plan.estimatedWeeks ? `Doorlooptijd: ${plan.estimatedWeeks} weken` : ""}`.trim
   const extra = extraInstructions ? `\n\nExtra instructies van de gebruiker: ${extraInstructions}` : "";
 
   const prompts: Record<string, string> = {
-    description: `Schrijf een projectomschrijving voor het volgende project. Beschrijf het doel, de aanleiding en de gewenste situatie. Maak het specifiek voor deze klant — verwijs naar hun branche, huidige situatie en behoeften. 2-3 alinea's in HTML.\n\n${companyInfo}\n${planInfo}${previousContext}${extra}`,
+    description: `Schrijf een projectomschrijving voor het volgende project. Beschrijf het doel, de aanleiding en de gewenste situatie. Maak het specifiek voor deze klant — verwijs naar hun branche, huidige situatie en behoeften. Als er in gesprekken of berichten specifieke problemen of wensen zijn besproken, verwijs daar concreet naar als aanleiding. 2-3 alinea's in HTML.
+
+${companyInfo}
+${planInfo}${communicationContext}${communicationInstruction}${previousContext}${extra}`,
 
     scope: `Schrijf de functionele scope voor dit project. Beschrijf per module/onderdeel:
 - Wat het doet (concreet, geen vage beschrijvingen)
 - Welke functionaliteiten erin zitten (als <ul> lijst)
 - Wat NIET inbegrepen is
 
-Baseer de modules op wat deze klant nodig heeft gezien hun branche en situatie. Gebruik <h4> per module. Typische modules: Website/CMS, CRM, ERP, Klantportaal, Integraties, Dashboard, Automatiseringen — maar alleen wat relevant is.
+Baseer de modules op wat deze klant nodig heeft gezien hun branche, situatie en wat er in telefoongesprekken en berichten is besproken. Als de klant in een gesprek specifieke functionaliteiten heeft genoemd of problemen heeft beschreven, neem die concreet op. Gebruik <h4> per module. Typische modules: Website/CMS, CRM, ERP, Klantportaal, Integraties, Dashboard, Automatiseringen — maar alleen wat relevant is.
 
 ${companyInfo}
-${planInfo}${previousContext}${extra}`,
+${planInfo}${communicationContext}${communicationInstruction}${previousContext}${extra}`,
 
-    timeline: `Maak een planning/fasering voor dit project. Gebruik een HTML tabel met kolommen: Fase, Omschrijving, Duur, Deliverables. Typische fasen: Kick-off & ontwerp, Ontwikkeling fase 1, Ontwikkeling fase 2, Testen & feedback, Oplevering & training. Maak het realistisch voor de geschatte doorlooptijd.\n\n${companyInfo}\n${planInfo}${previousContext}${extra}`,
+    timeline: `Maak een planning/fasering voor dit project. Gebruik een HTML tabel met kolommen: Fase, Omschrijving, Duur, Deliverables. Typische fasen: Kick-off & ontwerp, Ontwikkeling fase 1, Ontwikkeling fase 2, Testen & feedback, Oplevering & training. Maak het realistisch voor de geschatte doorlooptijd. Als er in gesprekken deadlines of urgentie is besproken, houd daar rekening mee.
+
+${companyInfo}
+${planInfo}${communicationContext}${previousContext}${extra}`,
 
     investment: `Schrijf de investering-sectie. Benoem:
 - Het totaalbedrag (of "Nader te bepalen na scopebepaling" als er geen bedrag is)
@@ -83,7 +145,7 @@ ${planInfo}${previousContext}${extra}`,
 
 ${companyInfo}
 ${planInfo}
-${plan.paymentStructure ? `Betaalschema: ${JSON.stringify(plan.paymentStructure)}` : "Betaalschema: 50% bij opstart, 50% bij oplevering"}${previousContext}${extra}`,
+${plan.paymentStructure ? `Betaalschema: ${JSON.stringify(plan.paymentStructure)}` : "Betaalschema: 50% bij opstart, 50% bij oplevering"}${communicationContext}${previousContext}${extra}`,
 
     deliverables: `Maak een lijst van concrete op te leveren items voor dit project. Denk aan:
 - Functionele applicatie (beschrijf kort)
@@ -94,10 +156,10 @@ ${plan.paymentStructure ? `Betaalschema: ${JSON.stringify(plan.paymentStructure)
 - Hosting & deployment
 - Training (X sessies)
 - 30 dagen garantieperiode
-Maak het specifiek voor wat in de scope staat.
+Maak het specifiek voor wat in de scope staat. Als er in gesprekken specifieke deliverables zijn afgesproken, neem die op.
 
 ${companyInfo}
-${planInfo}${previousContext}${extra}`,
+${planInfo}${communicationContext}${communicationInstruction}${previousContext}${extra}`,
 
     parties: `Schrijf de partijen-sectie met twee kolommen in nette HTML met <h4> kopjes:
 
@@ -113,7 +175,7 @@ Best, Nederland
 KvK: 94498083
 Vertegenwoordigd door: Kas van de Meulengraaf`,
 
-    assumptions: `Schrijf de uitgangspunten en randvoorwaarden voor dit project. Maak ze specifiek voor deze klant en branche. Typische punten:
+    assumptions: `Schrijf de uitgangspunten en randvoorwaarden voor dit project. Maak ze specifiek voor deze klant en branche. Als er in gesprekken afspraken zijn gemaakt over aanlevering, beschikbaarheid of werkwijze, neem die als uitgangspunten op. Typische punten:
 - Content aanlevering door klant
 - Feedbacktermijnen
 - Vast aanspreekpunt
@@ -123,10 +185,10 @@ Vertegenwoordigd door: Kas van de Meulengraaf`,
 Maak het een <ul> lijst, 6-8 punten.
 
 ${companyInfo}
-${planInfo}${previousContext}${extra}`,
+${planInfo}${communicationContext}${communicationInstruction}${previousContext}${extra}`,
   };
 
-  return prompts[sectionType] || `Schrijf de sectie "${title}" voor het volgende projectplan:\n\n${companyInfo}\n${planInfo}${previousContext}${extra}`;
+  return prompts[sectionType] || `Schrijf de sectie "${title}" voor het volgende projectplan:\n\n${companyInfo}\n${planInfo}${communicationContext}${previousContext}${extra}`;
 }
 
 serve(async (req) => {
@@ -181,6 +243,18 @@ serve(async (req) => {
     if (!response.ok) {
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit bereikt. Probeer het over een minuut opnieuw." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits op. Voeg credits toe in Lovable workspace instellingen." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "AI generation failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

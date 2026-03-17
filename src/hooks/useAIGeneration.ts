@@ -12,6 +12,9 @@ export interface ClientContext {
   enrichment: any;
   prospect: any;
   recentActivities: any[];
+  calls: any[];
+  emails: any[];
+  whatsapp: any[];
 }
 
 export async function gatherClientContext(
@@ -20,14 +23,46 @@ export async function gatherClientContext(
   contactId?: string | null,
   dealId?: string | null
 ): Promise<ClientContext> {
-  const [company, contacts, deal, scrapes, enrichment, prospects, activities] = await Promise.all([
+  // First get contact IDs for this company (needed for call/email/whatsapp matching)
+  const { data: companyContacts } = await supabase
+    .from("contacts").select("id").eq("company_id", companyId);
+  const contactIds = (companyContacts ?? []).map(c => c.id);
+
+  const [company, contacts, deal, scrapes, enrichment, prospects, activities, calls, emails, whatsapp] = await Promise.all([
+    // Company
     supabase.from("companies").select("name, website, industry, company_size, annual_revenue, city, postal_code, kvk_number, sbi_description, legal_form, founding_date, employee_count_range, notes, linkedin_url, address_line1").eq("id", companyId).single(),
+    // Contacts
     supabase.from("contacts").select("first_name, last_name, email, phone, job_title, linkedin_url").eq("company_id", companyId),
+    // Deal
     dealId ? supabase.from("deals").select("title, description, value, probability").eq("id", dealId).single() : Promise.resolve({ data: null }),
+    // Website scrapes
     supabase.from("website_scrapes").select("url, summary, ai_analysis, branding").eq("company_id", companyId).order("created_at", { ascending: false }).limit(1),
+    // Lead enrichment
     supabase.from("lead_enrichment").select("ai_company_summary, ai_pain_points, ai_opportunity_notes, ai_pitch_brief, tech_stack, has_crm, has_erp, cms_platform").eq("organization_id", orgId).limit(1),
+    // Prospect leads
     supabase.from("prospect_leads").select("fit_summary, score, analysis, score_breakdown").eq("company_id", companyId).limit(1),
-    supabase.from("activities").select("activity_type, subject, description, created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(5),
+    // Recent activities
+    supabase.from("activities").select("activity_type, subject, description, created_at").eq("company_id", companyId).order("created_at", { ascending: false }).limit(10),
+    // Call log — match on company_id OR contact_id
+    supabase.from("call_log")
+      .select("direction, caller_name, destination_name, started_at, duration_seconds, transcription_text, transcription_summary, ai_summary, ai_action_items, sentiment, notes")
+      .or(`matched_company_id.eq.${companyId}${contactIds.length ? ",matched_contact_id.in.(" + contactIds.join(",") + ")" : ""}`)
+      .order("started_at", { ascending: false })
+      .limit(20),
+    // Google emails — match on company_id OR contact_id
+    supabase.from("google_emails")
+      .select("subject, snippet, from_name, from_email, to_emails, direction, received_at, ai_summary, category")
+      .or(`company_id.eq.${companyId}${contactIds.length ? ",contact_id.in.(" + contactIds.join(",") + ")" : ""}`)
+      .order("received_at", { ascending: false })
+      .limit(20),
+    // WhatsApp messages — only from contacts of this company
+    contactIds.length
+      ? supabase.from("whatsapp_messages")
+          .select("content, direction, message_type, phone_number, created_at")
+          .in("contact_id", contactIds)
+          .order("created_at", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: [] }),
   ]);
 
   return {
@@ -38,6 +73,9 @@ export async function gatherClientContext(
     enrichment: (enrichment.data as any)?.[0] || null,
     prospect: (prospects.data as any)?.[0] || null,
     recentActivities: activities.data || [],
+    calls: (calls.data as any[]) || [],
+    emails: (emails.data as any[]) || [],
+    whatsapp: ((whatsapp as any).data as any[]) || [],
   };
 }
 
