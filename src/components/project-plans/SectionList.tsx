@@ -3,7 +3,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEn
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Eye, EyeOff, Trash2, Plus, FileText, Users, AlignLeft, Package, Calendar, DollarSign, CheckSquare, AlertTriangle, Scale, Shield, Lock, PenTool, File, ChevronDown } from "lucide-react";
+import { GripVertical, Eye, EyeOff, Trash2, Plus, FileText, Users, AlignLeft, Package, Calendar, DollarSign, CheckSquare, AlertTriangle, Scale, Shield, Lock, PenTool, File, ChevronDown, Sparkles, Loader2, Check } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
@@ -37,11 +37,14 @@ interface Props {
   onToggleVisibility: (id: string, visible: boolean) => void;
   onDelete: (id: string) => void;
   onAdd: (type: string) => void;
+  generatingId?: string | null;
+  completedIds?: string[];
 }
 
-function SortableItem({ section, isSelected, onSelect, onToggleVis, onDelete }: {
+function SortableItem({ section, isSelected, onSelect, onToggleVis, onDelete, isGenerating, isCompleted }: {
   section: SectionRow; isSelected: boolean;
   onSelect: () => void; onToggleVis: () => void; onDelete: () => void;
+  isGenerating?: boolean; isCompleted?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: section.id });
   const Icon = SECTION_ICONS[section.section_type] || File;
@@ -64,6 +67,12 @@ function SortableItem({ section, isSelected, onSelect, onToggleVis, onDelete }: 
       <span className={cn("flex-1 text-sm truncate", section.is_visible ? "text-erp-text0" : "text-erp-text3 line-through")}>
         {section.title}
       </span>
+      {/* AI status indicators */}
+      {isGenerating && <Loader2 className="w-3.5 h-3.5 animate-spin text-[hsl(var(--erp-blue))] shrink-0" />}
+      {isCompleted && !isGenerating && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+      {!isGenerating && !isCompleted && section.ai_generated && (
+        <Sparkles className="w-3 h-3 text-[hsl(var(--erp-blue))]/60 shrink-0" />
+      )}
       <button onClick={e => { e.stopPropagation(); onToggleVis(); }} className="opacity-0 group-hover:opacity-100 text-erp-text3 hover:text-erp-text1 transition-opacity">
         {section.is_visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
       </button>
@@ -74,7 +83,7 @@ function SortableItem({ section, isSelected, onSelect, onToggleVis, onDelete }: 
   );
 }
 
-export default function SectionList({ sections, selectedId, onSelect, onReorder, onToggleVisibility, onDelete, onAdd }: Props) {
+export default function SectionList({ sections, selectedId, onSelect, onReorder, onToggleVisibility, onDelete, onAdd, generatingId, completedIds = [] }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -97,6 +106,8 @@ export default function SectionList({ sections, selectedId, onSelect, onReorder,
               onSelect={() => onSelect(s.id)}
               onToggleVis={() => onToggleVisibility(s.id, !s.is_visible)}
               onDelete={() => onDelete(s.id)}
+              isGenerating={generatingId === s.id}
+              isCompleted={completedIds.includes(s.id)}
             />
           ))}
         </SortableContext>

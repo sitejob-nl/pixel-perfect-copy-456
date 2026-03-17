@@ -1,13 +1,15 @@
-import { useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Download, Send, MoreHorizontal, Trash2, Copy, Eye, EyeOff } from "lucide-react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { ArrowLeft, Save, Download, Send, MoreHorizontal, Trash2, Copy, Eye, EyeOff, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
 import { useProjectPlan, useUpdateProjectPlan, useUpdateSection, useAddSection, useDeleteSection } from "@/hooks/useProjectPlans";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useBranding } from "@/contexts/BrandingContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAIGeneration } from "@/hooks/useAIGeneration";
 import SectionList from "@/components/project-plans/SectionList";
 import SectionEditor from "@/components/project-plans/SectionEditor";
 import PlanPreview from "@/components/project-plans/PlanPreview";
@@ -36,6 +38,7 @@ const statusColors: Record<string, string> = {
 export default function ProjectPlanBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: plan, isLoading, refetch } = useProjectPlan(id);
   const updatePlan = useUpdateProjectPlan();
   const updateSec = useUpdateSection();
@@ -44,24 +47,39 @@ export default function ProjectPlanBuilderPage() {
   const { data: org } = useOrganization();
   const { org: brandOrg } = useBranding();
   const { user } = useAuth();
+  const { progress, generateFullPlan, rewriteSection, abort } = useAIGeneration();
+  const autoGenerateTriggered = useRef(false);
 
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [localSections, setLocalSections] = useState<SectionRow[] | null>(null);
+  const [rewritingId, setRewritingId] = useState<string | null>(null);
 
   const sections = localSections ?? plan?.project_plan_sections ?? [];
   const selectedSection = sections.find(s => s.id === selectedSectionId) || null;
-
-  // Sync local sections when plan loads
-  if (plan && !localSections) {
-    // Will set on first render
-  }
   const effectiveSections = plan ? (localSections ?? plan.project_plan_sections) : [];
+
+  // Initialize localSections from plan
+  useEffect(() => {
+    if (plan && !localSections) {
+      setLocalSections(plan.project_plan_sections);
+    }
+  }, [plan]);
+
+  // Auto-generate with AI when navigating from wizard with flag
+  useEffect(() => {
+    const state = location.state as { autoGenerate?: boolean } | null;
+    if (state?.autoGenerate && plan && org?.organization_id && localSections && !autoGenerateTriggered.current && !progress.isGenerating) {
+      autoGenerateTriggered.current = true;
+      // Clear navigation state
+      window.history.replaceState({}, document.title);
+      handleGenerateFullPlan();
+    }
+  }, [plan, org, localSections]);
 
   const handleReorder = async (newOrder: SectionRow[]) => {
     setLocalSections(newOrder);
-    // Update sort_order for each
     for (let i = 0; i < newOrder.length; i++) {
       if (newOrder[i].sort_order !== i) {
         updateSec.mutate({ id: newOrder[i].id, sort_order: i });
@@ -121,6 +139,52 @@ export default function ProjectPlanBuilderPage() {
     window.print();
   };
 
+  // AI: Generate full plan
+  const handleGenerateFullPlan = async () => {
+    if (!plan || !org?.organization_id) return;
+    if (!plan.company_id) {
+      toast({ title: "Koppel eerst een bedrijf aan dit plan", variant: "destructive" });
+      return;
+    }
+    try {
+      await generateFullPlan(
+        plan.id,
+        org.organization_id,
+        plan,
+        effectiveSections,
+        (sectionId, html) => {
+          setLocalSections(prev =>
+            (prev ?? effectiveSections).map(s =>
+              s.id === sectionId ? { ...s, content_html: html, ai_generated: true } : s
+            )
+          );
+        }
+      );
+      toast({ title: "Projectplan gegenereerd", description: "Controleer de inhoud en pas aan waar nodig." });
+    } catch (e: any) {
+      toast({ title: "Generatie mislukt", description: e.message, variant: "destructive" });
+    }
+  };
+
+  // AI: Rewrite single section
+  const handleRewriteSection = async (section: SectionRow, extraInstructions?: string) => {
+    if (!plan || !org?.organization_id) return;
+    setRewritingId(section.id);
+    try {
+      const newContent = await rewriteSection(section, plan, org.organization_id, effectiveSections, extraInstructions);
+      setLocalSections(prev =>
+        (prev ?? effectiveSections).map(s =>
+          s.id === section.id ? { ...s, content_html: newContent, ai_generated: true } : s
+        )
+      );
+      toast({ title: "Sectie herschreven met AI" });
+    } catch (e: any) {
+      toast({ title: "Herschrijven mislukt", description: e.message, variant: "destructive" });
+    } finally {
+      setRewritingId(null);
+    }
+  };
+
   if (isLoading) {
     return <div className="p-6 text-erp-text3">Laden...</div>;
   }
@@ -129,9 +193,24 @@ export default function ProjectPlanBuilderPage() {
   }
 
   const orgName = brandOrg?.name || "SiteJob";
+  const progressPct = progress.totalSections > 0 ? (progress.completedSectionIds.length / progress.totalSections) * 100 : 0;
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
+      {/* AI Progress bar */}
+      {progress.isGenerating && (
+        <div className="px-4 py-2 bg-erp-bg3 border-b border-erp-border0 shrink-0">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-4 h-4 animate-spin text-[hsl(var(--erp-blue))]" />
+            <span className="text-xs text-erp-text1">
+              AI genereert secties ({progress.completedSectionIds.length}/{progress.totalSections})...
+            </span>
+            <Progress value={progressPct} className="flex-1 h-2" />
+            <Button variant="ghost" size="sm" className="h-6 text-xs text-erp-text3" onClick={abort}>Stop</Button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-erp-border0 shrink-0">
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/project-plans")}>
@@ -148,6 +227,16 @@ export default function ProjectPlanBuilderPage() {
             ))}
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 text-xs gap-1.5 border-[hsl(var(--erp-blue))]/30 text-[hsl(var(--erp-blue))] hover:bg-[hsl(var(--erp-blue))]/10"
+          onClick={handleGenerateFullPlan}
+          disabled={progress.isGenerating}
+        >
+          {progress.isGenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+          Genereer met AI
+        </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowPreview(!showPreview)} title={showPreview ? "Verberg preview" : "Toon preview"}>
           {showPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </Button>
@@ -192,6 +281,8 @@ export default function ProjectPlanBuilderPage() {
                 onToggleVisibility={handleToggleVisibility}
                 onDelete={handleDeleteSection}
                 onAdd={handleAddSection}
+                generatingId={progress.currentSectionId}
+                completedIds={progress.completedSectionIds}
               />
             </div>
 
@@ -201,8 +292,12 @@ export default function ProjectPlanBuilderPage() {
                 <SectionEditor
                   key={selectedSection.id}
                   section={selectedSection}
+                  plan={plan}
+                  allSections={effectiveSections}
                   onTitleChange={(title) => handleTitleChange(selectedSection.id, title)}
                   onContentChange={(html) => handleContentChange(selectedSection.id, html)}
+                  onRewrite={handleRewriteSection}
+                  isRewriting={rewritingId === selectedSection.id}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-erp-text3 text-sm">
