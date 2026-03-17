@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCompanies } from "@/hooks/useCompanies";
 import { useContacts } from "@/hooks/useContacts";
@@ -16,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Sparkles } from "lucide-react";
 
 interface Props { open: boolean; onOpenChange: (o: boolean) => void }
 
@@ -31,6 +32,7 @@ export default function PlanWizard({ open, onOpenChange }: Props) {
   const [weeks, setWeeks] = useState<number | "">("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [amount, setAmount] = useState<number | "">("");
+  const [generateWithAI, setGenerateWithAI] = useState(true);
 
   const { data: companies = [] } = useCompanies();
   const { data: contacts = [] } = useContacts();
@@ -48,7 +50,7 @@ export default function PlanWizard({ open, onOpenChange }: Props) {
   const filteredDeals = deals.filter(d => !companyId || d.company_id === companyId);
 
   const reset = () => {
-    setStep(1); setCompanyId(""); setContactId(""); setProjectId(""); setDealId(""); setTemplateId(""); setTitle(""); setWeeks(""); setStartDate(undefined); setAmount("");
+    setStep(1); setCompanyId(""); setContactId(""); setProjectId(""); setDealId(""); setTemplateId(""); setTitle(""); setWeeks(""); setStartDate(undefined); setAmount(""); setGenerateWithAI(true);
   };
 
   const goToStep2 = () => {
@@ -73,7 +75,8 @@ export default function PlanWizard({ open, onOpenChange }: Props) {
       toast({ title: `Plan aangemaakt met ${result.sections_created} secties` });
       onOpenChange(false);
       reset();
-      navigate(`/project-plans/${result.plan_id}`);
+      // Navigate with AI flag in state
+      navigate(`/project-plans/${result.plan_id}`, { state: { autoGenerate: generateWithAI } });
     } catch (e: any) {
       toast({ title: "Fout", description: e.message, variant: "destructive" });
     }
@@ -174,6 +177,20 @@ export default function PlanWizard({ open, onOpenChange }: Props) {
                 </PopoverContent>
               </Popover>
             </div>
+
+            {/* AI generation checkbox */}
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-[hsl(var(--erp-blue))]/5 border border-[hsl(var(--erp-blue))]/20">
+              <Checkbox
+                id="generateAI"
+                checked={generateWithAI}
+                onCheckedChange={(v) => setGenerateWithAI(!!v)}
+              />
+              <label htmlFor="generateAI" className="text-sm text-erp-text0 flex items-center gap-1.5 cursor-pointer">
+                <Sparkles className="w-4 h-4 text-[hsl(var(--erp-blue))]" />
+                Direct genereren met AI
+              </label>
+            </div>
+
             <div className="flex justify-between">
               <Button variant="ghost" onClick={() => setStep(1)} size="sm">Terug</Button>
               <Button onClick={handleCreate} size="sm" disabled={generate.isPending}>
