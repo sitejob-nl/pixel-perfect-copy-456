@@ -21,6 +21,8 @@ export default function AuthPage() {
     setLoading(false);
     if (error) {
       toast.error(error.message);
+    } else if (redirect) {
+      navigate(redirect, { replace: true });
     }
   };
 
