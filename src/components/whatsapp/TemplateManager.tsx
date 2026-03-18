@@ -249,13 +249,17 @@ function CreateTemplateSheet({ open, onOpenChange, onCreated }: { open: boolean;
         components.push({ type: "FOOTER", text: footerText.trim() });
       }
 
-      await invokeTemplates("create", {
+      const hasVars = bodyVars.length > 0 || headerVars.length > 0;
+      const createPayload: any = {
         name: name.trim().toLowerCase().replace(/\s+/g, "_"),
         category,
         language,
-        parameter_format: paramFormat,
         components,
-      });
+      };
+      if (hasVars) {
+        createPayload.parameter_format = paramFormat;
+      }
+      await invokeTemplates("create", createPayload);
       toast.success("Template ingediend voor review");
       onOpenChange(false);
       onCreated();
