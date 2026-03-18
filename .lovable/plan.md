@@ -1,67 +1,53 @@
 
 
-## Three Issues to Fix
+# ✅ LinkedIn Integratie: Posts Plaatsen
 
-### 1. Taken afvinken — status mismatch bug
+## Wat is gebouwd
 
-**Problem**: `CompanyDetailPage` and `DealTasksTab` use `status: "done"` when toggling tasks, while `TasksPage`, `TaskList`, `TaskListItem`, `TaskBoard`, and `TaskWeekView` all use `status: "completed"`. This means checking off a task on the company page sets it to `"done"`, but the tasks page looks for `"completed"` — so the task never appears as done.
+### Database
+- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
 
-**Fix**: Change `CompanyDetailPage.toggleTask` and `DealTasksTab.toggleTask` to use `"completed"` instead of `"done"`. Also update the checkbox `checked` and styling checks from `=== "done"` to `=== "completed"` in both files.
+### Edge Functions
+- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
+- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
 
-| File | Change |
-|------|--------|
-| `src/pages/CompanyDetailPage.tsx` | Replace all `"done"` → `"completed"` in toggleTask + template |
-| `src/components/deals/DealTasksTab.tsx` | Same replacement |
+### Frontend
+- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
+- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
 
----
+### Secrets
+- `LINKEDIN_CLIENT_ID` — opgeslagen
+- `LINKEDIN_CLIENT_SECRET` — opgeslagen
 
-### 2. Bestanden uploaden bij bedrijven, contacten en taken
+## ⚠️ Actie vereist
 
-**Problem**: No file attachment system exists for these entities.
-
-**Plan**:
-1. **New table** `entity_attachments` via migration:
-   - `id`, `organization_id`, `entity_type` (company/contact/task), `entity_id`, `file_name`, `file_path`, `file_size`, `mime_type`, `uploaded_by`, `created_at`
-   - RLS: org members can read/insert/delete their own org's attachments
-
-2. **Storage bucket** `entity-attachments` (private) with RLS policies for authenticated org members
-
-3. **Reusable component** `src/components/shared/EntityAttachments.tsx`:
-   - Props: `entityType`, `entityId`
-   - Shows list of uploaded files with name, size, date
-   - Upload button → picks file → uploads to `entity-attachments/{org_id}/{entity_type}/{entity_id}/{filename}`
-   - Inserts record into `entity_attachments`
-   - Download button (signed URL) + delete button
-   - Styled in ERP dark theme
-
-4. **Integration**:
-   - `CompanyDetailPage`: Add to "Documenten" tab alongside contracts
-   - `ContactDetailPage`: Add new "Bestanden" tab (or add to existing tab)
-   - `TaskDetailPanel`: Add file attachment section at the bottom of the sheet
+Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
+```
 
 ---
 
-### 3. Contactpersoon toevoegen: bestaand kiezen OF nieuw aanmaken
+# ✅ LinkedIn Webhooks: Real-time Notificaties
 
-**Problem**: On `CompanyDetailPage`, the "Contact toevoegen" button only opens `CreateContactDialog` which always creates a new contact. There's no way to link an existing contact.
+## Wat is gebouwd
 
-**Fix**: Replace with a new `AddContactToCompanyDialog` component:
-- **Two modes** via toggle/tabs: "Bestaand contact" | "Nieuw contact"
-- **Bestaand**: Searchable dropdown of all contacts (without a company, or with option to reassign). On select → updates `contact.company_id` to the current company.
-- **Nieuw**: The existing creation form but with `company_id` pre-filled.
+### Database
+- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
 
-| File | Change |
-|------|--------|
-| `src/components/shared/AddContactToCompanyDialog.tsx` | New component with both modes |
-| `src/pages/CompanyDetailPage.tsx` | Replace `CreateContactDialog` import/usage with new component, pass `companyId` |
+### Edge Function
+- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
 
----
+### Frontend
+- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
 
-## Summary of all changes
+### Webhook URL
+```
+https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
+```
 
-| Area | Files |
-|------|-------|
-| Task toggle fix | `CompanyDetailPage.tsx`, `DealTasksTab.tsx` — `"done"` → `"completed"` |
-| File uploads | New migration, new `EntityAttachments.tsx` component, integrate into 3 pages |
-| Contact linking | New `AddContactToCompanyDialog.tsx`, update `CompanyDetailPage.tsx` |
+## ⚠️ Actie vereist
 
+1. Vraag een webhook use case aan in je LinkedIn Developer Portal
+2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
+3. LinkedIn valideert automatisch via de challenge-response flow

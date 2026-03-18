@@ -10,7 +10,8 @@ import InlineEditField from "@/components/erp/InlineEditField";
 import QuickActionBar from "@/components/shared/QuickActionBar";
 import CommunicationTimeline from "@/components/shared/CommunicationTimeline";
 import AddTaskDialog from "@/components/shared/AddTaskDialog";
-import CreateContactDialog from "@/components/erp/CreateContactDialog";
+import AddContactToCompanyDialog from "@/components/shared/AddContactToCompanyDialog";
+import EntityAttachments from "@/components/shared/EntityAttachments";
 import { formatDistanceToNow, format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { toast } from "sonner";
@@ -102,7 +103,7 @@ export default function CompanyDetailPage() {
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     const updates = completed
-      ? { status: "done" as const, completed_at: new Date().toISOString(), completed_by: user?.id }
+      ? { status: "completed" as const, completed_at: new Date().toISOString(), completed_by: user?.id }
       : { status: "todo" as const, completed_at: null, completed_by: null };
     await supabase.from("tasks").update(updates).eq("id", taskId);
     qc.invalidateQueries({ queryKey: ["company-tasks", id] });
@@ -315,12 +316,12 @@ export default function CompanyDetailPage() {
               <div key={t.id} className="flex items-center gap-2 bg-erp-bg3 rounded-lg p-2.5 border border-erp-border0">
                 <input
                   type="checkbox"
-                  checked={t.status === "done"}
+                  checked={t.status === "completed"}
                   onChange={e => toggleTask(t.id, e.target.checked)}
                   className="rounded border-erp-border1 accent-erp-blue"
                 />
                 <div className="flex-1 min-w-0">
-                  <span className={cn("text-[13px]", t.status === "done" ? "line-through text-erp-text3" : "text-erp-text0")}>{t.title}</span>
+                  <span className={cn("text-[13px]", t.status === "completed" ? "line-through text-erp-text3" : "text-erp-text0")}>{t.title}</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={cn("text-[10px] font-medium uppercase", t.priority === "high" ? "text-erp-red" : t.priority === "low" ? "text-erp-text3" : "text-erp-orange")}>{t.priority}</span>
                     {t.due_date && <span className="text-[10px] text-erp-text3">{format(new Date(t.due_date), "d MMM", { locale: nl })}</span>}
@@ -335,26 +336,41 @@ export default function CompanyDetailPage() {
 
       {/* === TAB: Documenten === */}
       {tab === "documents" && (
-        <div className="space-y-3">
-          {contracts.length === 0 && <p className="text-sm text-erp-text3 py-4">Geen documenten</p>}
-          {contracts.map((c: any) => (
-            <ErpCard key={c.id} className="p-4" hover>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-[13px] font-semibold text-erp-text0">{c.title}</div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Chip>{c.type ?? "Contract"}</Chip>
-                    <Badge color={c.status === "signed" ? "#22c55e" : "#6b7280"}>{c.status ?? "—"}</Badge>
+        <div className="space-y-5">
+          {/* Bestanden */}
+          <div>
+            <h3 className="text-sm font-semibold text-erp-text0 mb-3">Bestanden</h3>
+            <EntityAttachments entityType="company" entityId={id!} />
+          </div>
+
+          {/* Contracten */}
+          <div>
+            <h3 className="text-sm font-semibold text-erp-text0 mb-3">Contracten</h3>
+            {contracts.length === 0 && <p className="text-sm text-erp-text3 py-2">Geen contracten</p>}
+            {contracts.map((c: any) => (
+              <ErpCard key={c.id} className="p-4 mb-2" hover>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-[13px] font-semibold text-erp-text0">{c.title}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Chip>{c.type ?? "Contract"}</Chip>
+                      <Badge color={c.status === "signed" ? "#22c55e" : "#6b7280"}>{c.status ?? "—"}</Badge>
+                    </div>
                   </div>
+                  <span className="text-xs text-erp-text3">{format(new Date(c.created_at), "d MMM yyyy", { locale: nl })}</span>
                 </div>
-                <span className="text-xs text-erp-text3">{format(new Date(c.created_at), "d MMM yyyy", { locale: nl })}</span>
-              </div>
-            </ErpCard>
-          ))}
+              </ErpCard>
+            ))}
+          </div>
         </div>
       )}
 
-      <CreateContactDialog open={contactDialogOpen} onOpenChange={setContactDialogOpen} />
+      <AddContactToCompanyDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+        companyId={id!}
+        companyName={company.name}
+      />
     </div>
   );
 }

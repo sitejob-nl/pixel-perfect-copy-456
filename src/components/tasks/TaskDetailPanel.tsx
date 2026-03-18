@@ -6,6 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/erp/ErpPrimitives";
+import EntityAttachments from "@/components/shared/EntityAttachments";
 import { CalendarIcon, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -191,6 +192,12 @@ export default function TaskDetailPanel({ task, open, onOpenChange, onUpdate, on
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* File Attachments */}
+          <div>
+            <label className="text-xs text-erp-text2 mb-1 block">Bestanden</label>
+            <EntityAttachments entityType="task" entityId={task.id} />
           </div>
 
           {/* Delete */}

@@ -10,6 +10,7 @@ import InlineEditField from "@/components/erp/InlineEditField";
 import QuickActionBar from "@/components/shared/QuickActionBar";
 import CommunicationTimeline from "@/components/shared/CommunicationTimeline";
 import AddTaskDialog from "@/components/shared/AddTaskDialog";
+import EntityAttachments from "@/components/shared/EntityAttachments";
 import { useActivities, useCreateActivity } from "@/hooks/useActivities";
 import { stageColors, stageLabels, tierColors } from "@/data/mockData";
 import type { ContactWithCompany } from "@/hooks/useContacts";
@@ -134,7 +135,7 @@ export default function ContactDetailPage() {
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     const updates = completed
-      ? { status: "done" as const, completed_at: new Date().toISOString(), completed_by: user?.id }
+      ? { status: "completed" as const, completed_at: new Date().toISOString(), completed_by: user?.id }
       : { status: "todo" as const, completed_at: null, completed_by: null };
     await supabase.from("tasks").update(updates).eq("id", taskId);
     qc.invalidateQueries({ queryKey: ["contact-tasks", id] });
@@ -205,6 +206,7 @@ export default function ContactDetailPage() {
           ["deals", "Deals"],
           ["notes", "Notities"],
           ["tasks", "Taken"],
+          ["files", "Bestanden"],
         ]}
         active={tab}
         onChange={setTab}
@@ -296,9 +298,9 @@ export default function ContactDetailPage() {
           <div className="space-y-1">
             {tasks.map((t: any) => (
               <div key={t.id} className="flex items-center gap-2 bg-erp-bg3 rounded-lg p-2.5 border border-erp-border0">
-                <input type="checkbox" checked={t.status === "done"} onChange={e => toggleTask(t.id, e.target.checked)} className="rounded border-erp-border1 accent-erp-blue" />
+                <input type="checkbox" checked={t.status === "completed"} onChange={e => toggleTask(t.id, e.target.checked)} className="rounded border-erp-border1 accent-erp-blue" />
                 <div className="flex-1 min-w-0">
-                  <span className={cn("text-[13px]", t.status === "done" ? "line-through text-erp-text3" : "text-erp-text0")}>{t.title}</span>
+                  <span className={cn("text-[13px]", t.status === "completed" ? "line-through text-erp-text3" : "text-erp-text0")}>{t.title}</span>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className={cn("text-[10px] font-medium uppercase", t.priority === "high" ? "text-erp-red" : t.priority === "low" ? "text-erp-text3" : "text-erp-orange")}>{t.priority}</span>
                     {t.due_date && <span className="text-[10px] text-erp-text3">{format(new Date(t.due_date), "d MMM", { locale: nl })}</span>}
@@ -309,6 +311,11 @@ export default function ContactDetailPage() {
           </div>
           <AddTaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} contactId={id} />
         </div>
+      )}
+
+      {/* === TAB: Bestanden === */}
+      {tab === "files" && (
+        <EntityAttachments entityType="contact" entityId={id!} />
       )}
 
       {/* Add Activity Dialog */}
