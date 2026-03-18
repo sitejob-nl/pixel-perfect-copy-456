@@ -106,9 +106,18 @@ Deno.serve(async (req) => {
         name,
         category,
         language,
-        parameter_format: parameter_format || "positional",
         components,
       };
+
+      // Only include parameter_format when components actually contain variables
+      const hasParams = Array.isArray(components) && components.some(
+        (c: any) => c.example || /\{\{/.test(c.text || "")
+      );
+      if (hasParams && parameter_format) {
+        payload.parameter_format = parameter_format;
+      }
+
+      console.log("Creating template with payload:", JSON.stringify(payload));
 
       const res = await fetch(
         `${META_API}/${account.waba_id}/message_templates`,
@@ -119,7 +128,10 @@ Deno.serve(async (req) => {
         }
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error?.message || "Failed to create template");
+      if (!res.ok) {
+        console.error("Meta API error response:", JSON.stringify(data));
+        throw new Error(data?.error?.message || "Failed to create template");
+      }
       return new Response(JSON.stringify({ success: true, template: data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
