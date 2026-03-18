@@ -21,6 +21,7 @@ export function useContacts() {
       const { data, error } = await supabase
         .from("contacts")
         .select("*, companies:companies!contacts_company_id_fkey(name, industry, city)")
+        .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as ContactWithCompany[];

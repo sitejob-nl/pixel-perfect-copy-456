@@ -18,6 +18,7 @@ export function useCompanies() {
       const { data, error } = await supabase
         .from("companies")
         .select("*")
+        .eq("organization_id", orgId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as CompanyRow[];

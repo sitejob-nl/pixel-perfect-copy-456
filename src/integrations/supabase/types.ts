@@ -12782,6 +12782,7 @@ export type Database = {
         Args: { p_organization_id: string; p_pool_id?: string }
         Returns: Json
       }
+      import_contacts_json: { Args: { data: Json }; Returns: number }
       increment_demo_views: { Args: { p_demo_id: string }; Returns: undefined }
       increment_email_clicks: {
         Args: { p_resend_id: string }
