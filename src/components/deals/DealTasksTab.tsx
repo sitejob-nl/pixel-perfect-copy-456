@@ -35,7 +35,7 @@ export default function DealTasksTab({ dealId }: { dealId: string }) {
 
   const toggleTask = async (taskId: string, completed: boolean) => {
     const updates = completed
-      ? { status: "done" as const, completed_at: new Date().toISOString(), completed_by: user?.id }
+      ? { status: "completed" as const, completed_at: new Date().toISOString(), completed_by: user?.id }
       : { status: "todo" as const, completed_at: null, completed_by: null };
     const { error } = await supabase.from("tasks").update(updates).eq("id", taskId);
     if (error) toast.error(error.message);
@@ -79,12 +79,12 @@ export default function DealTasksTab({ dealId }: { dealId: string }) {
           <div key={t.id} className="flex items-center gap-2 bg-erp-bg3 rounded-lg p-2.5 border border-erp-border0">
             <input
               type="checkbox"
-              checked={t.status === "done"}
+              checked={t.status === "completed"}
               onChange={e => toggleTask(t.id, e.target.checked)}
               className="rounded border-erp-border1 accent-erp-blue"
             />
             <div className="flex-1 min-w-0">
-              <span className={cn("text-[13px]", t.status === "done" ? "line-through text-erp-text3" : "text-erp-text0")}>{t.title}</span>
+              <span className={cn("text-[13px]", t.status === "completed" ? "line-through text-erp-text3" : "text-erp-text0")}>{t.title}</span>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className={cn("text-[10px] font-medium uppercase", priorityColors[t.priority ?? "medium"])}>{t.priority}</span>
                 {t.due_date && <span className="text-[10px] text-erp-text3">{format(new Date(t.due_date), "d MMM", { locale: nl })}</span>}
