@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import DemoTypeSelector from "./DemoTypeSelector";
-import { Upload } from "lucide-react";
+import { Upload, FileCode, FileText } from "lucide-react";
 import { useCreateDemo } from "@/hooks/useDemos";
 
 interface Props {
@@ -12,30 +12,72 @@ interface Props {
   onOpenChange: (open: boolean) => void;
 }
 
+function wrapJsxInHtml(jsxCode: string, fileName: string): string {
+  return `<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${fileName.replace(/\.(jsx|tsx)$/, "")}</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>body{margin:0;font-family:system-ui,sans-serif}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-type="module">
+${jsxCode}
+
+// Auto-render: look for default export or App component
+const _Component = typeof App !== 'undefined' ? App : (typeof Default !== 'undefined' ? Default : null);
+if (_Component) {
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(_Component));
+}
+  <\/script>
+</body>
+</html>`;
+}
+
 export default function UploadDemoDialog({ open, onOpenChange }: Props) {
   const [html, setHtml] = useState("");
+  const [fileName, setFileName] = useState("");
+  const [fileType, setFileType] = useState<"html" | "jsx">("html");
   const [companyName, setCompanyName] = useState("");
   const [slug, setSlug] = useState("");
   const [demoType, setDemoType] = useState("website");
   const [password, setPassword] = useState("");
   const createDemo = useCreateDemo();
 
-  const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processFile = useCallback((file: File) => {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const isJsx = ext === "jsx" || ext === "tsx";
+    setFileName(file.name);
+    setFileType(isJsx ? "jsx" : "html");
+
     const reader = new FileReader();
-    reader.onload = () => setHtml(reader.result as string);
+    reader.onload = () => {
+      const content = reader.result as string;
+      if (isJsx) {
+        setHtml(wrapJsxInHtml(content, file.name));
+      } else {
+        setHtml(content);
+      }
+    };
     reader.readAsText(file);
   }, []);
+
+  const handleFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  }, [processFile]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setHtml(reader.result as string);
-    reader.readAsText(file);
-  }, []);
+    if (file) processFile(file);
+  }, [processFile]);
 
   const handleSubmit = () => {
     if (!html) return;
@@ -49,7 +91,7 @@ export default function UploadDemoDialog({ open, onOpenChange }: Props) {
         public_slug: slug || undefined,
         password_hash: password || undefined,
       },
-      { onSuccess: () => { onOpenChange(false); setHtml(""); setCompanyName(""); setSlug(""); setPassword(""); } }
+      { onSuccess: () => { onOpenChange(false); setHtml(""); setFileName(""); setCompanyName(""); setSlug(""); setPassword(""); } }
     );
   };
 
@@ -64,9 +106,23 @@ export default function UploadDemoDialog({ open, onOpenChange }: Props) {
             className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/40 transition-colors"
           >
             <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground mb-2">{html ? "HTML geladen ✓" : "Sleep een HTML bestand hierheen"}</p>
-            <Input type="file" accept=".html,.htm" onChange={handleFile} className="max-w-xs mx-auto" />
+            {html ? (
+              <div className="flex items-center justify-center gap-2 text-sm text-foreground mb-2">
+                {fileType === "jsx" ? <FileCode className="h-4 w-4 text-primary" /> : <FileText className="h-4 w-4 text-primary" />}
+                <span>{fileName}</span>
+                <span className="text-primary">✓</span>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-2">Sleep een HTML of JSX bestand hierheen</p>
+            )}
+            <Input type="file" accept=".html,.htm,.jsx,.tsx" onChange={handleFile} className="max-w-xs mx-auto" />
           </div>
+
+          {fileType === "jsx" && html && (
+            <p className="text-xs text-muted-foreground bg-muted/50 rounded p-2">
+              JSX wordt automatisch verpakt met React 18, Babel en Tailwind CSS zodat het als standalone demo werkt.
+            </p>
+          )}
 
           <div className="space-y-2">
             <Label>Bedrijfsnaam</Label>
