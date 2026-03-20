@@ -13,33 +13,49 @@ interface Props {
 }
 
 function wrapJsxInHtml(jsxCode: string, fileName: string): string {
-  return `<!DOCTYPE html>
-<html lang="nl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${fileName.replace(/\.(jsx|tsx)$/, "")}</title>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <style>body{margin:0;font-family:system-ui,sans-serif}</style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="text/babel" data-type="module">
-${jsxCode}
+  // Strip import statements — libraries will be provided as UMD globals
+  const strippedCode = jsxCode
+    .replace(/^import\s+.*from\s+['"]react['"];?\s*$/gm, "")
+    .replace(/^import\s+\{[^}]*\}\s+from\s+['"]react['"];?\s*$/gm, "")
+    .replace(/^import\s+\{([^}]*)\}\s+from\s+['"]recharts['"];?\s*$/gm, 
+      (_, imports) => `const { ${imports.trim()} } = Recharts;`)
+    .replace(/^import\s+\{([^}]*)\}\s+from\s+['"]lucide-react['"];?\s*$/gm,
+      (_, imports) => `const { ${imports.trim()} } = lucideReact;`)
+    .replace(/^import\s+.*from\s+['"][^'"]+['"];?\s*$/gm, "// removed import");
 
-// Auto-render: look for default export or App component
-const _Component = typeof App !== 'undefined' ? App : (typeof Default !== 'undefined' ? Default : null);
-if (_Component) {
-  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(_Component));
-}
-  <\/script>
-</body>
-</html>`;
-}
+  const title = fileName.replace(/\.(jsx|tsx)$/, "");
 
+  // Build HTML parts separately to avoid template literal issues with </script>
+  const head = [
+    '<!DOCTYPE html>',
+    '<html lang="nl">',
+    '<head>',
+    '<meta charset="UTF-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0" />',
+    `<title>${title}</title>`,
+    '<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>',
+    '<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>',
+    '<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>',
+    '<script src="https://unpkg.com/recharts@2/umd/Recharts.min.js"></script>',
+    '<script src="https://unpkg.com/lucide-react@0.462.0/dist/umd/lucide-react.min.js"></script>',
+    '<script src="https://cdn.tailwindcss.com"></script>',
+    '<style>body{margin:0;font-family:system-ui,sans-serif}*{box-sizing:border-box}</style>',
+    '</head>',
+    '<body>',
+    '<div id="root"></div>',
+  ].join('\n');
+
+  const scriptContent = [
+    strippedCode,
+    '',
+    '// Auto-render',
+    'const _C = typeof App !== "undefined" ? App : typeof Default !== "undefined" ? Default : null;',
+    'if (_C) ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(_C));',
+  ].join('\n');
+
+  // Use array join to avoid escaping issues with closing script tags
+  return head + '\n<script type="text/babel">\n' + scriptContent + '\n<' + '/script>\n</body>\n</html>';
+}
 export default function UploadDemoDialog({ open, onOpenChange }: Props) {
   const [html, setHtml] = useState("");
   const [fileName, setFileName] = useState("");
