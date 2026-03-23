@@ -163,13 +163,26 @@ export default function DemoWizard({ onClose }: Props) {
   const crawlStart = useCrawlStart();
   const generateDemo = useGenerateDemo();
 
-  // Generation polling
-  const { data: genStatus } = usePollStatus(
-    "check-generation",
-    { demo_id: generationId },
-    3000,
-    !!generationId && step === 3 && !generationDone
-  );
+  // Generation polling — direct DB query instead of broken edge function action
+  const [genStartedAt, setGenStartedAt] = useState<number | null>(null);
+  const { data: genStatus } = useQuery({
+    queryKey: ["demo-gen-status", generationId],
+    enabled: !!generationId && step === 3 && !generationDone,
+    refetchInterval: 3000,
+    queryFn: async () => {
+      const { data: demo } = await supabase
+        .from("demos")
+        .select("id, generation_status, demo_html")
+        .eq("id", generationId!)
+        .single();
+      const { data: pages } = await supabase
+        .from("demo_pages")
+        .select("*")
+        .eq("demo_id", generationId!)
+        .order("sort_order");
+      return { demo, pages: pages || [] };
+    },
+  });
 
   // Inline update mutation
   const updateDemo = useMutation({
@@ -232,16 +245,25 @@ export default function DemoWizard({ onClose }: Props) {
   // Handle generation completion
   useEffect(() => {
     if (!genStatus) return;
-    if (genStatus.status === "completed" || genStatus.generation_status === "completed") {
+    const demo = genStatus.demo;
+    const pagesData = genStatus.pages || [];
+    const allPagesReady = pagesData.length > 0 && pagesData.every((p: any) => p.html_content);
+
+    if (demo?.generation_status === "completed" || allPagesReady) {
       setGenerationDone(true);
-      setResultDemo(genStatus.demo || genStatus);
-      setResultPages(genStatus.pages || []);
-      if (genStatus.pages?.length) setActivePage(genStatus.pages[0].slug);
+      setResultDemo(demo);
+      setResultPages(pagesData);
+      if (pagesData.length) setActivePage(pagesData[0].slug);
       setTimeout(() => setStep(4), 500);
-    } else if (genStatus.status === "failed" || genStatus.generation_status === "failed") {
-      setGenerationError(genStatus.error || "Generatie mislukt");
+    } else if (demo?.generation_status === "failed") {
+      setGenerationError("Generatie mislukt");
     }
-  }, [genStatus]);
+
+    // Timeout fallback: 3 minutes
+    if (genStartedAt && Date.now() - genStartedAt > 180_000 && !generationDone) {
+      setGenerationError("Generatie duurt te lang. Probeer het opnieuw.");
+    }
+  }, [genStatus, genStartedAt, generationDone]);
 
   // Listen for iframe page navigation
   useEffect(() => {
@@ -281,6 +303,7 @@ export default function DemoWizard({ onClose }: Props) {
     setStep(3);
     setGenerationDone(false);
     setGenerationError(null);
+    setGenStartedAt(Date.now());
     const enabledPages = pages.filter((p) => p.enabled);
     try {
       const result = await generateDemo.mutateAsync({
@@ -680,9 +703,9 @@ export default function DemoWizard({ onClose }: Props) {
               <>
                 <div className="space-y-2">
                   {enabledPages.map((page, i) => {
-                    const pageStatus = genStatus?.pages_status?.find((ps: any) => ps.slug === page.slug);
-                    const isDone = pageStatus?.status === "completed";
-                    const isActive = pageStatus?.status === "generating";
+                    const dbPage = genStatus?.pages?.find((ps: any) => ps.slug === page.slug);
+                    const isDone = !!dbPage?.html_content;
+                    const isActive = dbPage?.generation_status === "generating";
 
                     return (
                       <div key={i} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-card border border-border">
@@ -697,8 +720,7 @@ export default function DemoWizard({ onClose }: Props) {
                           <span className={cn(isDone ? "text-foreground" : "text-muted-foreground")}>{page.title}</span>
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {isDone ? `klaar${pageStatus?.duration ? ` (${pageStatus.duration}s)` : ""}` :
-                           isActive ? "bezig..." : "wachtend"}
+                          {isDone ? "klaar" : isActive ? "bezig..." : "wachtend"}
                         </span>
                       </div>
                     );
@@ -707,18 +729,15 @@ export default function DemoWizard({ onClose }: Props) {
 
                 <div className="space-y-1">
                   <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-500"
-                      style={{
-                        width: `${genStatus?.pages_status
-                          ? Math.round((genStatus.pages_status.filter((p: any) => p.status === "completed").length / enabledPages.length) * 100)
-                          : 10}%`
-                      }}
-                    />
+                    {(() => {
+                      const doneCount = genStatus?.pages?.filter((p: any) => p.html_content).length || 0;
+                      const pct = enabledPages.length > 0 ? Math.round((doneCount / enabledPages.length) * 100) : 10;
+                      return <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />;
+                    })()}
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
-                    {genStatus?.pages_status
-                      ? `${genStatus.pages_status.filter((p: any) => p.status === "completed").length}/${enabledPages.length} pagina's`
+                    {genStatus?.pages
+                      ? `${genStatus.pages.filter((p: any) => p.html_content).length}/${enabledPages.length} pagina's`
                       : "Bezig..."}
                   </p>
                 </div>
