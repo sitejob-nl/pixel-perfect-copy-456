@@ -163,13 +163,26 @@ export default function DemoWizard({ onClose }: Props) {
   const crawlStart = useCrawlStart();
   const generateDemo = useGenerateDemo();
 
-  // Generation polling
-  const { data: genStatus } = usePollStatus(
-    "check-generation",
-    { demo_id: generationId },
-    3000,
-    !!generationId && step === 3 && !generationDone
-  );
+  // Generation polling — direct DB query instead of broken edge function action
+  const [genStartedAt, setGenStartedAt] = useState<number | null>(null);
+  const { data: genStatus } = useQuery({
+    queryKey: ["demo-gen-status", generationId],
+    enabled: !!generationId && step === 3 && !generationDone,
+    refetchInterval: 3000,
+    queryFn: async () => {
+      const { data: demo } = await supabase
+        .from("demos")
+        .select("id, generation_status, demo_html")
+        .eq("id", generationId!)
+        .single();
+      const { data: pages } = await supabase
+        .from("demo_pages")
+        .select("*")
+        .eq("demo_id", generationId!)
+        .order("sort_order");
+      return { demo, pages: pages || [] };
+    },
+  });
 
   // Inline update mutation
   const updateDemo = useMutation({
