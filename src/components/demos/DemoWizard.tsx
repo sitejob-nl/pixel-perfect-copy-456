@@ -702,9 +702,9 @@ export default function DemoWizard({ onClose }: Props) {
               <>
                 <div className="space-y-2">
                   {enabledPages.map((page, i) => {
-                    const pageStatus = genStatus?.pages_status?.find((ps: any) => ps.slug === page.slug);
-                    const isDone = pageStatus?.status === "completed";
-                    const isActive = pageStatus?.status === "generating";
+                    const dbPage = genStatus?.pages?.find((ps: any) => ps.slug === page.slug);
+                    const isDone = !!dbPage?.html_content;
+                    const isActive = dbPage?.generation_status === "generating";
 
                     return (
                       <div key={i} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-card border border-border">
@@ -719,8 +719,7 @@ export default function DemoWizard({ onClose }: Props) {
                           <span className={cn(isDone ? "text-foreground" : "text-muted-foreground")}>{page.title}</span>
                         </div>
                         <span className="text-xs text-muted-foreground">
-                          {isDone ? `klaar${pageStatus?.duration ? ` (${pageStatus.duration}s)` : ""}` :
-                           isActive ? "bezig..." : "wachtend"}
+                          {isDone ? "klaar" : isActive ? "bezig..." : "wachtend"}
                         </span>
                       </div>
                     );
@@ -729,18 +728,15 @@ export default function DemoWizard({ onClose }: Props) {
 
                 <div className="space-y-1">
                   <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-500"
-                      style={{
-                        width: `${genStatus?.pages_status
-                          ? Math.round((genStatus.pages_status.filter((p: any) => p.status === "completed").length / enabledPages.length) * 100)
-                          : 10}%`
-                      }}
-                    />
+                    {(() => {
+                      const doneCount = genStatus?.pages?.filter((p: any) => p.html_content).length || 0;
+                      const pct = enabledPages.length > 0 ? Math.round((doneCount / enabledPages.length) * 100) : 10;
+                      return <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />;
+                    })()}
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
-                    {genStatus?.pages_status
-                      ? `${genStatus.pages_status.filter((p: any) => p.status === "completed").length}/${enabledPages.length} pagina's`
+                    {genStatus?.pages
+                      ? `${genStatus.pages.filter((p: any) => p.html_content).length}/${enabledPages.length} pagina's`
                       : "Bezig..."}
                   </p>
                 </div>
