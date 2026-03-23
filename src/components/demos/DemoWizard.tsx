@@ -303,6 +303,7 @@ export default function DemoWizard({ onClose }: Props) {
     setStep(3);
     setGenerationDone(false);
     setGenerationError(null);
+    setGenStartedAt(Date.now());
     const enabledPages = pages.filter((p) => p.enabled);
     try {
       const result = await generateDemo.mutateAsync({
