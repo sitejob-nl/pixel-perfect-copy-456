@@ -1,53 +1,53 @@
 
 
-# ✅ LinkedIn Integratie: Posts Plaatsen
+## Problem
 
-## Wat is gebouwd
+The `demo-service` edge function's `generate` action returns `{ id: "xxx" }` without `demo_html` or `pages` inline. The frontend then tries to poll `check-generation` — but that action returns 404 (not implemented in the edge function). So the wizard gets stuck on step 3 spinning forever.
 
-### Database
-- `linkedin_connections` tabel met RLS (users zien alleen eigen koppeling)
+## Solution
 
-### Edge Functions
-- `linkedin-oauth` — OAuth 2.0 flow (start → redirect → callback → tokens opslaan)
-- `linkedin-post` — Authenticated endpoint om LinkedIn posts te publiceren
+Replace the broken polling mechanism with direct Supabase database queries. After `generate` returns a `demo_id`, poll the `demos` table and `demo_pages` table directly instead of calling the non-existent `check-generation` action.
 
-### Frontend
-- **Instellingen → LinkedIn tab** — Koppel/ontkoppel LinkedIn account
-- **Content pagina → LinkedIn Post knop** — Schrijf en publiceer posts
+## Changes
 
-### Secrets
-- `LINKEDIN_CLIENT_ID` — opgeslagen
-- `LINKEDIN_CLIENT_SECRET` — opgeslagen
+### `src/components/demos/DemoWizard.tsx`
 
-## ⚠️ Actie vereist
+1. **Replace `usePollStatus("check-generation", ...)` with a direct Supabase query**:
+   - Poll `demos` table for `generation_status` field on the demo record
+   - When status is `completed`, fetch `demo_pages` for that demo
+   - When status is `failed`, show error
 
-Voeg deze redirect URL toe aan je LinkedIn Developer Portal:
+2. **Add a fallback timeout**: If after ~3 minutes it's still "generating", show a retry option instead of spinning forever.
+
+The polling logic changes from:
 ```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-oauth?action=callback
+usePollStatus("check-generation", { demo_id }, 3000, enabled)
+```
+To a `useQuery` that directly queries Supabase:
+```typescript
+useQuery({
+  queryKey: ["demo-gen-status", generationId],
+  enabled: !!generationId && step === 3 && !generationDone,
+  refetchInterval: 3000,
+  queryFn: async () => {
+    const { data: demo } = await supabase
+      .from("demos")
+      .select("id, generation_status, demo_html")
+      .eq("id", generationId)
+      .single();
+    const { data: pages } = await supabase
+      .from("demo_pages")
+      .select("*")
+      .eq("demo_id", generationId)
+      .order("sort_order");
+    return { demo, pages };
+  }
+});
 ```
 
----
+3. **Update the `useEffect` that handles completion** to work with the new query shape — check `demo.generation_status === "completed"` or if `pages` have `html_content` filled in.
 
-# ✅ LinkedIn Webhooks: Real-time Notificaties
+| File | Change |
+|------|--------|
+| `src/components/demos/DemoWizard.tsx` | Replace `usePollStatus("check-generation")` with direct Supabase polling; update completion effect; add timeout fallback |
 
-## Wat is gebouwd
-
-### Database
-- `linkedin_webhook_events` tabel met deduplicatie (unique notification_id), RLS voor org members
-
-### Edge Function
-- `linkedin-webhook` — Challenge-response validatie (GET) + event ontvangst met X-LI-Signature verificatie (POST)
-
-### Frontend
-- **Instellingen → LinkedIn tab** — Webhook URL getoond met kopieerknop
-
-### Webhook URL
-```
-https://fuvpmxxihmpustftzvgk.supabase.co/functions/v1/linkedin-webhook
-```
-
-## ⚠️ Actie vereist
-
-1. Vraag een webhook use case aan in je LinkedIn Developer Portal
-2. Na goedkeuring: registreer bovenstaande webhook URL onder "Webhooks"
-3. LinkedIn valideert automatisch via de challenge-response flow
