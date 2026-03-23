@@ -245,16 +245,25 @@ export default function DemoWizard({ onClose }: Props) {
   // Handle generation completion
   useEffect(() => {
     if (!genStatus) return;
-    if (genStatus.status === "completed" || genStatus.generation_status === "completed") {
+    const demo = genStatus.demo;
+    const pagesData = genStatus.pages || [];
+    const allPagesReady = pagesData.length > 0 && pagesData.every((p: any) => p.html_content);
+
+    if (demo?.generation_status === "completed" || allPagesReady) {
       setGenerationDone(true);
-      setResultDemo(genStatus.demo || genStatus);
-      setResultPages(genStatus.pages || []);
-      if (genStatus.pages?.length) setActivePage(genStatus.pages[0].slug);
+      setResultDemo(demo);
+      setResultPages(pagesData);
+      if (pagesData.length) setActivePage(pagesData[0].slug);
       setTimeout(() => setStep(4), 500);
-    } else if (genStatus.status === "failed" || genStatus.generation_status === "failed") {
-      setGenerationError(genStatus.error || "Generatie mislukt");
+    } else if (demo?.generation_status === "failed") {
+      setGenerationError("Generatie mislukt");
     }
-  }, [genStatus]);
+
+    // Timeout fallback: 3 minutes
+    if (genStartedAt && Date.now() - genStartedAt > 180_000 && !generationDone) {
+      setGenerationError("Generatie duurt te lang. Probeer het opnieuw.");
+    }
+  }, [genStatus, genStartedAt, generationDone]);
 
   // Listen for iframe page navigation
   useEffect(() => {
