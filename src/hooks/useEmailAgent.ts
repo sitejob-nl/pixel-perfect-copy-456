@@ -68,6 +68,61 @@ export function useEmailInbox(category?: string) {
   });
 }
 
+/** Fetch all email_inbox items indexed by gmail_thread_id for quick lookup */
+export function useEmailInboxMap() {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
+  return useQuery({
+    queryKey: ["email-inbox-map", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("email_inbox")
+        .select("gmail_thread_id, ai_summary, ai_sentiment, ai_action, category, confidence, draft_status, draft_body, id")
+        .eq("organization_id", orgId)
+        .not("gmail_thread_id", "is", null)
+        .order("gmail_date", { ascending: false });
+
+      if (error) throw error;
+
+      const map: Record<string, EmailInboxItem> = {};
+      for (const item of data || []) {
+        // Keep the most recent per thread
+        if (!map[item.gmail_thread_id]) {
+          map[item.gmail_thread_id] = item;
+        }
+      }
+      return map;
+    },
+    refetchInterval: 30000,
+  });
+}
+
+/** Fetch email_inbox record for a specific thread */
+export function useEmailInboxByThread(threadId: string | null) {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
+  return useQuery({
+    queryKey: ["email-inbox-thread", orgId, threadId],
+    enabled: !!orgId && !!threadId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("email_inbox")
+        .select("*, companies(name), projects(name)")
+        .eq("organization_id", orgId)
+        .eq("gmail_thread_id", threadId)
+        .order("gmail_date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as EmailInboxItem | null;
+    },
+  });
+}
+
 export function useEmailInboxStats() {
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
@@ -123,6 +178,8 @@ export function useSendDraft() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["email-inbox"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-map"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-thread"] });
       qc.invalidateQueries({ queryKey: ["email-inbox-stats"] });
     },
   });
@@ -151,6 +208,8 @@ export function useRejectDraft() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["email-inbox"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-map"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-thread"] });
       qc.invalidateQueries({ queryKey: ["email-inbox-stats"] });
     },
   });
@@ -184,6 +243,8 @@ export function useProcessManual() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["email-inbox"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-map"] });
+      qc.invalidateQueries({ queryKey: ["email-inbox-thread"] });
       qc.invalidateQueries({ queryKey: ["email-inbox-stats"] });
     },
   });

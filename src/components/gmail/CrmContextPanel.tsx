@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ErpCard, Badge, Dot, Chip } from "@/components/erp/ErpPrimitives";
 import { Icons } from "@/components/erp/ErpIcons";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Bot } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import {
   type EmailThread,
   type AiSuggestion,
 } from "@/hooks/useGmailThreads";
+import { useEmailInboxByThread, useSendDraft, useRejectDraft } from "@/hooks/useEmailAgent";
 
 const tempColors: Record<string, string> = {
   hot: "#ef4444", warm: "#f59e0b", cold: "#3b82f6",
@@ -24,6 +25,24 @@ const tempColors: Record<string, string> = {
 const suggestionIcons: Record<string, string> = {
   create_task: "✅", create_deal: "💰", update_contact: "👤",
   log_activity: "📝", flag_urgent: "🚨", send_followup: "📧",
+};
+
+const sentimentLabels: Record<string, { label: string; color: string }> = {
+  urgent: { label: "Urgent", color: "bg-red-500/15 text-red-400" },
+  negatief: { label: "Negatief", color: "bg-orange-500/15 text-orange-400" },
+  negative: { label: "Negatief", color: "bg-orange-500/15 text-orange-400" },
+  positief: { label: "Positief", color: "bg-emerald-500/15 text-emerald-400" },
+  positive: { label: "Positief", color: "bg-emerald-500/15 text-emerald-400" },
+  neutraal: { label: "Neutraal", color: "bg-erp-bg4 text-erp-text3" },
+  neutral: { label: "Neutraal", color: "bg-erp-bg4 text-erp-text3" },
+};
+
+const actionLabels: Record<string, string> = {
+  reply_needed: "Reactie vereist",
+  fyi_only: "Ter info",
+  urgent: "Urgente actie",
+  follow_up: "Follow-up",
+  no_action: "Geen actie nodig",
 };
 
 interface Props {
@@ -35,7 +54,10 @@ export default function CrmContextPanel({ thread, emailIds }: Props) {
   const navigate = useNavigate();
   const approve = useApproveSuggestion();
   const reject = useRejectSuggestion();
+  const sendDraft = useSendDraft();
+  const rejectDraft = useRejectDraft();
   const { data: suggestions = [], isLoading: sugLoading } = useThreadSuggestions(emailIds);
+  const { data: aiData, isLoading: aiLoading } = useEmailInboxByThread(thread?.thread_id || null);
 
   const contactId = thread?.matched_contact_id;
   const companyId = thread?.matched_company_id;
@@ -109,10 +131,123 @@ export default function CrmContextPanel({ thread, emailIds }: Props) {
     }
   };
 
+  const handleSendDraft = async () => {
+    if (!aiData?.id) return;
+    try {
+      await sendDraft.mutateAsync(aiData.id);
+      toast.success("Draft verstuurd via Gmail");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const handleRejectDraft = async () => {
+    if (!aiData?.id) return;
+    try {
+      await rejectDraft.mutateAsync(aiData.id);
+      toast.success("Draft afgewezen");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   if (!thread) return null;
+
+  const sentiment = aiData?.ai_sentiment ? sentimentLabels[aiData.ai_sentiment] : null;
 
   return (
     <div className="w-[300px] min-w-[300px] border-l border-erp-border0 h-full overflow-y-auto p-3 space-y-3">
+      {/* AI Analysis */}
+      {(aiData || aiLoading) && (
+        <ErpCard className="p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Bot className="w-3.5 h-3.5 text-erp-blue" />
+            <span className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">AI Analyse</span>
+          </div>
+          {aiLoading ? (
+            <Skeleton className="h-12 w-full bg-erp-bg3 rounded" />
+          ) : aiData ? (
+            <div className="space-y-2">
+              {aiData.ai_summary && (
+                <p className="text-[11px] text-erp-text1 leading-relaxed">{aiData.ai_summary}</p>
+              )}
+              <div className="flex flex-wrap gap-1.5">
+                {aiData.category && (
+                  <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-erp-blue/15 text-erp-blue">
+                    {aiData.category}
+                  </span>
+                )}
+                {sentiment && (
+                  <span className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded-full", sentiment.color)}>
+                    {sentiment.label}
+                  </span>
+                )}
+                {aiData.ai_action && (
+                  <span className="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-erp-bg4 text-erp-text2">
+                    {actionLabels[aiData.ai_action] || aiData.ai_action}
+                  </span>
+                )}
+              </div>
+              {aiData.companies?.name && (
+                <div className="text-[10px] text-erp-text3">
+                  Bedrijf: <span className="text-erp-text1">{aiData.companies.name}</span>
+                </div>
+              )}
+              {aiData.projects?.name && (
+                <div className="text-[10px] text-erp-text3">
+                  Project: <span className="text-erp-text1">{aiData.projects.name}</span>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </ErpCard>
+      )}
+
+      {/* Draft review */}
+      {aiData?.draft_body && aiData.draft_status === "pending" && (
+        <ErpCard className="p-3">
+          <div className="flex items-center gap-1.5 mb-2">
+            <Icons.Send className="w-3.5 h-3.5 text-erp-amber" />
+            <span className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">Concept-antwoord</span>
+          </div>
+          <div className="bg-erp-bg3 rounded-lg p-2.5 mb-2 max-h-[200px] overflow-y-auto">
+            <p className="text-[11px] text-erp-text1 whitespace-pre-wrap leading-relaxed">{aiData.draft_body}</p>
+          </div>
+          <div className="flex gap-1.5">
+            <button
+              onClick={handleSendDraft}
+              disabled={sendDraft.isPending}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium bg-emerald-500/15 text-emerald-400 rounded-lg hover:bg-emerald-500/25 transition disabled:opacity-50"
+            >
+              ✓ Goedkeuren & Versturen
+            </button>
+            <button
+              onClick={handleRejectDraft}
+              disabled={rejectDraft.isPending}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-medium bg-erp-bg4 text-erp-text3 rounded-lg hover:bg-erp-hover transition disabled:opacity-50"
+            >
+              ✗ Afwijzen
+            </button>
+          </div>
+        </ErpCard>
+      )}
+
+      {/* Draft sent/rejected status */}
+      {aiData?.draft_body && aiData.draft_status !== "pending" && aiData.draft_status !== "none" && (
+        <ErpCard className="p-3">
+          <div className="flex items-center gap-1.5">
+            <Icons.Send className="w-3.5 h-3.5 text-erp-text3" />
+            <span className="text-[11px] font-semibold text-erp-text3 uppercase tracking-wider">Concept-antwoord</span>
+            <span className={cn(
+              "text-[9px] font-medium px-1.5 py-0.5 rounded-full ml-auto",
+              aiData.draft_status === "sent" ? "bg-emerald-500/15 text-emerald-400" : "bg-erp-bg4 text-erp-text3"
+            )}>
+              {aiData.draft_status === "sent" ? "Verstuurd" : "Afgewezen"}
+            </span>
+          </div>
+        </ErpCard>
+      )}
+
       {/* CRM Context */}
       {contact ? (
         <ErpCard className="p-3">
@@ -221,11 +356,9 @@ export default function CrmContextPanel({ thread, emailIds }: Props) {
           </ErpCard>
         ) : (
           <div className="space-y-2">
-            {/* Pending */}
             {pendingSuggestions.map(s => (
               <SuggestionCard key={s.id} suggestion={s} onApprove={handleApprove} onReject={handleReject} isPending />
             ))}
-            {/* Processed */}
             {processedSuggestions.map(s => (
               <SuggestionCard key={s.id} suggestion={s} onApprove={handleApprove} onReject={handleReject} isPending={false} />
             ))}
@@ -259,7 +392,6 @@ function SuggestionCard({
           <div className="text-[12px] font-medium text-erp-text0">{s.title}</div>
           {s.description && <p className="text-[10px] text-erp-text2 mt-0.5">{s.description}</p>}
 
-          {/* Confidence bar */}
           <div className="flex items-center gap-2 mt-1.5">
             <div className="flex-1 h-1 bg-erp-bg4 rounded-full overflow-hidden">
               <div className={cn("h-full rounded-full", barColor)} style={{ width: `${confidence}%` }} />
@@ -267,7 +399,6 @@ function SuggestionCard({
             <span className="text-[9px] text-erp-text3">{Math.round(confidence)}%</span>
           </div>
 
-          {/* Suggested data */}
           {s.suggested_data && Object.keys(s.suggested_data).length > 0 && (
             <div className="mt-1.5 space-y-0.5">
               {Object.entries(s.suggested_data).slice(0, 4).map(([k, v]) => (
@@ -278,7 +409,6 @@ function SuggestionCard({
             </div>
           )}
 
-          {/* Actions */}
           {isPending ? (
             <div className="flex gap-1.5 mt-2">
               <button
