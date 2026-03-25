@@ -1,100 +1,60 @@
 
 
-## AI Email Agent — Implementatieplan
+## Integreer AI Email Agent in de Gmail pagina
 
-Dit is een groot feature dat in fasen wordt gebouwd. Het document beschrijft een systeem waarbij inkomende Gmail berichten automatisch door AI worden geclassificeerd, gekoppeld aan klanten/projecten, en concept-antwoorden als Gmail drafts worden aangemaakt.
-
-**Belangrijk**: Het document verwijst naar een `clients` tabel, maar jullie database gebruikt `companies` en `contacts`. De SQL en edge function worden hierop aangepast.
+De aparte `/email-agent` pagina wordt verwijderd. Alle AI-functionaliteit (classificatie, samenvatting, drafts) wordt geïntegreerd in de bestaande Gmail-pagina.
 
 ---
 
-### Fase 1: Database (migration)
+### Wat verandert er
 
-Twee nieuwe tabellen aanmaken:
-
-**`email_inbox`** — elke verwerkte mail
-- Gmail metadata (gmail_id, thread_id, from_email, subject, body, etc.)
-- AI classificatie (category, confidence, summary, action, sentiment)
-- Koppelingen naar `companies` en `projects` (niet `clients`)
-- Draft tracking (draft_gmail_id, draft_status, draft_body)
-- Review tracking (reviewed_by → profiles, reviewed_at)
-
-**`email_rules`** — bekende patronen voor snelle matching
-- match_from/match_subject arrays, koppeling naar company_id, priority
-- Seed data voor bekende klanten (Best Security, Abitare, JA Werkt, BRUT, etc.)
-
-RLS: Alleen leden van de organisatie mogen lezen/schrijven. Service role voor de edge function.
+1. **ThreadList**: AI-samenvatting en sentiment badge tonen per thread (data uit `email_inbox` koppelen op `gmail_thread_id`)
+2. **CrmContextPanel**: AI samenvatting + draft review (goedkeuren/afwijzen/aanpassen) toevoegen onder de bestaande suggesties
+3. **GmailPage header**: "AI Sync" knop toevoegen naast de bestaande Sync knop (roept `process-manual` aan op `email-agent`)
+4. **Sidebar**: `email-agent` nav-item verwijderen — Gmail is nu de enige inbox
+5. **Route + page verwijderen**: `/email-agent` route uit App.tsx, `EmailAgentPage.tsx` kan blijven als unused file of verwijderd worden
 
 ---
 
-### Fase 2: Edge Function `email-agent`
+### Technische details
 
-Eén edge function die het volledige verwerkingsproces afhandelt:
+**Nieuw: `useEmailInboxByThread` hook** — haalt `email_inbox` records op voor de geselecteerde thread (match op `gmail_thread_id`). Retourneert AI summary, category, sentiment, action, en draft info.
 
-1. **Gmail Push ontvangen** — Pub/Sub webhook (geen auth nodig voor Google push)
-2. **Mail ophalen** — Via bestaande `google_connections` tabel (hergebruikt het OAuth refresh token systeem uit `google-api`)
-3. **Regels checken** — Match tegen `email_rules`
-4. **AI classificatie** — Claude Sonnet call met context van companies + projects uit de database
-5. **Gmail labelen** — Label aanmaken/toewijzen via Gmail API
-6. **Draft aanmaken** — Als reply nodig, draft in Gmail thread
-7. **Opslaan in `email_inbox`**
-8. **Urgente notificatie** — Via Resend als sentiment = urgent
+**ThreadList wijzigingen:**
+- Voeg een `useEmailInbox` query toe die alle inbox items ophaalt (of een view/join)
+- Toon `ai_summary` als extra regel onder de snippet (truncated, met 🤖 icoon)
+- Toon `ai_sentiment` badge (urgent = rood, negatief = oranje) naast de category badge
 
-De `callClaude` functie wordt aangepast om `companies` (niet `clients`) als context mee te sturen. Het prompt is al goed beschreven in het document.
+**CrmContextPanel wijzigingen:**
+- Nieuw blok "AI Analyse" boven de suggesties:
+  - AI samenvatting
+  - Categorie + sentiment badges
+  - Actie label (reply_needed, fyi_only, etc.)
+- Nieuw blok "Concept-antwoord" (als `draft_body` bestaat):
+  - Draft tekst tonen
+  - Goedkeuren + Afwijzen knoppen (hergebruikt `useSendDraft` / `useRejectDraft` uit `useEmailAgent.ts`)
 
----
+**GmailPage wijzigingen:**
+- Import `useProcessManual` uit `useEmailAgent`
+- Extra "🤖 AI Sync" knop in de header die `processManual.mutateAsync()` aanroept
 
-### Fase 3: ERP Frontend — Email Dashboard pagina
+**ErpSidebar:**
+- Verwijder `{ k: "email-agent", l: "AI Email", i: "Bot", dot: true }` uit de nav items
+- Verwijder de module mapping `"email-agent": "mod_gmail"`
 
-Nieuwe pagina `/email-agent` met:
-
-- **Gefilterde lijsten** per categorie: Urgent, Reply Needed, FYI, Reclame
-- **Per email**: afzender, onderwerp, AI samenvatting, gekoppelde company/project
-- **Draft acties**: Bekijk draft, Goedkeuren (stuurt draft via edge function), Aanpassen (opent Gmail), Afwijzen (verwijdert draft)
-- **Sidebar navigatie**: Nieuw item "AI Email" onder Communicatie sectie
-
-De "Goedkeuren" actie roept een nieuwe `send-draft` action aan op de edge function die `drafts.send` aanroept via de Gmail API.
-
----
-
-### Fase 3b: Extra edge function actions
-
-Toevoegen aan `email-agent`:
-- `action: "send-draft"` — Stuurt een Gmail draft en update `draft_status` naar `sent`
-- `action: "reject-draft"` — Verwijdert Gmail draft en update status naar `rejected`
-- `action: "list"` — Haalt emails op (fallback als RLS direct query niet werkt)
-- `action: "process-manual"` — Handmatig een sync triggeren (Gmail history ophalen)
-
----
-
-### Benodigde secrets
-
-De edge function heeft nodig (meeste bestaan al):
-- `ANTHROPIC_API_KEY` — al aanwezig
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — al aanwezig
-- `RESEND_API_KEY` — al aanwezig
-
-Geen nieuwe secrets nodig.
+**App.tsx:**
+- Verwijder de `<Route path="email-agent" ...>` regel
 
 ---
 
 ### Bestanden
 
-| Bestand | Actie |
-|---------|-------|
-| `supabase/migrations/xxx_email_agent.sql` | Nieuwe tabellen + seed + RLS |
-| `supabase/functions/email-agent/index.ts` | Nieuwe edge function |
-| `src/pages/EmailAgentPage.tsx` | Nieuw dashboard |
-| `src/hooks/useEmailAgent.ts` | Query hooks voor email_inbox |
-| `src/components/erp/ErpSidebar.tsx` | Nav item toevoegen |
-| `src/App.tsx` | Route toevoegen |
-
----
-
-### Setup na implementatie
-
-Jullie moeten nog handmatig:
-1. Google Cloud Pub/Sub topic + push subscription naar de edge function URL instellen
-2. `gmail.users.watch()` activeren voor info@sitejob.nl
-3. De `company_id`'s in `email_rules` koppelen aan de juiste UUIDs
+| Bestand | Wijziging |
+|---------|-----------|
+| `src/components/gmail/ThreadList.tsx` | AI summary + sentiment badge per thread |
+| `src/components/gmail/CrmContextPanel.tsx` | AI analyse blok + draft review blok |
+| `src/pages/GmailPage.tsx` | AI Sync knop, hook import |
+| `src/components/erp/ErpSidebar.tsx` | email-agent nav item verwijderen |
+| `src/App.tsx` | email-agent route verwijderen |
+| `src/hooks/useEmailAgent.ts` | Behouden (hooks worden hergebruikt) |
 
