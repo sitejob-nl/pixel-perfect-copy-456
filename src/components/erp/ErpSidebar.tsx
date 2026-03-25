@@ -107,6 +107,7 @@ const moduleMap: Record<string, string> = {
   demos: "mod_demos",
   reports: "mod_reports",
   gmail: "mod_gmail",
+  "email-agent": "mod_gmail",
   calendar: "mod_calendar",
   bookings: "mod_bookings",
   calls: "mod_calls",
