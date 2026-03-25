@@ -77,15 +77,33 @@ async function handleAction(req: Request, supabase: any, body: any) {
       .select("*")
       .eq("id", inbox_id)
       .single();
-    if (!inbox?.draft_gmail_id) {
+    if (!inbox?.draft_body && !inbox?.draft_gmail_id) {
       return jsonRes({ error: "No draft found" }, 400);
     }
 
     const gmailToken = await getGmailToken(supabase, inbox.organization_id);
-    const res = await fetch(`${GMAIL_API}/drafts/${inbox.draft_gmail_id}/send`, {
+
+    let draftGmailId = inbox.draft_gmail_id;
+
+    // If we have a draft_body but no Gmail draft yet, create it first
+    if (!draftGmailId && inbox.draft_body) {
+      const draft = await createGmailDraft(gmailToken, {
+        threadId: inbox.gmail_thread_id,
+        to: inbox.from_email,
+        subject: `Re: ${inbox.subject || ""}`,
+        html: formatDraftHtml(inbox.draft_body),
+      });
+      draftGmailId = draft.id;
+    }
+
+    if (!draftGmailId) {
+      return jsonRes({ error: "Failed to create draft" }, 500);
+    }
+
+    const res = await fetch(`${GMAIL_API}/drafts/${draftGmailId}/send`, {
       method: "POST",
       headers: { Authorization: `Bearer ${gmailToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ id: inbox.draft_gmail_id }),
+      body: JSON.stringify({ id: draftGmailId }),
     });
 
     if (!res.ok) {
@@ -98,6 +116,7 @@ async function handleAction(req: Request, supabase: any, body: any) {
       .from("email_inbox")
       .update({
         draft_status: "sent",
+        draft_gmail_id: draftGmailId,
         reviewed_by: userData.user.id,
         reviewed_at: new Date().toISOString(),
       })
