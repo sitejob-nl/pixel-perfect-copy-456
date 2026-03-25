@@ -584,7 +584,10 @@ async function createGmailDraft(
   if (opts.references) headers.push(`References: ${opts.references}`);
 
   const rawMessage = headers.join("\r\n") + "\r\n\r\n" + opts.html;
-  const encoded = btoa(rawMessage)
+  const uint8 = new TextEncoder().encode(rawMessage);
+  let binary = "";
+  for (const byte of uint8) binary += String.fromCharCode(byte);
+  const encoded = btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
