@@ -11,8 +11,9 @@ import EmailDetail from "@/components/gmail/EmailDetail";
 import CrmContextPanel from "@/components/gmail/CrmContextPanel";
 import ComposeEmailDialog from "@/components/gmail/ComposeEmailDialog";
 import type { EmailThread, ThreadEmail } from "@/hooks/useGmailThreads";
-import { Info } from "lucide-react";
+import { Info, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useProcessManual, useEmailInboxMap } from "@/hooks/useEmailAgent";
 
 export default function GmailPage() {
   const { data: connections = [] } = useGoogleConnections();
@@ -34,7 +35,9 @@ export default function GmailPage() {
   const { data: threads = [], isLoading: threadsLoading } = useEmailThreads(category, selectedConn);
   const { data: threadEmails = [], isLoading: emailsLoading } = useThreadEmails(selectedThread?.thread_id || null);
   const { data: pendingEmailIds = new Set() } = usePendingSuggestionsByThread(orgId);
+  const { data: inboxMap = {} } = useEmailInboxMap();
   const sync = useSyncGoogle();
+  const processManual = useProcessManual();
 
   const emailIds = useMemo(() => threadEmails.map(e => e.id), [threadEmails]);
 
@@ -56,6 +59,15 @@ export default function GmailPage() {
     }
   };
 
+  const handleAiSync = async () => {
+    try {
+      await processManual.mutateAsync(selectedConn || undefined);
+      toast.success("AI verwerking gestart");
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
   const handleReply = (email: ThreadEmail) => {
     setReplyTo(email.from_address);
     setReplySubject(email.subject);
@@ -68,7 +80,6 @@ export default function GmailPage() {
     setComposing(true);
   };
 
-  // Mobile: show detail as full page
   const [mobileView, setMobileView] = useState<"list" | "detail">("list");
 
   const handleSelectThread = (thread: EmailThread) => {
@@ -104,7 +115,7 @@ export default function GmailPage() {
             </button>
           )}
           <h1 className="text-[18px] font-bold text-erp-text0">Gmail</h1>
-          {sync.isPending && <span className="text-[11px] text-erp-text3">Synchroniseren...</span>}
+          {(sync.isPending || processManual.isPending) && <span className="text-[11px] text-erp-text3">Synchroniseren...</span>}
         </div>
         <div className="flex items-center gap-2">
           {allConns.length >= 1 && (
@@ -130,6 +141,15 @@ export default function GmailPage() {
             Sync
           </button>
           <button
+            onClick={handleAiSync}
+            disabled={processManual.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-erp-bg3 border border-erp-border0 rounded-lg text-erp-text1 hover:bg-erp-hover transition"
+            title="AI classificatie & samenvatting starten"
+          >
+            <Bot className="w-3.5 h-3.5" />
+            AI Sync
+          </button>
+          <button
             onClick={() => setShowContext(!showContext)}
             className={cn(
               "p-1.5 rounded-lg border transition",
@@ -153,7 +173,6 @@ export default function GmailPage() {
 
       {/* 3-panel layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Panel 1: Thread list */}
         {(!isMobile || mobileView === "list") && (
           <ThreadList
             threads={threads}
@@ -166,10 +185,10 @@ export default function GmailPage() {
             onSearchChange={setSearch}
             pendingEmailIds={pendingEmailIds as Set<string>}
             categoryCounts={categoryCounts}
+            inboxMap={inboxMap}
           />
         )}
 
-        {/* Panel 2: Email detail */}
         {(!isMobile || mobileView === "detail") && (
           <EmailDetail
             thread={selectedThread}
@@ -181,7 +200,6 @@ export default function GmailPage() {
           />
         )}
 
-        {/* Panel 3: CRM Context + AI Suggestions */}
         {showContext && !isMobile && (
           <CrmContextPanel
             thread={selectedThread}
@@ -190,7 +208,6 @@ export default function GmailPage() {
         )}
       </div>
 
-      {/* Compose dialog */}
       <ComposeEmailDialog
         open={composing}
         onOpenChange={setComposing}

@@ -61,7 +61,6 @@ const nav: NavSection[] = [
     l: "Communicatie",
     items: [
       { k: "gmail", l: "Gmail", i: "Mail" },
-      { k: "email-agent", l: "AI Email", i: "Bot", dot: true },
       { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
       { k: "calendar", l: "Agenda", i: "Calendar" },
       { k: "calls", l: "Gesprekken", i: "Phone" },
@@ -107,7 +106,6 @@ const moduleMap: Record<string, string> = {
   demos: "mod_demos",
   reports: "mod_reports",
   gmail: "mod_gmail",
-  "email-agent": "mod_gmail",
   calendar: "mod_calendar",
   bookings: "mod_bookings",
   calls: "mod_calls",

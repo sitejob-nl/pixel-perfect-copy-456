@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Icons } from "@/components/erp/ErpIcons";
@@ -6,6 +5,7 @@ import { Avatar } from "@/components/erp/ErpPrimitives";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { EmailThread } from "@/hooks/useGmailThreads";
+import type { EmailInboxItem } from "@/hooks/useEmailAgent";
 
 const categories = [
   { key: "alle", label: "Alle", icon: "" },
@@ -26,6 +26,14 @@ const categoryColors: Record<string, string> = {
   overig: "bg-gray-500/15 text-gray-400",
 };
 
+const sentimentColors: Record<string, string> = {
+  urgent: "bg-red-500/20 text-red-400",
+  negatief: "bg-orange-500/20 text-orange-400",
+  negative: "bg-orange-500/20 text-orange-400",
+  positief: "bg-emerald-500/20 text-emerald-400",
+  positive: "bg-emerald-500/20 text-emerald-400",
+};
+
 interface Props {
   threads: EmailThread[];
   isLoading: boolean;
@@ -37,12 +45,13 @@ interface Props {
   onSearchChange: (s: string) => void;
   pendingEmailIds: Set<string>;
   categoryCounts: Record<string, number>;
+  inboxMap?: Record<string, EmailInboxItem>;
 }
 
 export default function ThreadList({
   threads, isLoading, selectedThreadId, onSelect,
   category, onCategoryChange, search, onSearchChange,
-  pendingEmailIds, categoryCounts,
+  pendingEmailIds, categoryCounts, inboxMap = {},
 }: Props) {
   const filtered = search
     ? threads.filter(t =>
@@ -104,6 +113,7 @@ export default function ThreadList({
           filtered.map(thread => {
             const active = thread.thread_id === selectedThreadId;
             const hasPending = thread.email_ids?.some(id => pendingEmailIds.has(id));
+            const aiData = inboxMap[thread.thread_id];
             return (
               <div
                 key={thread.thread_id}
@@ -144,12 +154,25 @@ export default function ThreadList({
                     <span className="text-[10px] text-erp-text3 truncate flex-1">
                       {thread.last_snippet}
                     </span>
+                    {/* Sentiment badge */}
+                    {aiData?.ai_sentiment && sentimentColors[aiData.ai_sentiment] && (
+                      <span className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0", sentimentColors[aiData.ai_sentiment])}>
+                        {aiData.ai_sentiment}
+                      </span>
+                    )}
                     {thread.category && (
                       <span className={cn("text-[9px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0", categoryColors[thread.category] || categoryColors.overig)}>
                         {thread.category}
                       </span>
                     )}
                   </div>
+                  {/* AI summary line */}
+                  {aiData?.ai_summary && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-[10px]">🤖</span>
+                      <span className="text-[10px] text-erp-text3 truncate">{aiData.ai_summary}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             );
