@@ -1,0 +1,1 @@
+UPDATE email_inbox SET draft_status = 'pending' WHERE draft_body IS NOT NULL AND draft_status = 'none';

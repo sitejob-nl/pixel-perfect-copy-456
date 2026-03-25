@@ -297,7 +297,7 @@ async function processEmail(supabase: any, email: any, orgId: string, gmailToken
 
   // Create draft if needed
   let draftId: string | null = null;
-  let draftStatus = "none";
+  let draftStatus = aiResponse.draft ? "pending" : "none";
 
   if (aiResponse.action === "reply_needed" && aiResponse.draft) {
     try {

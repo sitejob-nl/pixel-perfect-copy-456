@@ -9,20 +9,23 @@ import type { EmailInboxItem } from "@/hooks/useEmailAgent";
 
 const categories = [
   { key: "alle", label: "Alle", icon: "" },
-  { key: "lead", label: "🔥 Leads", color: "#ef4444" },
-  { key: "offerte", label: "💰 Offertes", color: "#f59e0b" },
-  { key: "support", label: "🛠 Support", color: "#eab308" },
-  { key: "project", label: "📋 Project", color: "#3b82f6" },
-  { key: "factuur", label: "💳 Facturen", color: "#22c55e" },
+  { key: "klant", label: "👤 Klant", color: "#3b82f6" },
+  { key: "lead", label: "🔥 Lead", color: "#ef4444" },
+  { key: "project", label: "📋 Project", color: "#8b5cf6" },
+  { key: "factuur", label: "💳 Factuur", color: "#22c55e" },
+  { key: "intern", label: "🏢 Intern", color: "#6366f1" },
+  { key: "reclame", label: "📢 Reclame", color: "#f59e0b" },
   { key: "overig", label: "📧 Overig", color: "#6b7280" },
 ];
 
 const categoryColors: Record<string, string> = {
+  klant: "bg-blue-500/15 text-blue-400",
   lead: "bg-red-500/15 text-red-400",
-  offerte: "bg-amber-500/15 text-amber-400",
-  support: "bg-yellow-500/15 text-yellow-400",
-  project: "bg-blue-500/15 text-blue-400",
+  project: "bg-violet-500/15 text-violet-400",
   factuur: "bg-emerald-500/15 text-emerald-400",
+  intern: "bg-indigo-500/15 text-indigo-400",
+  reclame: "bg-amber-500/15 text-amber-400",
+  spam: "bg-gray-500/15 text-gray-400",
   overig: "bg-gray-500/15 text-gray-400",
 };
 
