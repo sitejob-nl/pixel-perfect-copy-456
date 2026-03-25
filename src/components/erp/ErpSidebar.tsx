@@ -61,6 +61,7 @@ const nav: NavSection[] = [
     l: "Communicatie",
     items: [
       { k: "gmail", l: "Gmail", i: "Mail" },
+      { k: "email-agent", l: "AI Email", i: "Bot", dot: true },
       { k: "whatsapp", l: "WhatsApp", i: "Msg", b: "3" },
       { k: "calendar", l: "Agenda", i: "Calendar" },
       { k: "calls", l: "Gesprekken", i: "Phone" },

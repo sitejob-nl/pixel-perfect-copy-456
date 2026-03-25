@@ -66,7 +66,7 @@ export default function EmailAgentPage() {
 
   const handleSync = async () => {
     try {
-      const result = await processManual.mutateAsync();
+      const result = await processManual.mutateAsync(undefined);
       toast.success(`${result.processed} nieuwe mails verwerkt`);
     } catch (e: any) {
       toast.error(e.message);
