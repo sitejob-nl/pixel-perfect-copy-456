@@ -3933,6 +3933,167 @@ export type Database = {
           },
         ]
       }
+      email_inbox: {
+        Row: {
+          ai_action: string | null
+          ai_sentiment: string | null
+          ai_summary: string | null
+          auto_replied: boolean | null
+          body_snippet: string | null
+          body_text: string | null
+          category: string
+          company_id: string | null
+          confidence: number | null
+          created_at: string | null
+          draft_body: string | null
+          draft_gmail_id: string | null
+          draft_status: string | null
+          from_email: string
+          from_name: string | null
+          gmail_date: string | null
+          gmail_id: string
+          gmail_label: string | null
+          gmail_thread_id: string | null
+          id: string
+          organization_id: string
+          processed_at: string | null
+          project_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          subject: string | null
+          to_email: string | null
+        }
+        Insert: {
+          ai_action?: string | null
+          ai_sentiment?: string | null
+          ai_summary?: string | null
+          auto_replied?: boolean | null
+          body_snippet?: string | null
+          body_text?: string | null
+          category?: string
+          company_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          draft_body?: string | null
+          draft_gmail_id?: string | null
+          draft_status?: string | null
+          from_email: string
+          from_name?: string | null
+          gmail_date?: string | null
+          gmail_id: string
+          gmail_label?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          organization_id: string
+          processed_at?: string | null
+          project_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          subject?: string | null
+          to_email?: string | null
+        }
+        Update: {
+          ai_action?: string | null
+          ai_sentiment?: string | null
+          ai_summary?: string | null
+          auto_replied?: boolean | null
+          body_snippet?: string | null
+          body_text?: string | null
+          category?: string
+          company_id?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          draft_body?: string | null
+          draft_gmail_id?: string | null
+          draft_status?: string | null
+          from_email?: string
+          from_name?: string | null
+          gmail_date?: string | null
+          gmail_id?: string
+          gmail_label?: string | null
+          gmail_thread_id?: string | null
+          id?: string
+          organization_id?: string
+          processed_at?: string | null
+          project_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          subject?: string | null
+          to_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_inbox_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "email_inbox_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_inbox_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_link_clicks: {
         Row: {
           clicked_at: string
@@ -3971,6 +4132,108 @@ export type Database = {
             columns: ["email_send_id"]
             isOneToOne: false
             referencedRelation: "v_email_drafts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_rules: {
+        Row: {
+          auto_action: string | null
+          category: string
+          company_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          match_from: string[] | null
+          match_subject: string[] | null
+          organization_id: string
+          priority: number | null
+          project_id: string | null
+        }
+        Insert: {
+          auto_action?: string | null
+          category: string
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          match_from?: string[] | null
+          match_subject?: string[] | null
+          organization_id: string
+          priority?: number | null
+          project_id?: string | null
+        }
+        Update: {
+          auto_action?: string | null
+          category?: string
+          company_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          match_from?: string[] | null
+          match_subject?: string[] | null
+          organization_id?: string
+          priority?: number | null
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_email_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "email_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_company_health"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "v_klanten"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_rules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_rules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_overview"
             referencedColumns: ["id"]
           },
         ]
