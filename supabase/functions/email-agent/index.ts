@@ -100,7 +100,7 @@ async function handleAction(req: Request, supabase: any, body: any) {
       return jsonRes({ error: "Failed to create draft" }, 500);
     }
 
-    const res = await fetch(`${GMAIL_API}/drafts/${draftGmailId}/send`, {
+    const res = await fetch(`${GMAIL_API}/drafts/send`, {
       method: "POST",
       headers: { Authorization: `Bearer ${gmailToken}`, "Content-Type": "application/json" },
       body: JSON.stringify({ id: draftGmailId }),
