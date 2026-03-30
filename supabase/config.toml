@@ -101,3 +101,9 @@ verify_jwt = false
 
 [functions.email-agent]
 verify_jwt = false
+
+[functions.webhook-receiver]
+verify_jwt = false
+
+[functions.manage-webhooks]
+verify_jwt = false
