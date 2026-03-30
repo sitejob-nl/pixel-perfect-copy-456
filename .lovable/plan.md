@@ -1,26 +1,49 @@
 
 
-## Fixes voor AI Email Agent integratie
+## API-koppelingen: ontbrekende edge functions bouwen
 
-Er zijn twee problemen gevonden:
+De webhooks-pagina, database-tabellen en frontend zijn al volledig aanwezig. Wat ontbreekt zijn de twee edge functions die het systeem werkend maken:
 
-### Probleem 1: Drafts worden niet getoond
-De `email_inbox` records hebben `draft_status = 'none'` terwijl er wél een `draft_body` aanwezig is. Het CRM panel checkt op `draft_status === "pending"` — dus de draft wordt nooit zichtbaar.
+1. **`webhook-receiver`** — ontvangt inbound POST requests van externe systemen
+2. **`manage-webhooks`** — beheert API keys en voert test-mappings uit
 
-**Oorzaak**: De edge function zet `draft_status: 'none'` bij het opslaan, ook wanneer er een draft is gegenereerd.
+---
 
-**Fix**: In `supabase/functions/email-agent/index.ts`, de logica aanpassen zodat `draft_status` op `'pending'` wordt gezet wanneer `draft_body` niet null is.
+### 1. Edge Function: `webhook-receiver`
 
-Daarnaast: een database migration om de bestaande records te fixen:
-```sql
-UPDATE email_inbox SET draft_status = 'pending' WHERE draft_body IS NOT NULL AND draft_status = 'none';
-```
+**Pad**: `supabase/functions/webhook-receiver/index.ts`
 
-### Probleem 2: Categorie-filters matchen niet met AI output
-De ThreadList filter-knoppen gebruiken: `lead, offerte, support, project, factuur, overig`
-Maar de AI classificeert als: `lead, reclame, intern, spam, klant`
+Wat het doet:
+- Accepteert POST requests met `X-API-Key` header
+- Zoekt het bijbehorende endpoint op via gehashte API key
+- Past de geconfigureerde field mappings toe (source_path → target_field)
+- Voert transforms uit (lowercase, split_first, phone_nl, etc.)
+- Deduplicatie-check op basis van `dedup_field` + `dedup_action`
+- Insert/update in de juiste target_table (contacts, companies, deals, raw_leads)
+- Logt alles in `webhook_logs` (payload, mapped_data, status, processing_time)
+- Werkt endpoint statistieken bij (total_received, total_processed, total_failed, last_received_at)
 
-**Fix**: De categorie-lijst in `ThreadList.tsx` aanpassen naar de werkelijke AI-categorieën, plus een "reclame" en "intern" optie toevoegen.
+Beveiligingsregels:
+- Geen JWT vereist (externe systemen sturen geen Supabase auth)
+- API key verificatie via bcrypt hash vergelijking
+- Validatie van alle input
+- Service role client voor database operaties
+
+### 2. Edge Function: `manage-webhooks`
+
+**Pad**: `supabase/functions/manage-webhooks/index.ts`
+
+Twee acties (achter JWT-authenticatie):
+
+**`generate_api_key`**:
+- Genereert een random API key
+- Slaat bcrypt hash + prefix op in `webhook_endpoints`
+- Retourneert de plaintext key (eenmalig)
+
+**`test_webhook`**:
+- Leest de `sample_payload` en `field_mappings` van het endpoint
+- Voert de mapping dry-run uit
+- Retourneert het gemapte resultaat zonder database-insert
 
 ---
 
@@ -28,7 +51,8 @@ Maar de AI classificeert als: `lead, reclame, intern, spam, klant`
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `supabase/functions/email-agent/index.ts` | `draft_status` → `'pending'` als draft_body bestaat |
-| `supabase/migrations/xxx.sql` | Bestaande records fixen |
-| `src/components/gmail/ThreadList.tsx` | Categorieën aanpassen naar werkelijke AI output |
+| `supabase/functions/webhook-receiver/index.ts` | Nieuw — inbound webhook ontvanger |
+| `supabase/functions/manage-webhooks/index.ts` | Nieuw — API key generatie + test mapping |
+
+Geen database-migraties nodig — alle tabellen bestaan al.
 
