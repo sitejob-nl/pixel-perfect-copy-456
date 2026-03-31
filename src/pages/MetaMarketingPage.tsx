@@ -556,99 +556,253 @@ function CampaignsList({ statusFilter, setStatusFilter, onSelect, onEdit }: any)
 function AdSetsList({ campaignId, onSelect, onEdit }: any) {
   const { data, isLoading } = useMetaAdSets(campaignId);
   const updateAdSet = useUpdateAdSet();
+  const createAdSet = useCreateAdSet();
   const adsets = data?.adsets || [];
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newBudget, setNewBudget] = useState("10");
+  const [newCountries, setNewCountries] = useState("NL");
+  const [newGoal, setNewGoal] = useState("LINK_CLICKS");
 
-  if (isLoading) return <LoadingTable />;
-  if (adsets.length === 0) return <ErpCard className="p-6 text-center"><p className="text-sm text-muted-foreground">Geen ad sets gevonden</p></ErpCard>;
+  const COUNTRIES = [
+    { value: "NL", label: "Nederland" }, { value: "BE", label: "België" },
+    { value: "DE", label: "Duitsland" }, { value: "US", label: "Verenigde Staten" },
+    { value: "GB", label: "Verenigd Koninkrijk" }, { value: "FR", label: "Frankrijk" },
+  ];
+  const OPT_GOALS = [
+    { value: "LINK_CLICKS", label: "Link klikken" }, { value: "IMPRESSIONS", label: "Impressies" },
+    { value: "REACH", label: "Bereik" }, { value: "LANDING_PAGE_VIEWS", label: "Paginaweergaven" },
+    { value: "LEAD_GENERATION", label: "Lead generatie" }, { value: "OFFSITE_CONVERSIONS", label: "Conversies" },
+  ];
 
   return (
-    <ErpCard className="p-0">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Naam</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Dagbudget</TableHead>
-            <TableHead className="text-right">Totaalbudget</TableHead>
-            <TableHead>Optimalisatie</TableHead>
-            <TableHead className="w-[100px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {adsets.map((a: any) => (
-            <TableRow key={a.id} className="cursor-pointer" onClick={() => onSelect(a)}>
-              <TableCell className="font-medium text-xs">{a.name}</TableCell>
-              <TableCell><StatusBadge status={a.status} /></TableCell>
-              <TableCell className="text-right text-xs">{a.daily_budget ? fmtEuro(a.daily_budget / 100) : "—"}</TableCell>
-              <TableCell className="text-right text-xs">{a.lifetime_budget ? fmtEuro(a.lifetime_budget / 100) : "—"}</TableCell>
-              <TableCell className="text-xs text-muted-foreground">{a.optimization_goal || "—"}</TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={updateAdSet.isPending}
-                    onClick={() => updateAdSet.mutate({ adset_id: a.id, status: a.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })}>
-                    {a.status === "ACTIVE" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(a)}>
-                    <Settings className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </ErpCard>
+    <div className="space-y-3">
+      <div className="flex items-center justify-end">
+        <Button size="sm" onClick={() => setShowCreate(true)}><Plus className="h-3.5 w-3.5 mr-1" />Nieuwe ad set</Button>
+      </div>
+
+      {isLoading ? <LoadingTable /> : adsets.length === 0 ? (
+        <ErpCard className="p-6 text-center"><p className="text-sm text-muted-foreground">Geen ad sets gevonden</p></ErpCard>
+      ) : (
+        <ErpCard className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Naam</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Dagbudget</TableHead>
+                <TableHead className="text-right">Totaalbudget</TableHead>
+                <TableHead>Optimalisatie</TableHead>
+                <TableHead className="w-[100px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {adsets.map((a: any) => (
+                <TableRow key={a.id} className="cursor-pointer" onClick={() => onSelect(a)}>
+                  <TableCell className="font-medium text-xs">{a.name}</TableCell>
+                  <TableCell><StatusBadge status={a.status} /></TableCell>
+                  <TableCell className="text-right text-xs">{a.daily_budget ? fmtEuro(a.daily_budget / 100) : "—"}</TableCell>
+                  <TableCell className="text-right text-xs">{a.lifetime_budget ? fmtEuro(a.lifetime_budget / 100) : "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{a.optimization_goal || "—"}</TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={updateAdSet.isPending}
+                        onClick={() => updateAdSet.mutate({ adset_id: a.id, status: a.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })}>
+                        {a.status === "ACTIVE" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(a)}>
+                        <Settings className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ErpCard>
+      )}
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nieuwe ad set</DialogTitle>
+            <DialogDescription>Maak een nieuwe ad set aan binnen deze campagne.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Naam</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Mijn ad set" /></div>
+            <div><Label>Dagbudget (€)</Label><Input type="number" step="0.01" min="1" value={newBudget} onChange={(e) => setNewBudget(e.target.value)} /></div>
+            <div>
+              <Label>Doelland</Label>
+              <Select value={newCountries} onValueChange={setNewCountries}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{COUNTRIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Optimalisatiedoel</Label>
+              <Select value={newGoal} onValueChange={setNewGoal}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{OPT_GOALS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button disabled={!newName.trim() || !newBudget || createAdSet.isPending} onClick={() => {
+              createAdSet.mutate({ name: newName, campaign_id: campaignId, daily_budget: parseFloat(newBudget), targeting_countries: [newCountries], optimization_goal: newGoal }, {
+                onSuccess: () => { setShowCreate(false); setNewName(""); setNewBudget("10"); }
+              });
+            }}>
+              {createAdSet.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Aanmaken
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
 function AdsList({ adsetId, onEdit }: any) {
   const { data, isLoading } = useMetaAds(adsetId);
   const updateAd = useUpdateAd();
+  const createCreative = useCreateAdCreative();
+  const createAd = useCreateAd();
   const ads = data?.ads || [];
+  const [showCreate, setShowCreate] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
+  const [creativeId, setCreativeId] = useState("");
+  // Creative fields
+  const [crName, setCrName] = useState("");
+  const [crMessage, setCrMessage] = useState("");
+  const [crLink, setCrLink] = useState("");
+  const [crImage, setCrImage] = useState("");
+  const [crCta, setCrCta] = useState("LEARN_MORE");
+  // Ad fields
+  const [adName, setAdName] = useState("");
 
-  if (isLoading) return <LoadingTable />;
-  if (ads.length === 0) return <ErpCard className="p-6 text-center"><p className="text-sm text-muted-foreground">Geen advertenties gevonden</p></ErpCard>;
+  const CTA_TYPES = [
+    { value: "LEARN_MORE", label: "Meer informatie" }, { value: "SHOP_NOW", label: "Nu winkelen" },
+    { value: "SIGN_UP", label: "Aanmelden" }, { value: "CONTACT_US", label: "Neem contact op" },
+    { value: "DOWNLOAD", label: "Downloaden" }, { value: "GET_OFFER", label: "Aanbieding bekijken" },
+    { value: "BOOK_TRAVEL", label: "Boeken" }, { value: "SUBSCRIBE", label: "Abonneren" },
+  ];
+
+  function resetForm() {
+    setStep(1); setCreativeId(""); setCrName(""); setCrMessage(""); setCrLink(""); setCrImage(""); setCrCta("LEARN_MORE"); setAdName("");
+  }
+
+  async function handleCreateCreative() {
+    try {
+      const result = await createCreative.mutateAsync({ name: crName, message: crMessage, link: crLink, image_url: crImage || undefined, cta_type: crCta });
+      if (result?.creative_id) {
+        setCreativeId(result.creative_id);
+        setAdName(crName);
+        setStep(2);
+      }
+    } catch {}
+  }
+
+  async function handleCreateAd() {
+    try {
+      await createAd.mutateAsync({ name: adName, adset_id: adsetId, creative_id: creativeId });
+      setShowCreate(false);
+      resetForm();
+    } catch {}
+  }
 
   return (
-    <ErpCard className="p-0">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Naam</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Creative</TableHead>
-            <TableHead className="w-[100px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {ads.map((a: any) => (
-            <TableRow key={a.id}>
-              <TableCell className="font-medium text-xs">{a.name}</TableCell>
-              <TableCell><StatusBadge status={a.status} /></TableCell>
-              <TableCell>
-                {a.creative?.thumbnail_url ? (
-                  <img src={a.creative.thumbnail_url} alt="" className="h-8 w-8 rounded object-cover" />
-                ) : <span className="text-xs text-muted-foreground">—</span>}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" disabled={updateAd.isPending}
-                    onClick={() => updateAd.mutate({ ad_id: a.id, status: a.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })}>
-                    {a.status === "ACTIVE" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(a)}>
-                    <Settings className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </ErpCard>
+    <div className="space-y-3">
+      <div className="flex items-center justify-end">
+        <Button size="sm" onClick={() => { resetForm(); setShowCreate(true); }}><Plus className="h-3.5 w-3.5 mr-1" />Nieuwe advertentie</Button>
+      </div>
+
+      {isLoading ? <LoadingTable /> : ads.length === 0 ? (
+        <ErpCard className="p-6 text-center"><p className="text-sm text-muted-foreground">Geen advertenties gevonden</p></ErpCard>
+      ) : (
+        <ErpCard className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Naam</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Creative</TableHead>
+                <TableHead className="w-[100px]"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {ads.map((a: any) => (
+                <TableRow key={a.id}>
+                  <TableCell className="font-medium text-xs">{a.name}</TableCell>
+                  <TableCell><StatusBadge status={a.status} /></TableCell>
+                  <TableCell>
+                    {a.creative?.thumbnail_url ? (
+                      <img src={a.creative.thumbnail_url} alt="" className="h-8 w-8 rounded object-cover" />
+                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" className="h-7 w-7" disabled={updateAd.isPending}
+                        onClick={() => updateAd.mutate({ ad_id: a.id, status: a.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })}>
+                        {a.status === "ACTIVE" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onEdit(a)}>
+                        <Settings className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ErpCard>
+      )}
+
+      <Dialog open={showCreate} onOpenChange={(open) => { if (!open) { setShowCreate(false); resetForm(); } else setShowCreate(true); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{step === 1 ? "Stap 1: Creative aanmaken" : "Stap 2: Advertentie aanmaken"}</DialogTitle>
+            <DialogDescription>{step === 1 ? "Stel de visuele en tekstuele elementen in voor je advertentie." : "Geef de advertentie een naam en maak hem aan."}</DialogDescription>
+          </DialogHeader>
+
+          {step === 1 ? (
+            <div className="space-y-3">
+              <div><Label>Creative naam</Label><Input value={crName} onChange={(e) => setCrName(e.target.value)} placeholder="Mijn creative" /></div>
+              <div><Label>Bericht</Label><Textarea value={crMessage} onChange={(e) => setCrMessage(e.target.value)} placeholder="Bekijk ons nieuwe product!" rows={3} /></div>
+              <div><Label>Bestemmings-URL</Label><Input value={crLink} onChange={(e) => setCrLink(e.target.value)} placeholder="https://mijnwebsite.nl/product" /></div>
+              <div><Label>Afbeelding URL (optioneel)</Label><Input value={crImage} onChange={(e) => setCrImage(e.target.value)} placeholder="https://..." /></div>
+              <div>
+                <Label>Call-to-Action</Label>
+                <Select value={crCta} onValueChange={setCrCta}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{CTA_TYPES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="p-3 rounded-md bg-muted/50 text-xs space-y-1">
+                <p className="font-medium">Creative aangemaakt ✓</p>
+                <p className="text-muted-foreground">ID: {creativeId}</p>
+              </div>
+              <div><Label>Advertentienaam</Label><Input value={adName} onChange={(e) => setAdName(e.target.value)} placeholder="Mijn advertentie" /></div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {step === 1 ? (
+              <Button disabled={!crName.trim() || !crMessage.trim() || !crLink.trim() || createCreative.isPending} onClick={handleCreateCreative}>
+                {createCreative.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Creative aanmaken →
+              </Button>
+            ) : (
+              <Button disabled={!adName.trim() || createAd.isPending} onClick={handleCreateAd}>
+                {createAd.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Advertentie aanmaken
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
-
 function EditSheet({ item, onClose }: { item: { type: string; item: any }; onClose: () => void }) {
   const { type, item: data } = item;
   const [name, setName] = useState(data.name || "");
