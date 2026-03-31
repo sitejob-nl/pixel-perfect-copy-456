@@ -72,6 +72,49 @@ function fmtDate(d: any): string {
   try { return format(new Date(d), "d MMM yyyy", { locale: nl }); } catch { return "—"; }
 }
 
+// Extract action values from Meta's actions array
+function getAction(actions: any[], type: string): number {
+  if (!Array.isArray(actions)) return 0;
+  const a = actions.find((a: any) => a.action_type === type);
+  return a ? Number(a.value) || 0 : 0;
+}
+
+function getActionCost(costs: any[], type: string): number {
+  if (!Array.isArray(costs)) return 0;
+  const a = costs.find((a: any) => a.action_type === type);
+  return a ? Number(a.value) || 0 : 0;
+}
+
+// All available metrics for column picker
+const ALL_METRICS = [
+  { key: "impressions", label: "Impressies", format: "num" },
+  { key: "clicks", label: "Klikken", format: "num" },
+  { key: "ctr", label: "CTR", format: "pct" },
+  { key: "spend", label: "Uitgaven", format: "euro" },
+  { key: "cpc", label: "CPC", format: "euro" },
+  { key: "reach", label: "Bereik", format: "num" },
+  { key: "frequency", label: "Frequentie", format: "num" },
+  { key: "conversions", label: "Conversies", format: "action", actionType: "offsite_conversion.fb_pixel_purchase" },
+  { key: "leads", label: "Leads", format: "action", actionType: "lead" },
+  { key: "link_clicks", label: "Link klikken", format: "action", actionType: "link_click" },
+  { key: "page_engagement", label: "Pagina interactie", format: "action", actionType: "page_engagement" },
+  { key: "post_engagement", label: "Post interactie", format: "action", actionType: "post_engagement" },
+  { key: "video_views", label: "Video views", format: "action", actionType: "video_view" },
+  { key: "cost_per_lead", label: "Kosten/lead", format: "cost", actionType: "lead" },
+  { key: "cost_per_conversion", label: "Kosten/conversie", format: "cost", actionType: "offsite_conversion.fb_pixel_purchase" },
+] as const;
+
+const DEFAULT_METRICS = ["impressions", "clicks", "ctr", "spend", "cpc", "reach"];
+
+function formatMetricValue(metric: typeof ALL_METRICS[number], row: any): string {
+  if (metric.format === "num") return fmtNum(row[metric.key]);
+  if (metric.format === "pct") return fmtPct(row[metric.key]);
+  if (metric.format === "euro") return fmtEuro(row[metric.key]);
+  if (metric.format === "action") return fmtNum(getAction(row.actions, (metric as any).actionType));
+  if (metric.format === "cost") return fmtEuro(getActionCost(row.cost_per_action_type, (metric as any).actionType));
+  return "—";
+}
+
 function fmtDateTime(d: any): string {
   if (!d) return "—";
   try { return format(new Date(d), "d MMM yyyy HH:mm", { locale: nl }); } catch { return "—"; }
