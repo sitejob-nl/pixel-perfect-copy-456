@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ErpCard } from "@/components/erp/ErpPrimitives";
 import { Button } from "@/components/ui/button";
