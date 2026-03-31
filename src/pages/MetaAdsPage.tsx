@@ -325,14 +325,21 @@ function FacebookPanel() {
   const [loading, setLoading] = useState(false);
   const [newPost, setNewPost] = useState("");
   const [posting, setPosting] = useState(false);
+  const [permError, setPermError] = useState<string | null>(null);
 
   async function loadPosts() {
     setLoading(true);
+    setPermError(null);
     try {
       const data = await metaApi("page_posts");
       setPosts(data.posts || []);
     } catch (err: any) {
-      toast.error(err.message);
+      const msg = err.message || "";
+      if (msg.includes("pages_read_engagement") || msg.includes("permission") || msg.includes("Permission")) {
+        setPermError("Je Meta app mist de 'pages_read_engagement' permissie. Voeg deze toe in je Meta Developer Console om posts te kunnen laden.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -384,7 +391,14 @@ function FacebookPanel() {
           </Button>
         </div>
 
-        {posts.length === 0 && !loading && (
+        {permError && (
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-center space-y-2 mb-4">
+            <AlertCircle className="h-6 w-6 text-yellow-500 mx-auto" />
+            <p className="text-sm text-foreground">{permError}</p>
+          </div>
+        )}
+
+        {!permError && posts.length === 0 && !loading && (
           <p className="text-sm text-muted-foreground text-center py-8">Geen posts gevonden</p>
         )}
 
