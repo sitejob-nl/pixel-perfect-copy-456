@@ -488,10 +488,12 @@ Deno.serve(async (req) => {
       if (!lead) throw new Error("Lead niet gevonden");
 
       const fields = lead.fields as Record<string, string>;
-      const fullName = fields.full_name || fields.name || "";
-      const nameParts = fullName.split(/\s+/);
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
+      const fullName = fields.full_name || fields.name || fields["full name"] || fields.volledige_naam || "";
+      const firstName = fields.first_name || (fullName.trim().split(/\s+/)[0] || "Lead");
+      const lastName = fields.last_name || (fullName.trim().split(/\s+/).slice(1).join(" ") || null);
+      const email = fields.email || fields["e-mailadres"] || fields.work_email || null;
+      const phone = fields.phone_number || fields.phone || fields.telefoonnummer || fields.work_phone_number || null;
+      const companyName = fields.company_name || fields.bedrijfsnaam || null;
 
       const { data: contact, error: contactErr } = await admin
         .from("contacts")
@@ -499,20 +501,24 @@ Deno.serve(async (req) => {
           organization_id: orgId,
           first_name: firstName,
           last_name: lastName,
-          email: fields.email || null,
-          phone: fields.phone_number || fields.phone || null,
+          email,
+          phone,
           source: "meta_lead_ads",
-          status: "new",
+          lead_status: "new",
+          lifecycle_stage: "lead",
+          custom_fields: companyName ? { company_name: companyName, meta_lead_form: lead.form_name } : { meta_lead_form: lead.form_name },
         })
         .select("id")
         .single();
 
       if (contactErr) throw contactErr;
 
-      await admin
+      const { error: updateLeadErr } = await admin
         .from("meta_leads")
         .update({ contact_id: contact.id, status: "imported", processed_at: new Date().toISOString() })
         .eq("id", lead_id);
+
+      if (updateLeadErr) throw updateLeadErr;
 
       return ok({ success: true, contact_id: contact.id });
     }
