@@ -26,6 +26,40 @@ function decrypt(encoded: string, key: string): string {
   return new TextDecoder().decode(result);
 }
 
+function ok(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+async function graphFetch(url: string) {
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.error) {
+    const code = data.error.code;
+    const msg = data.error.message || "Graph API error";
+    if (code === 190) throw new Error("TOKEN_EXPIRED:" + msg);
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function graphPost(url: string, body?: Record<string, unknown>) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json();
+  if (data.error) {
+    const code = data.error.code;
+    const msg = data.error.message || "Graph API error";
+    if (code === 190) throw new Error("TOKEN_EXPIRED:" + msg);
+    throw new Error(msg);
+  }
+  return data;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -37,7 +71,6 @@ Deno.serve(async (req) => {
     const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const ENC_KEY = Deno.env.get("ENCRYPTION_KEY") || SERVICE_KEY.slice(0, 32);
 
-    // Auth
     const authHeader = req.headers.get("authorization");
     if (!authHeader) throw new Error("Unauthorized");
 
@@ -61,7 +94,6 @@ Deno.serve(async (req) => {
 
     const { action, endpoint, params } = await req.json();
 
-    // Get encrypted tokens
     const { data: config } = await admin
       .from("meta_config")
       .select("*")
@@ -79,22 +111,14 @@ Deno.serve(async (req) => {
 
     if (!userToken) throw new Error("Geen Meta access token beschikbaar");
 
+    const GV = "v25.0";
+
     // ── AVAILABLE ASSETS ──
     if (action === "assets") {
-      const [pagesRes, adAccountsRes] = await Promise.all([
-        fetch(
-          `https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${userToken}`
-        ),
-        fetch(
-          `https://graph.facebook.com/v25.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${userToken}`
-        ),
+      const [pagesData, adAccountsData] = await Promise.all([
+        graphFetch(`https://graph.facebook.com/${GV}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${userToken}`),
+        graphFetch(`https://graph.facebook.com/${GV}/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${userToken}`),
       ]);
-
-      const pagesData = await pagesRes.json();
-      const adAccountsData = await adAccountsRes.json();
-
-      if (pagesData.error) throw new Error(pagesData.error.message);
-      if (adAccountsData.error) throw new Error(adAccountsData.error.message);
 
       const pages = (pagesData.data || []).map((page: any) => ({
         id: page.id,
@@ -105,25 +129,20 @@ Deno.serve(async (req) => {
       }));
 
       const instagramAccounts = pages
-        .filter((page: any) => page.instagram_account_id)
-        .map((page: any) => ({
-          id: page.instagram_account_id,
-          username: page.instagram_username,
-          page_id: page.id,
-          page_name: page.name,
+        .filter((p: any) => p.instagram_account_id)
+        .map((p: any) => ({
+          id: p.instagram_account_id,
+          username: p.instagram_username,
+          page_id: p.id,
+          page_name: p.name,
         }));
 
-      const adAccounts = (adAccountsData.data || []).map((account: any) => ({
-        id: account.id,
-        name: account.name,
-        account_status: account.account_status,
-        currency: account.currency || null,
-        timezone_name: account.timezone_name || null,
+      const adAccounts = (adAccountsData.data || []).map((a: any) => ({
+        id: a.id, name: a.name, account_status: a.account_status,
+        currency: a.currency || null, timezone_name: a.timezone_name || null,
       }));
 
-      return new Response(JSON.stringify({ pages, instagram_accounts: instagramAccounts, ad_accounts: adAccounts }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return ok({ pages, instagram_accounts: instagramAccounts, ad_accounts: adAccounts });
     }
 
     // ── SELECT ASSETS ──
@@ -132,36 +151,17 @@ Deno.serve(async (req) => {
       const selectedInstagramId = params?.instagram_account_id || null;
       const selectedAdAccountId = params?.ad_account_id || null;
 
-      const pagesRes = await fetch(
-        `https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${userToken}`
-      );
-      const pagesData = await pagesRes.json();
-      if (pagesData.error) throw new Error(pagesData.error.message);
-
-      const adAccountsRes = await fetch(
-        `https://graph.facebook.com/v25.0/me/adaccounts?fields=id,name&limit=100&access_token=${userToken}`
-      );
-      const adAccountsData = await adAccountsRes.json();
-      if (adAccountsData.error) throw new Error(adAccountsData.error.message);
+      const pagesData = await graphFetch(`https://graph.facebook.com/${GV}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${userToken}`);
+      const adAccountsData = await graphFetch(`https://graph.facebook.com/${GV}/me/adaccounts?fields=id,name&limit=100&access_token=${userToken}`);
 
       const pages = pagesData.data || [];
       const adAccounts = adAccountsData.data || [];
 
-      const selectedPage = selectedPageId
-        ? pages.find((page: any) => page.id === selectedPageId)
-        : null;
+      const selectedPage = selectedPageId ? pages.find((p: any) => p.id === selectedPageId) : null;
       const selectedInstagram = selectedInstagramId
-        ? pages
-            .map((page: any) => ({
-              id: page.instagram_business_account?.id,
-              username: page.instagram_business_account?.username,
-              page_id: page.id,
-            }))
-            .find((account: any) => account.id === selectedInstagramId)
+        ? pages.map((p: any) => ({ id: p.instagram_business_account?.id, username: p.instagram_business_account?.username, page_id: p.id })).find((a: any) => a.id === selectedInstagramId)
         : null;
-      const selectedAdAccount = selectedAdAccountId
-        ? adAccounts.find((account: any) => account.id === selectedAdAccountId)
-        : null;
+      const selectedAdAccount = selectedAdAccountId ? adAccounts.find((a: any) => a.id === selectedAdAccountId) : null;
 
       const updatedFields: Record<string, any> = {
         updated_at: new Date().toISOString(),
@@ -177,16 +177,10 @@ Deno.serve(async (req) => {
         updatedFields.page_access_token_encrypted = encrypt(selectedPage.access_token, ENC_KEY);
       }
 
-      const { error: updateError } = await admin
-        .from("meta_config")
-        .update(updatedFields)
-        .eq("organization_id", orgId);
-
+      const { error: updateError } = await admin.from("meta_config").update(updatedFields).eq("organization_id", orgId);
       if (updateError) throw updateError;
 
-      return new Response(JSON.stringify({ success: true, config: updatedFields }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return ok({ success: true, config: updatedFields });
     }
 
     // ── CAMPAIGNS ──
@@ -194,15 +188,18 @@ Deno.serve(async (req) => {
       const adAccountId = config.ad_account_id;
       if (!adAccountId) throw new Error("Geen ad account gekoppeld");
 
-      const res = await fetch(
-        `https://graph.facebook.com/v25.0/${adAccountId}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time,updated_time&limit=50&access_token=${userToken}`
-      );
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${adAccountId}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget,start_time,stop_time,updated_time&limit=50&access_token=${userToken}`);
+      return ok({ campaigns: data.data || [] });
+    }
 
-      return new Response(JSON.stringify({ campaigns: data.data || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // ── UPDATE CAMPAIGN STATUS ──
+    if (action === "update_campaign_status") {
+      const campaignId = params?.campaign_id;
+      const status = params?.status; // ACTIVE or PAUSED
+      if (!campaignId || !status) throw new Error("campaign_id en status vereist");
+
+      const data = await graphPost(`https://graph.facebook.com/${GV}/${campaignId}?access_token=${userToken}`, { status });
+      return ok({ success: true, result: data });
     }
 
     // ── INSIGHTS ──
@@ -212,15 +209,8 @@ Deno.serve(async (req) => {
 
       const datePreset = params?.date_preset || "last_30d";
       const level = params?.level || "account";
-      const res = await fetch(
-        `https://graph.facebook.com/v25.0/${adAccountId}/insights?fields=impressions,clicks,spend,cpc,ctr,reach,actions,cost_per_action_type,frequency&date_preset=${datePreset}&level=${level}&limit=100&access_token=${userToken}`
-      );
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-
-      return new Response(JSON.stringify({ insights: data.data || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${adAccountId}/insights?fields=impressions,clicks,spend,cpc,ctr,reach,actions,cost_per_action_type,frequency&date_preset=${datePreset}&level=${level}&limit=100&access_token=${userToken}`);
+      return ok({ insights: data.data || [] });
     }
 
     // ── CAMPAIGN INSIGHTS ──
@@ -229,15 +219,8 @@ Deno.serve(async (req) => {
       if (!adAccountId) throw new Error("Geen ad account gekoppeld");
 
       const datePreset = params?.date_preset || "last_30d";
-      const res = await fetch(
-        `https://graph.facebook.com/v25.0/${adAccountId}/insights?fields=campaign_name,campaign_id,impressions,clicks,spend,cpc,ctr,reach,actions&date_preset=${datePreset}&level=campaign&limit=100&access_token=${userToken}`
-      );
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-
-      return new Response(JSON.stringify({ insights: data.data || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${adAccountId}/insights?fields=campaign_name,campaign_id,impressions,clicks,spend,cpc,ctr,reach,actions&date_preset=${datePreset}&level=campaign&limit=100&access_token=${userToken}`);
+      return ok({ insights: data.data || [] });
     }
 
     // ── PAGE POSTS ──
@@ -245,15 +228,20 @@ Deno.serve(async (req) => {
       const pageId = config.page_id;
       if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
 
-      const res = await fetch(
-        `https://graph.facebook.com/v25.0/${pageId}/posts?fields=id,message,created_time,shares,likes.summary(true),comments.summary(true)&limit=25&access_token=${pageToken}`
-      );
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${pageId}/posts?fields=id,message,created_time,shares,likes.summary(true),comments.summary(true)&limit=25&access_token=${pageToken}`);
+      return ok({ posts: data.data || [] });
+    }
 
-      return new Response(JSON.stringify({ posts: data.data || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // ── CREATE PAGE POST ──
+    if (action === "create_page_post") {
+      const pageId = config.page_id;
+      if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
+
+      const message = params?.message;
+      if (!message) throw new Error("Bericht is vereist");
+
+      const data = await graphPost(`https://graph.facebook.com/${GV}/${pageId}/feed?access_token=${pageToken}`, { message });
+      return ok({ success: true, post_id: data.id });
     }
 
     // ── INSTAGRAM MEDIA ──
@@ -261,15 +249,41 @@ Deno.serve(async (req) => {
       const igId = config.instagram_account_id;
       if (!igId) throw new Error("Geen Instagram account gekoppeld");
 
-      const res = await fetch(
-        `https://graph.facebook.com/v25.0/${igId}/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count&limit=25&access_token=${userToken}`
-      );
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${igId}/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,permalink&limit=25&access_token=${userToken}`);
+      return ok({ media: data.data || [] });
+    }
 
-      return new Response(JSON.stringify({ media: data.data || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // ── INSTAGRAM INSIGHTS ──
+    if (action === "instagram_insights") {
+      const igId = config.instagram_account_id;
+      if (!igId) throw new Error("Geen Instagram account gekoppeld");
+
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${igId}/insights?metric=impressions,reach,profile_views&period=week&access_token=${userToken}`);
+      return ok({ insights: data.data || [] });
+    }
+
+    // ── INSTAGRAM PUBLISH ──
+    if (action === "instagram_publish") {
+      const igId = config.instagram_account_id;
+      if (!igId) throw new Error("Geen Instagram account gekoppeld");
+
+      const imageUrl = params?.image_url;
+      const caption = params?.caption || "";
+      if (!imageUrl) throw new Error("image_url is vereist");
+
+      // Step 1: Create container
+      const container = await graphPost(
+        `https://graph.facebook.com/${GV}/${igId}/media?access_token=${userToken}`,
+        { image_url: imageUrl, caption }
+      );
+      if (!container.id) throw new Error("Kon media container niet aanmaken");
+
+      // Step 2: Publish
+      const published = await graphPost(
+        `https://graph.facebook.com/${GV}/${igId}/media_publish?access_token=${userToken}`,
+        { creation_id: container.id }
+      );
+      return ok({ success: true, media_id: published.id });
     }
 
     // ── LEADS ──
@@ -281,9 +295,7 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: false })
         .limit(100);
 
-      return new Response(JSON.stringify({ leads: leads || [] }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return ok({ leads: leads || [] });
     }
 
     // ── IMPORT LEAD AS CONTACT ──
@@ -327,18 +339,50 @@ Deno.serve(async (req) => {
         .update({ contact_id: contact.id, status: "imported", processed_at: new Date().toISOString() })
         .eq("id", lead_id);
 
-      return new Response(
-        JSON.stringify({ success: true, contact_id: contact.id }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return ok({ success: true, contact_id: contact.id });
+    }
+
+    // ── CONVERSATIONS (Messenger) ──
+    if (action === "conversations") {
+      const pageId = config.page_id;
+      if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
+
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${pageId}/conversations?fields=id,snippet,updated_time,participants,message_count&limit=25&access_token=${pageToken}`);
+      return ok({ conversations: data.data || [] });
+    }
+
+    // ── CONVERSATION MESSAGES ──
+    if (action === "conversation_messages") {
+      const conversationId = params?.conversation_id;
+      if (!conversationId || !pageToken) throw new Error("conversation_id vereist");
+
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${conversationId}/messages?fields=id,message,from,created_time&limit=50&access_token=${pageToken}`);
+      return ok({ messages: data.data || [] });
+    }
+
+    // ── SEND MESSAGE ──
+    if (action === "send_message") {
+      const pageId = config.page_id;
+      if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
+
+      const recipientId = params?.recipient_id;
+      const message = params?.message;
+      if (!recipientId || !message) throw new Error("recipient_id en message vereist");
+
+      const data = await graphPost(`https://graph.facebook.com/${GV}/${pageId}/messages?access_token=${pageToken}`, {
+        recipient: { id: recipientId },
+        message: { text: message },
+      });
+      return ok({ success: true, message_id: data.message_id });
     }
 
     throw new Error(`Unknown action: ${action}`);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";
     console.error("connect-meta-api error:", msg);
+    const isTokenExpired = msg.startsWith("TOKEN_EXPIRED:");
     return new Response(
-      JSON.stringify({ error: msg }),
+      JSON.stringify({ error: isTokenExpired ? msg.replace("TOKEN_EXPIRED:", "") : msg, token_expired: isTokenExpired }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
