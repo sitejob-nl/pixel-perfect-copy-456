@@ -1009,7 +1009,7 @@ Deno.serve(async (req) => {
 
       const adsetId = params?.adset_id;
       const campaignId = params?.campaign_id;
-      let url = `https://graph.facebook.com/${GV}/${adAccountId}/ads?fields=id,name,status,creative{id,thumbnail_url,body,title,link_url}&limit=50&access_token=${userToken}`;
+      let url = `https://graph.facebook.com/${GV}/${adAccountId}/ads?fields=id,name,status,created_time,updated_time,creative{id,name,thumbnail_url,body,title,link_url,image_url,video_id,object_type,object_story_spec}&limit=50&access_token=${userToken}`;
       const filters = [];
       if (adsetId) filters.push(`{"field":"adset.id","operator":"EQUAL","value":"${adsetId}"}`);
       if (campaignId) filters.push(`{"field":"campaign.id","operator":"EQUAL","value":"${campaignId}"}`);
