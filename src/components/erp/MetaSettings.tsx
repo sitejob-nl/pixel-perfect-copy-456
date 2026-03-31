@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ErpCard } from "@/components/erp/ErpPrimitives";
 import { Button } from "@/components/ui/button";
-import { useMetaConnection, useMetaConfig, useMetaRegister, useMetaDisconnect } from "@/hooks/useMetaMarketing";
+import { useMetaAssets, useMetaConnection, useMetaConfig, useMetaRegister, useMetaDisconnect, useMetaSaveSelection } from "@/hooks/useMetaMarketing";
 import { toast } from "sonner";
 import { Loader2, ExternalLink, CheckCircle2, AlertCircle, Facebook, Instagram, Megaphone, Unlink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -11,17 +11,47 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function MetaSettings() {
   const { data: connection, isLoading: connLoading } = useMetaConnection();
   const { data: config, isLoading: configLoading } = useMetaConfig();
+  const { data: assets, isLoading: assetsLoading, refetch: refetchAssets } = useMetaAssets(!!connection);
   const register = useMetaRegister();
   const disconnect = useMetaDisconnect();
+  const saveSelection = useMetaSaveSelection();
   const [connecting, setConnecting] = useState(false);
+  const [pageId, setPageId] = useState<string>("");
+  const [instagramId, setInstagramId] = useState<string>("");
+  const [adAccountId, setAdAccountId] = useState<string>("");
 
   const isLoading = connLoading || configLoading;
   const isConnected = connection?.status === "active";
   const isPending = connection?.status === "pending";
+
+  useEffect(() => {
+    setPageId(config?.page_id || "");
+    setInstagramId(config?.instagram_account_id || "");
+    setAdAccountId(config?.ad_account_id || "");
+  }, [config?.page_id, config?.instagram_account_id, config?.ad_account_id]);
+
+  const filteredInstagramAccounts = useMemo(() => {
+    if (!assets?.instagramAccounts) return [];
+    if (!pageId) return assets.instagramAccounts;
+    return assets.instagramAccounts.filter((account: any) => account.page_id === pageId);
+  }, [assets?.instagramAccounts, pageId]);
+
+  async function handleSaveSelection() {
+    try {
+      await saveSelection.mutateAsync({
+        page_id: pageId || null,
+        instagram_account_id: instagramId || null,
+        ad_account_id: adAccountId || null,
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Opslaan mislukt");
+    }
+  }
 
   async function handleConnect() {
     try {
@@ -138,6 +168,73 @@ export default function MetaSettings() {
 
         {isConnected && config && (
           <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Facebook pagina</label>
+                <Select value={pageId || "__none"} onValueChange={(value) => {
+                  const nextPageId = value === "__none" ? "" : value;
+                  setPageId(nextPageId);
+                  if (nextPageId) {
+                    const linkedInstagram = assets?.instagramAccounts?.find((account: any) => account.page_id === nextPageId);
+                    setInstagramId(linkedInstagram?.id || "");
+                  } else {
+                    setInstagramId("");
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecteer pagina" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Geen pagina</SelectItem>
+                    {assets?.pages?.map((page: any) => (
+                      <SelectItem key={page.id} value={page.id}>{page.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Instagram account</label>
+                <Select value={instagramId || "__none"} onValueChange={(value) => setInstagramId(value === "__none" ? "" : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecteer Instagram" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Geen Instagram account</SelectItem>
+                    {filteredInstagramAccounts.map((account: any) => (
+                      <SelectItem key={account.id} value={account.id}>@{account.username || account.id}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground">Ad account</label>
+                <Select value={adAccountId || "__none"} onValueChange={(value) => setAdAccountId(value === "__none" ? "" : value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecteer ad account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Geen ad account</SelectItem>
+                    {assets?.adAccounts?.map((account: any) => (
+                      <SelectItem key={account.id} value={account.id}>{account.name || account.id}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={handleSaveSelection} disabled={saveSelection.isPending || assetsLoading}>
+                {(saveSelection.isPending || assetsLoading) && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+                Selectie opslaan
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => refetchAssets()} disabled={assetsLoading}>
+                {assetsLoading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+                Opnieuw laden
+              </Button>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {config.page_name && (
                 <div className="rounded-lg border border-border p-3 space-y-1">
@@ -174,6 +271,9 @@ export default function MetaSettings() {
                 {config.token_expires_at
                   ? formatDistanceToNow(new Date(config.token_expires_at), { addSuffix: true, locale: nl })
                   : "onbekend"}
+              </span>
+              <span>
+                {(assets?.pages?.length || 0)} pagina's · {(assets?.instagramAccounts?.length || 0)} Instagram · {(assets?.adAccounts?.length || 0)} ad accounts
               </span>
             </div>
 
