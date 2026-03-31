@@ -13,6 +13,7 @@ import NotificationSettings from "@/components/erp/NotificationSettings";
 import GoogleSettings from "@/components/erp/GoogleSettings";
 import IntegrationSettings from "@/components/erp/IntegrationSettings";
 import McpApiKeySettings from "@/components/erp/McpApiKeySettings";
+import MetaSettings from "@/components/erp/MetaSettings";
 
 const allTabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
