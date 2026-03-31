@@ -489,6 +489,108 @@ Deno.serve(async (req) => {
       return ok({ success: true, ad_id: data.id });
     }
 
+    // ── AD PREVIEW ──
+    if (action === "ad_preview") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const { creative_id, ad_format } = params || {};
+      if (!creative_id) throw new Error("creative_id vereist");
+
+      const format = ad_format || "DESKTOP_FEED_STANDARD";
+      const data = await graphFetch(
+        `https://graph.facebook.com/${GV}/${adAccountId}/generatepreviews?creative={"creative_id":"${creative_id}"}&ad_format=${format}&access_token=${userToken}`
+      );
+      return ok({ previews: data.data || [] });
+    }
+
+    // ── DELETE PAGE POST ──
+    if (action === "delete_page_post") {
+      const { post_id } = params || {};
+      if (!post_id || !pageToken) throw new Error("post_id vereist");
+
+      const res = await fetch(`https://graph.facebook.com/${GV}/${post_id}?access_token=${pageToken}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message || "Kon bericht niet verwijderen");
+      return ok({ success: true });
+    }
+
+    // ── UPDATE CAMPAIGN ──
+    if (action === "update_campaign") {
+      const { campaign_id, ...rest } = params || {};
+      if (!campaign_id) throw new Error("campaign_id vereist");
+
+      const body: Record<string, unknown> = {};
+      if (rest.name) body.name = rest.name;
+      if (rest.status) body.status = rest.status;
+      if (rest.daily_budget) body.daily_budget = Math.round(Number(rest.daily_budget) * 100);
+      if (rest.lifetime_budget) body.lifetime_budget = Math.round(Number(rest.lifetime_budget) * 100);
+      if (rest.end_time) body.end_time = rest.end_time;
+
+      const data = await graphPost(`https://graph.facebook.com/${GV}/${campaign_id}?access_token=${userToken}`, body);
+      return ok({ success: true, result: data });
+    }
+
+    // ── UPDATE AD SET ──
+    if (action === "update_adset") {
+      const { adset_id, ...rest } = params || {};
+      if (!adset_id) throw new Error("adset_id vereist");
+
+      const body: Record<string, unknown> = {};
+      if (rest.name) body.name = rest.name;
+      if (rest.status) body.status = rest.status;
+      if (rest.daily_budget) body.daily_budget = Math.round(Number(rest.daily_budget) * 100);
+      if (rest.lifetime_budget) body.lifetime_budget = Math.round(Number(rest.lifetime_budget) * 100);
+      if (rest.end_time) body.end_time = rest.end_time;
+      if (rest.bid_amount) body.bid_amount = rest.bid_amount;
+
+      const data = await graphPost(`https://graph.facebook.com/${GV}/${adset_id}?access_token=${userToken}`, body);
+      return ok({ success: true, result: data });
+    }
+
+    // ── UPDATE AD ──
+    if (action === "update_ad") {
+      const { ad_id, ...rest } = params || {};
+      if (!ad_id) throw new Error("ad_id vereist");
+
+      const body: Record<string, unknown> = {};
+      if (rest.name) body.name = rest.name;
+      if (rest.status) body.status = rest.status;
+
+      const data = await graphPost(`https://graph.facebook.com/${GV}/${ad_id}?access_token=${userToken}`, body);
+      return ok({ success: true, result: data });
+    }
+
+    // ── AD SETS ──
+    if (action === "adsets") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const campaignId = params?.campaign_id;
+      let url = `https://graph.facebook.com/${GV}/${adAccountId}/adsets?fields=id,name,status,daily_budget,lifetime_budget,optimization_goal,billing_event,targeting,start_time,end_time&limit=50&access_token=${userToken}`;
+      if (campaignId) url += `&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${campaignId}"}]`;
+
+      const data = await graphFetch(url);
+      return ok({ adsets: data.data || [] });
+    }
+
+    // ── ADS ──
+    if (action === "ads") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const adsetId = params?.adset_id;
+      const campaignId = params?.campaign_id;
+      let url = `https://graph.facebook.com/${GV}/${adAccountId}/ads?fields=id,name,status,creative{id,thumbnail_url,body,title,link_url}&limit=50&access_token=${userToken}`;
+      const filters = [];
+      if (adsetId) filters.push(`{"field":"adset.id","operator":"EQUAL","value":"${adsetId}"}`);
+      if (campaignId) filters.push(`{"field":"campaign.id","operator":"EQUAL","value":"${campaignId}"}`);
+      if (filters.length) url += `&filtering=[${filters.join(",")}]`;
+
+      const data = await graphFetch(url);
+      return ok({ ads: data.data || [] });
+    }
+
     throw new Error(`Unknown action: ${action}`);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";
