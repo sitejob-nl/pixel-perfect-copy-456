@@ -25,7 +25,7 @@ import {
   useMetaCampaigns, useUpdateCampaign, useCreateCampaign,
   useMetaAdSets, useUpdateAdSet, useCreateAdSet,
   useMetaAds, useUpdateAd, useCreateAd, useCreateAdCreative, useAdPreview, useUploadAdVideo,
-  useMetaInsights, useMetaCampaignInsights,
+  useMetaInsights, useMetaCampaignInsights, useAdInsights, useAdCreativeDetail,
   useMetaPagePosts, useCreatePagePost, useDeletePagePost,
   useMetaInstagramMedia, useMetaInstagramInsights, useInstagramPublish,
   useMetaLeads, useMetaImportLead, useMetaLeadForms, useCreateLeadForm, useSyncLeads, useArchiveLeadForm,
@@ -70,6 +70,49 @@ function fmtPct(n: any): string {
 function fmtDate(d: any): string {
   if (!d) return "—";
   try { return format(new Date(d), "d MMM yyyy", { locale: nl }); } catch { return "—"; }
+}
+
+// Extract action values from Meta's actions array
+function getAction(actions: any[], type: string): number {
+  if (!Array.isArray(actions)) return 0;
+  const a = actions.find((a: any) => a.action_type === type);
+  return a ? Number(a.value) || 0 : 0;
+}
+
+function getActionCost(costs: any[], type: string): number {
+  if (!Array.isArray(costs)) return 0;
+  const a = costs.find((a: any) => a.action_type === type);
+  return a ? Number(a.value) || 0 : 0;
+}
+
+// All available metrics for column picker
+const ALL_METRICS = [
+  { key: "impressions", label: "Impressies", format: "num" },
+  { key: "clicks", label: "Klikken", format: "num" },
+  { key: "ctr", label: "CTR", format: "pct" },
+  { key: "spend", label: "Uitgaven", format: "euro" },
+  { key: "cpc", label: "CPC", format: "euro" },
+  { key: "reach", label: "Bereik", format: "num" },
+  { key: "frequency", label: "Frequentie", format: "num" },
+  { key: "conversions", label: "Conversies", format: "action", actionType: "offsite_conversion.fb_pixel_purchase" },
+  { key: "leads", label: "Leads", format: "action", actionType: "lead" },
+  { key: "link_clicks", label: "Link klikken", format: "action", actionType: "link_click" },
+  { key: "page_engagement", label: "Pagina interactie", format: "action", actionType: "page_engagement" },
+  { key: "post_engagement", label: "Post interactie", format: "action", actionType: "post_engagement" },
+  { key: "video_views", label: "Video views", format: "action", actionType: "video_view" },
+  { key: "cost_per_lead", label: "Kosten/lead", format: "cost", actionType: "lead" },
+  { key: "cost_per_conversion", label: "Kosten/conversie", format: "cost", actionType: "offsite_conversion.fb_pixel_purchase" },
+] as const;
+
+const DEFAULT_METRICS = ["impressions", "clicks", "ctr", "spend", "cpc", "reach"];
+
+function formatMetricValue(metric: typeof ALL_METRICS[number], row: any): string {
+  if (metric.format === "num") return fmtNum(row[metric.key]);
+  if (metric.format === "pct") return fmtPct(row[metric.key]);
+  if (metric.format === "euro") return fmtEuro(row[metric.key]);
+  if (metric.format === "action") return fmtNum(getAction(row.actions, (metric as any).actionType));
+  if (metric.format === "cost") return fmtEuro(getActionCost(row.cost_per_action_type, (metric as any).actionType));
+  return "—";
 }
 
 function fmtDateTime(d: any): string {
@@ -220,11 +263,25 @@ export default function MetaMarketingPage() {
 
 function DashboardTab() {
   const [datePreset, setDatePreset] = useState("last_30d");
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(DEFAULT_METRICS);
+  const [showMetricPicker, setShowMetricPicker] = useState(false);
   const { data: insightsData, isLoading: insightsLoading, refetch: refetchInsights } = useMetaInsights(datePreset);
   const { data: campaignData, isLoading: campaignLoading, refetch: refetchCampaigns } = useMetaCampaignInsights(datePreset);
 
   const totals = insightsData?.insights?.[0] || {};
   const campaigns = campaignData?.insights || [];
+
+  const totalConversions = getAction(totals.actions, "offsite_conversion.fb_pixel_purchase") + getAction(totals.actions, "lead");
+  const totalLeads = getAction(totals.actions, "lead");
+  const totalLinkClicks = getAction(totals.actions, "link_click");
+
+  const visibleMetrics = ALL_METRICS.filter(m => selectedMetrics.includes(m.key));
+
+  function toggleMetric(key: string) {
+    setSelectedMetrics(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  }
 
   // Chart data
   const spendChart = useMemo(() =>
@@ -258,29 +315,57 @@ function DashboardTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <Select value={datePreset} onValueChange={setDatePreset}>
           <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             {DATE_PRESETS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={() => { refetchInsights(); refetchCampaigns(); }}>
-          <RefreshCw className="h-3.5 w-3.5 mr-1" /> Vernieuwen
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowMetricPicker(v => !v)}>
+            <BarChart3 className="h-3.5 w-3.5 mr-1" /> Kolommen
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { refetchInsights(); refetchCampaigns(); }}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Vernieuwen
+          </Button>
+        </div>
       </div>
+
+      {/* Metric picker */}
+      {showMetricPicker && (
+        <ErpCard className="p-3">
+          <p className="text-xs font-semibold text-foreground mb-2">Toon kolommen in tabel</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ALL_METRICS.map(m => (
+              <Badge
+                key={m.key}
+                variant={selectedMetrics.includes(m.key) ? "default" : "outline"}
+                className="cursor-pointer text-[10px]"
+                onClick={() => toggleMetric(m.key)}
+              >
+                {m.label}
+              </Badge>
+            ))}
+          </div>
+        </ErpCard>
+      )}
 
       {/* KPI Cards */}
       {insightsLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           <KpiCard icon={DollarSign} label="Uitgaven" value={fmtEuro(totals.spend)} />
           <KpiCard icon={Eye} label="Bereik" value={fmtNum(totals.reach)} />
           <KpiCard icon={TrendingUp} label="Impressies" value={fmtNum(totals.impressions)} />
           <KpiCard icon={MousePointerClick} label="Klikken" value={fmtNum(totals.clicks)} />
+          <KpiCard icon={Target} label="CTR" value={fmtPct(totals.ctr)} />
+          <KpiCard icon={DollarSign} label="CPC" value={fmtEuro(totals.cpc)} />
+          <KpiCard icon={Target} label="Conversies" value={fmtNum(totalConversions)} />
+          <KpiCard icon={Megaphone} label="Leads" value={fmtNum(totalLeads)} />
           <KpiCard icon={Target} label="CTR" value={fmtPct(totals.ctr)} />
           <KpiCard icon={DollarSign} label="CPC" value={fmtEuro(totals.cpc)} />
         </div>
@@ -360,10 +445,10 @@ function DashboardTab() {
         </ErpCard>
       )}
 
-      {/* Campaign performance table */}
+      {/* Campaign performance table - dynamic columns */}
       <ErpCard className="p-4">
         <h3 className="text-sm font-semibold text-foreground mb-3">Campagne prestaties</h3>
-        {campaignLoading ? <LoadingTable cols={7} /> : campaigns.length === 0 ? (
+        {campaignLoading ? <LoadingTable cols={visibleMetrics.length + 1} /> : campaigns.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">Geen campagne data gevonden</p>
         ) : (
           <div className="overflow-x-auto">
@@ -371,24 +456,18 @@ function DashboardTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Campagne</TableHead>
-                  <TableHead className="text-right">Impressies</TableHead>
-                  <TableHead className="text-right">Klikken</TableHead>
-                  <TableHead className="text-right">CTR</TableHead>
-                  <TableHead className="text-right">Uitgaven</TableHead>
-                  <TableHead className="text-right">CPC</TableHead>
-                  <TableHead className="text-right">Bereik</TableHead>
+                  {visibleMetrics.map(m => (
+                    <TableHead key={m.key} className="text-right">{m.label}</TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {campaigns.map((c: any) => (
                   <TableRow key={c.campaign_id || c.campaign_name}>
                     <TableCell className="font-medium text-xs">{c.campaign_name}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtNum(c.impressions)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtNum(c.clicks)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtPct(c.ctr)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtEuro(c.spend)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtEuro(c.cpc)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtNum(c.reach)}</TableCell>
+                    {visibleMetrics.map(m => (
+                      <TableCell key={m.key} className="text-right text-xs">{formatMetricValue(m, c)}</TableCell>
+                    ))}
                   </TableRow>
                 ))}
               </TableBody>
@@ -775,6 +854,8 @@ function AdsList({ adsetId, onEdit }: any) {
     (creativeType === "carousel" && crMessage.trim() && crLink.trim() && carouselItems.filter(i => i.link).length >= 2)
   );
 
+  const [selectedAd, setSelectedAd] = useState<any>(null);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-end">
@@ -788,23 +869,40 @@ function AdsList({ adsetId, onEdit }: any) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Preview</TableHead>
                 <TableHead>Naam</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Creative</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {ads.map((a: any) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium text-xs">{a.name}</TableCell>
-                  <TableCell><StatusBadge status={a.status} /></TableCell>
+                <TableRow key={a.id} className="cursor-pointer" onClick={() => setSelectedAd(a)}>
                   <TableCell>
                     {a.creative?.thumbnail_url ? (
-                      <img src={a.creative.thumbnail_url} alt="" className="h-8 w-8 rounded object-cover" />
-                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                      <div className="relative h-10 w-10 rounded overflow-hidden bg-muted">
+                        <img src={a.creative.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                        {a.creative?.video_id && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <Play className="h-4 w-4 text-white" fill="white" />
+                          </div>
+                        )}
+                      </div>
+                    ) : a.creative?.image_url ? (
+                      <img src={a.creative.image_url} alt="" className="h-10 w-10 rounded object-cover" />
+                    ) : (
+                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium text-xs">{a.name}</TableCell>
+                  <TableCell><StatusBadge status={a.status} /></TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {a.creative?.video_id ? "Video" : a.creative?.object_type === "SHARE" ? "Link" : a.creative?.object_type || "—"}
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7" disabled={updateAd.isPending}
                         onClick={() => updateAd.mutate({ ad_id: a.id, status: a.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })}>
@@ -821,6 +919,17 @@ function AdsList({ adsetId, onEdit }: any) {
           </Table>
         </ErpCard>
       )}
+
+      {/* Ad Detail Sheet */}
+      <Sheet open={!!selectedAd} onOpenChange={(o) => !o && setSelectedAd(null)}>
+        <SheetContent className="sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{selectedAd?.name || "Advertentie"}</SheetTitle>
+            <SheetDescription>Details, creative en prestaties</SheetDescription>
+          </SheetHeader>
+          {selectedAd && <AdDetailContent ad={selectedAd} />}
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={showCreate} onOpenChange={(open) => { if (!open) { setShowCreate(false); resetForm(); } else setShowCreate(true); }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
@@ -967,6 +1076,191 @@ function AdsList({ adsetId, onEdit }: any) {
     </div>
   );
 }
+
+function AdDetailContent({ ad }: { ad: any }) {
+  const [datePreset, setDatePreset] = useState("last_30d");
+  const { data: insightsData, isLoading: insightsLoading } = useAdInsights(ad.id, datePreset);
+  const { data: creativeData, isLoading: creativeLoading } = useAdCreativeDetail(ad.creative?.id);
+
+  const insights = insightsData?.insights?.[0] || {};
+  const creative = creativeData?.creative || ad.creative || {};
+  const video = creativeData?.video;
+  const storySpec = creative.object_story_spec || {};
+
+  return (
+    <div className="space-y-5 mt-4">
+      {/* Creative preview */}
+      <div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Creative</h4>
+        {creativeLoading ? (
+          <Skeleton className="h-48 w-full rounded-lg" />
+        ) : (
+          <div className="space-y-3">
+            {/* Video player */}
+            {video?.source && (
+              <div className="rounded-lg overflow-hidden bg-black">
+                <video
+                  controls
+                  poster={video.picture || creative.thumbnail_url}
+                  className="w-full max-h-[300px]"
+                  preload="metadata"
+                >
+                  <source src={video.source} type="video/mp4" />
+                  Je browser ondersteunt geen video.
+                </video>
+                {video.length && (
+                  <p className="text-[10px] text-muted-foreground px-2 py-1 bg-muted/50">
+                    Duur: {Math.floor(video.length / 60)}:{String(Math.floor(video.length % 60)).padStart(2, "0")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Image preview (if not video) */}
+            {!video?.source && (creative.image_url || creative.thumbnail_url) && (
+              <img
+                src={creative.image_url || creative.thumbnail_url}
+                alt={creative.title || ""}
+                className="w-full rounded-lg object-contain max-h-[300px] bg-muted"
+              />
+            )}
+
+            {/* Creative text */}
+            <div className="space-y-1.5 text-xs">
+              {creative.title && <p className="font-semibold text-foreground">{creative.title}</p>}
+              {creative.body && <p className="text-muted-foreground">{creative.body}</p>}
+              {storySpec.link_data?.message && <p className="text-muted-foreground">{storySpec.link_data.message}</p>}
+              {creative.link_url && (
+                <a href={creative.link_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                  <ExternalLink className="h-3 w-3" />{creative.link_url}
+                </a>
+              )}
+            </div>
+
+            {/* Carousel cards */}
+            {storySpec.link_data?.child_attachments && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">Carousel kaarten</p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {storySpec.link_data.child_attachments.map((card: any, i: number) => (
+                    <div key={i} className="min-w-[140px] max-w-[160px] rounded-md border border-border overflow-hidden flex-shrink-0">
+                      {card.picture && <img src={card.picture} alt="" className="h-24 w-full object-cover" />}
+                      <div className="p-1.5 text-[10px]">
+                        {card.name && <p className="font-medium truncate">{card.name}</p>}
+                        {card.description && <p className="text-muted-foreground truncate">{card.description}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Insights */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase">Prestaties</h4>
+          <Select value={datePreset} onValueChange={setDatePreset}>
+            <SelectTrigger className="h-7 w-[150px] text-[10px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {DATE_PRESETS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {insightsLoading ? (
+          <div className="grid grid-cols-3 gap-2">
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-14" />)}
+          </div>
+        ) : Object.keys(insights).length === 0 ? (
+          <p className="text-xs text-muted-foreground py-2">Geen data voor deze periode</p>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-2 rounded bg-muted/50 text-center">
+              <p className="text-[10px] text-muted-foreground">Impressies</p>
+              <p className="text-sm font-semibold">{fmtNum(insights.impressions)}</p>
+            </div>
+            <div className="p-2 rounded bg-muted/50 text-center">
+              <p className="text-[10px] text-muted-foreground">Klikken</p>
+              <p className="text-sm font-semibold">{fmtNum(insights.clicks)}</p>
+            </div>
+            <div className="p-2 rounded bg-muted/50 text-center">
+              <p className="text-[10px] text-muted-foreground">CTR</p>
+              <p className="text-sm font-semibold">{fmtPct(insights.ctr)}</p>
+            </div>
+            <div className="p-2 rounded bg-muted/50 text-center">
+              <p className="text-[10px] text-muted-foreground">Uitgaven</p>
+              <p className="text-sm font-semibold">{fmtEuro(insights.spend)}</p>
+            </div>
+            <div className="p-2 rounded bg-muted/50 text-center">
+              <p className="text-[10px] text-muted-foreground">CPC</p>
+              <p className="text-sm font-semibold">{fmtEuro(insights.cpc)}</p>
+            </div>
+            <div className="p-2 rounded bg-muted/50 text-center">
+              <p className="text-[10px] text-muted-foreground">Bereik</p>
+              <p className="text-sm font-semibold">{fmtNum(insights.reach)}</p>
+            </div>
+            {getAction(insights.actions, "lead") > 0 && (
+              <div className="p-2 rounded bg-muted/50 text-center">
+                <p className="text-[10px] text-muted-foreground">Leads</p>
+                <p className="text-sm font-semibold">{fmtNum(getAction(insights.actions, "lead"))}</p>
+              </div>
+            )}
+            {getAction(insights.actions, "link_click") > 0 && (
+              <div className="p-2 rounded bg-muted/50 text-center">
+                <p className="text-[10px] text-muted-foreground">Link klikken</p>
+                <p className="text-sm font-semibold">{fmtNum(getAction(insights.actions, "link_click"))}</p>
+              </div>
+            )}
+            {getAction(insights.actions, "offsite_conversion.fb_pixel_purchase") > 0 && (
+              <div className="p-2 rounded bg-muted/50 text-center">
+                <p className="text-[10px] text-muted-foreground">Conversies</p>
+                <p className="text-sm font-semibold">{fmtNum(getAction(insights.actions, "offsite_conversion.fb_pixel_purchase"))}</p>
+              </div>
+            )}
+            {getAction(insights.actions, "video_view") > 0 && (
+              <div className="p-2 rounded bg-muted/50 text-center">
+                <p className="text-[10px] text-muted-foreground">Video views</p>
+                <p className="text-sm font-semibold">{fmtNum(getAction(insights.actions, "video_view"))}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* All actions breakdown */}
+        {Array.isArray(insights.actions) && insights.actions.length > 0 && (
+          <div className="mt-3">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-1.5">Alle acties</p>
+            <div className="space-y-1">
+              {insights.actions.map((a: any, i: number) => (
+                <div key={i} className="flex justify-between text-[10px] border-b border-border/50 pb-0.5">
+                  <span className="text-muted-foreground">{a.action_type?.replace(/_/g, " ")}</span>
+                  <span className="font-medium">{fmtNum(a.value)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Separator />
+
+      {/* Metadata */}
+      <div className="text-[10px] text-muted-foreground space-y-0.5">
+        <p>Ad ID: {ad.id}</p>
+        {ad.creative?.id && <p>Creative ID: {ad.creative.id}</p>}
+        {creative.video_id && <p>Video ID: {creative.video_id}</p>}
+        <p>Status: {ad.status}</p>
+        {ad.created_time && <p>Aangemaakt: {fmtDate(ad.created_time)}</p>}
+      </div>
+    </div>
+  );
+}
+
 function EditSheet({ item, onClose }: { item: { type: string; item: any }; onClose: () => void }) {
   const { type, item: data } = item;
   const [name, setName] = useState(data.name || "");
