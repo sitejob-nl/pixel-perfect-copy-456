@@ -82,7 +82,7 @@ const nav: NavSection[] = [
       { k: "content", l: "Content", i: "Calendar" },
       { k: "email", l: "Email Builder", i: "Send" },
       { k: "drafts", l: "Email Drafts", i: "Send" },
-      { k: "meta-ads", l: "Meta Marketing", i: "Megaphone" },
+      { k: "marketing", l: "Meta Marketing", i: "Megaphone" },
       { k: "reports", l: "Rapportages", i: "BarChart" },
       { k: "webhooks", l: "Webhooks", i: "Zap" },
     ],

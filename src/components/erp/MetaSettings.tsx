@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ErpCard } from "@/components/erp/ErpPrimitives";
 import { Button } from "@/components/ui/button";
-import { useMetaAssets, useMetaConnection, useMetaConfig, useMetaRegister, useMetaDisconnect, useMetaSaveSelection } from "@/hooks/useMetaMarketing";
+import { useMetaAssets, useMetaHealth, useMetaConfig, useMetaRegister, useMetaDisconnect, useMetaSaveSelection } from "@/hooks/useMetaMarketing";
 import { toast } from "sonner";
 import { Loader2, ExternalLink, CheckCircle2, AlertCircle, Facebook, Instagram, Megaphone, Unlink } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -14,9 +14,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function MetaSettings() {
-  const { data: connection, isLoading: connLoading } = useMetaConnection();
+  const { data: health, isLoading: connLoading } = useMetaHealth();
+  const connection: any = health ? { status: health.connected ? "active" : "disconnected", connect_url: (health as any).connect_url } : null;
   const { data: config, isLoading: configLoading } = useMetaConfig();
-  const { data: assets, isLoading: assetsLoading, refetch: refetchAssets } = useMetaAssets(!!connection);
+  const { data: assets, isLoading: assetsLoading, refetch: refetchAssets } = useMetaAssets(!!health?.connected);
   const register = useMetaRegister();
   const disconnect = useMetaDisconnect();
   const saveSelection = useMetaSaveSelection();

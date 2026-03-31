@@ -6111,11 +6111,14 @@ export type Database = {
           id: string
           instagram_account_id: string | null
           instagram_username: string | null
+          last_webhook_at: string | null
           organization_id: string
           page_access_token_encrypted: string | null
           page_id: string | null
           page_name: string | null
           token_expires_at: string | null
+          token_refresh_count: number | null
+          token_refreshed_at: string | null
           updated_at: string
           user_access_token_encrypted: string | null
         }
@@ -6127,11 +6130,14 @@ export type Database = {
           id?: string
           instagram_account_id?: string | null
           instagram_username?: string | null
+          last_webhook_at?: string | null
           organization_id: string
           page_access_token_encrypted?: string | null
           page_id?: string | null
           page_name?: string | null
           token_expires_at?: string | null
+          token_refresh_count?: number | null
+          token_refreshed_at?: string | null
           updated_at?: string
           user_access_token_encrypted?: string | null
         }
@@ -6143,11 +6149,14 @@ export type Database = {
           id?: string
           instagram_account_id?: string | null
           instagram_username?: string | null
+          last_webhook_at?: string | null
           organization_id?: string
           page_access_token_encrypted?: string | null
           page_id?: string | null
           page_name?: string | null
           token_expires_at?: string | null
+          token_refresh_count?: number | null
+          token_refreshed_at?: string | null
           updated_at?: string
           user_access_token_encrypted?: string | null
         }

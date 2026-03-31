@@ -3,30 +3,55 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrganization } from "./useOrganization";
 import { toast } from "sonner";
 
-const sb = supabase as any;
+// ── Generic API helpers ──
 
-export function useMetaConnection() {
-  const { data: org } = useOrganization();
-  const orgId = org?.organization_id;
+async function metaApi(action: string, params?: any) {
+  const { data, error } = await supabase.functions.invoke("connect-meta-api", {
+    body: { action, params },
+  });
+  if (error) throw error;
+  if (data?.token_expired) {
+    toast.error("Je Meta token is verlopen. Ga naar Instellingen om opnieuw te koppelen.", { duration: 8000 });
+    throw new Error(data.error || "Token verlopen");
+  }
+  if (data?.meta_rate_limited) {
+    toast.error(`Meta rate limit bereikt. Probeer het over ${Math.ceil((data.retry_after || 300) / 60)} minuten opnieuw.`);
+    throw new Error("Rate limited");
+  }
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
 
+async function metaManage(action: string, params?: any) {
+  const { data, error } = await supabase.functions.invoke("connect-meta-manage", {
+    body: { action, ...params },
+  });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data;
+}
+
+export { metaApi, metaManage };
+
+const STALE = 5 * 60 * 1000;
+
+// ── Health ──
+
+export function useMetaHealth() {
   return useQuery({
-    queryKey: ["meta-connection", orgId],
-    enabled: !!orgId,
-    queryFn: async () => {
-      const { data, error } = await sb
-        .from("meta_connections")
-        .select("*")
-        .eq("organization_id", orgId)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
+    queryKey: ["meta-health"],
+    queryFn: () => metaApi("health"),
+    staleTime: STALE,
+    retry: 1,
   });
 }
+
+// ── Config (from DB) ──
 
 export function useMetaConfig() {
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
+  const sb = supabase as any;
 
   return useQuery({
     queryKey: ["meta-config", orgId],
@@ -43,38 +68,260 @@ export function useMetaConfig() {
   });
 }
 
-export function useMetaStatus() {
-  const { data: org } = useOrganization();
-  const orgId = org?.organization_id;
+// ── Assets ──
 
+export function useMetaAssets(enabled = true) {
   return useQuery({
-    queryKey: ["meta-status", orgId],
-    enabled: !!orgId,
-    refetchInterval: false,
+    queryKey: ["meta-assets"],
+    enabled,
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-manage", {
-        body: { action: "status" },
-      });
-      if (error) throw error;
-      return data;
+      const res = await metaApi("assets");
+      return {
+        pages: res.pages || [],
+        instagramAccounts: res.instagram_accounts || [],
+        adAccounts: res.ad_accounts || [],
+      };
     },
   });
 }
 
+export function useMetaSaveSelection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (selection: { page_id: string | null; instagram_account_id: string | null; ad_account_id: string | null }) =>
+      metaApi("select_assets", selection),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-config"] });
+      qc.invalidateQueries({ queryKey: ["meta-health"] });
+      qc.invalidateQueries({ queryKey: ["meta-assets"] });
+      toast.success("Meta selectie opgeslagen");
+    },
+  });
+}
+
+// ── Campaigns ──
+
+export function useMetaCampaigns(statusFilter?: string) {
+  return useQuery({
+    queryKey: ["meta-campaigns", statusFilter],
+    queryFn: () => metaApi("campaigns", statusFilter ? { status_filter: statusFilter } : undefined),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useUpdateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { campaign_id: string; name?: string; status?: string; daily_budget?: number; lifetime_budget?: number; end_time?: string }) =>
+      metaApi("update_campaign", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-campaigns"] });
+      qc.invalidateQueries({ queryKey: ["meta-campaign-insights"] });
+      toast.success("Campagne bijgewerkt");
+    },
+  });
+}
+
+// ── Ad Sets ──
+
+export function useMetaAdSets(campaignId?: string) {
+  return useQuery({
+    queryKey: ["meta-adsets", campaignId],
+    enabled: !!campaignId,
+    queryFn: () => metaApi("adsets", { campaign_id: campaignId }),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useUpdateAdSet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { adset_id: string; name?: string; status?: string; daily_budget?: number; lifetime_budget?: number; end_time?: string; bid_amount?: number }) =>
+      metaApi("update_adset", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-adsets"] });
+      toast.success("Ad set bijgewerkt");
+    },
+  });
+}
+
+// ── Ads ──
+
+export function useMetaAds(adsetId?: string, campaignId?: string) {
+  return useQuery({
+    queryKey: ["meta-ads", adsetId, campaignId],
+    enabled: !!adsetId || !!campaignId,
+    queryFn: () => metaApi("ads", { adset_id: adsetId, campaign_id: campaignId }),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useUpdateAd() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { ad_id: string; name?: string; status?: string }) =>
+      metaApi("update_ad", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-ads"] });
+      toast.success("Advertentie bijgewerkt");
+    },
+  });
+}
+
+// ── Insights ──
+
+export function useMetaInsights(datePreset = "last_30d", level?: string) {
+  return useQuery({
+    queryKey: ["meta-insights", datePreset, level],
+    queryFn: () => metaApi("insights", { date_preset: datePreset, level }),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useMetaCampaignInsights(datePreset = "last_30d") {
+  return useQuery({
+    queryKey: ["meta-campaign-insights", datePreset],
+    queryFn: () => metaApi("campaign_insights", { date_preset: datePreset }),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+// ── Facebook Page ──
+
+export function useMetaPagePosts() {
+  return useQuery({
+    queryKey: ["meta-page-posts"],
+    queryFn: () => metaApi("page_posts"),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useCreatePagePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { message: string; link?: string; published?: boolean }) =>
+      metaApi("create_page_post", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-page-posts"] });
+      toast.success("Bericht geplaatst");
+    },
+  });
+}
+
+export function useDeletePagePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (postId: string) => metaApi("delete_page_post", { post_id: postId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-page-posts"] });
+      toast.success("Bericht verwijderd");
+    },
+  });
+}
+
+// ── Instagram ──
+
+export function useMetaInstagramMedia() {
+  return useQuery({
+    queryKey: ["meta-instagram-media"],
+    queryFn: () => metaApi("instagram_media"),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useMetaInstagramInsights() {
+  return useQuery({
+    queryKey: ["meta-instagram-insights"],
+    queryFn: () => metaApi("instagram_insights"),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useInstagramPublish() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { image_url: string; caption?: string }) =>
+      metaApi("instagram_publish", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-instagram-media"] });
+      toast.success("Instagram post gepubliceerd");
+    },
+  });
+}
+
+// ── Leads ──
+
+export function useMetaLeads(status?: string) {
+  return useQuery({
+    queryKey: ["meta-leads", status],
+    queryFn: () => metaApi("leads", { status }),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useMetaImportLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (leadId: string) => metaApi("import_lead", { lead_id: leadId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-leads"] });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      toast.success("Lead geïmporteerd als contact");
+    },
+  });
+}
+
+// ── Messenger ──
+
+export function useMetaConversations() {
+  return useQuery({
+    queryKey: ["meta-conversations"],
+    queryFn: () => metaApi("conversations"),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useMetaConversationMessages(conversationId?: string) {
+  return useQuery({
+    queryKey: ["meta-conversation-messages", conversationId],
+    enabled: !!conversationId,
+    queryFn: () => metaApi("conversation_messages", { conversation_id: conversationId }),
+    staleTime: 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useSendMessage() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { recipient_id: string; message: string }) =>
+      metaApi("send_message", params),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["meta-conversation-messages"] });
+      qc.invalidateQueries({ queryKey: ["meta-conversations"] });
+    },
+  });
+}
+
+// ── Connect/Manage ──
+
 export function useMetaRegister() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-manage", {
-        body: { action: "register" },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
+    mutationFn: () => metaManage("register"),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["meta-connection"] });
-      qc.invalidateQueries({ queryKey: ["meta-status"] });
+      qc.invalidateQueries({ queryKey: ["meta-health"] });
+      qc.invalidateQueries({ queryKey: ["meta-config"] });
     },
   });
 }
@@ -82,146 +329,21 @@ export function useMetaRegister() {
 export function useMetaDisconnect() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-manage", {
-        body: { action: "disconnect" },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
+    mutationFn: () => metaManage("disconnect"),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["meta-connection"] });
+      qc.invalidateQueries({ queryKey: ["meta-health"] });
       qc.invalidateQueries({ queryKey: ["meta-config"] });
-      qc.invalidateQueries({ queryKey: ["meta-status"] });
+      qc.invalidateQueries({ queryKey: ["meta-assets"] });
       toast.success("Meta koppeling verwijderd");
     },
   });
 }
 
-export function useMetaAssets(enabled = true) {
-  const { data: org } = useOrganization();
-  const orgId = org?.organization_id;
-
+export function useMetaStatus() {
   return useQuery({
-    queryKey: ["meta-assets", orgId],
-    enabled: !!orgId && enabled,
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
-        body: { action: "assets" },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return {
-        pages: data.pages || [],
-        instagramAccounts: data.instagram_accounts || [],
-        adAccounts: data.ad_accounts || [],
-      };
-    },
-  });
-}
-
-type MetaAssetSelection = {
-  page_id: string | null;
-  instagram_account_id: string | null;
-  ad_account_id: string | null;
-};
-
-export function useMetaSaveSelection() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (selection: MetaAssetSelection) => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
-        body: { action: "select_assets", params: selection },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["meta-config"] });
-      qc.invalidateQueries({ queryKey: ["meta-status"] });
-      qc.invalidateQueries({ queryKey: ["meta-assets"] });
-      toast.success("Meta selectie opgeslagen");
-    },
-  });
-}
-
-export function useMetaCampaigns() {
-  return useQuery({
-    queryKey: ["meta-campaigns"],
-    enabled: false, // manually triggered
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
-        body: { action: "campaigns" },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data.campaigns || [];
-    },
-  });
-}
-
-export function useMetaInsights(datePreset = "last_30d") {
-  return useQuery({
-    queryKey: ["meta-insights", datePreset],
-    enabled: false,
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
-        body: { action: "insights", params: { date_preset: datePreset } },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data.insights || [];
-    },
-  });
-}
-
-export function useMetaCampaignInsights(datePreset = "last_30d") {
-  return useQuery({
-    queryKey: ["meta-campaign-insights", datePreset],
-    enabled: false,
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
-        body: { action: "campaign_insights", params: { date_preset: datePreset } },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data.insights || [];
-    },
-  });
-}
-
-export function useMetaLeads() {
-  return useQuery({
-    queryKey: ["meta-leads"],
-    enabled: false,
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
-        body: { action: "leads" },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data.leads || [];
-    },
-  });
-}
-
-export function useMetaImportLead() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (leadId: string) => {
-      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
-        body: { action: "import_lead", params: { lead_id: leadId } },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      return data;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["meta-leads"] });
-      qc.invalidateQueries({ queryKey: ["contacts"] });
-      toast.success("Lead geïmporteerd als contact");
-    },
+    queryKey: ["meta-status"],
+    queryFn: () => metaManage("status"),
+    staleTime: STALE,
+    retry: 1,
   });
 }

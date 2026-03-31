@@ -51,7 +51,7 @@ import BookingPage from "./pages/BookingPage";
 import BookingsPage from "./pages/BookingsPage";
 import CallsPage from "./pages/CallsPage";
 import AiAssistantPage from "./pages/AiAssistantPage";
-import MetaAdsPage from "./pages/MetaAdsPage";
+import MetaMarketingPage from "./pages/MetaMarketingPage";
 
 import ProspectingPage from "./pages/ProspectingPage";
 import ProspectPoolDetailPage from "./pages/ProspectPoolDetailPage";
@@ -210,7 +210,8 @@ const App = () => (
               <Route path="calls" element={<CallsPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="drafts" element={<EmailDraftsPage />} />
-              <Route path="meta-ads" element={<MetaAdsPage />} />
+              <Route path="meta-ads" element={<MetaMarketingPage />} />
+              <Route path="marketing" element={<MetaMarketingPage />} />
               
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminRoute />} />
