@@ -667,17 +667,30 @@ function AdsList({ adsetId, onEdit }: any) {
   const createCreative = useCreateAdCreative();
   const createAd = useCreateAd();
   const adPreview = useAdPreview();
+  const uploadVideo = useUploadAdVideo();
   const ads = data?.ads || [];
   const [showCreate, setShowCreate] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [creativeId, setCreativeId] = useState("");
   const [previewHtml, setPreviewHtml] = useState("");
-  // Creative fields
+  const [creativeType, setCreativeType] = useState<"link" | "video" | "carousel">("link");
+  // Shared fields
   const [crName, setCrName] = useState("");
   const [crMessage, setCrMessage] = useState("");
   const [crLink, setCrLink] = useState("");
-  const [crImage, setCrImage] = useState("");
   const [crCta, setCrCta] = useState("LEARN_MORE");
+  // Link fields
+  const [crImage, setCrImage] = useState("");
+  // Video fields
+  const [crVideoUrl, setCrVideoUrl] = useState("");
+  const [crVideoId, setCrVideoId] = useState("");
+  const [crThumbnail, setCrThumbnail] = useState("");
+  const [crLinkDesc, setCrLinkDesc] = useState("");
+  // Carousel fields
+  const [carouselItems, setCarouselItems] = useState([
+    { link: "", name: "", description: "", image_url: "" },
+    { link: "", name: "", description: "", image_url: "" },
+  ]);
   // Ad fields
   const [adName, setAdName] = useState("");
 
@@ -686,20 +699,45 @@ function AdsList({ adsetId, onEdit }: any) {
     { value: "SIGN_UP", label: "Aanmelden" }, { value: "CONTACT_US", label: "Neem contact op" },
     { value: "DOWNLOAD", label: "Downloaden" }, { value: "GET_OFFER", label: "Aanbieding bekijken" },
     { value: "BOOK_TRAVEL", label: "Boeken" }, { value: "SUBSCRIBE", label: "Abonneren" },
+    { value: "GET_DIRECTIONS", label: "Routebeschrijving" }, { value: "APPLY_NOW", label: "Nu solliciteren" },
   ];
 
   function resetForm() {
-    setStep(1); setCreativeId(""); setPreviewHtml(""); setCrName(""); setCrMessage(""); setCrLink(""); setCrImage(""); setCrCta("LEARN_MORE"); setAdName("");
+    setStep(1); setCreativeId(""); setPreviewHtml(""); setCreativeType("link");
+    setCrName(""); setCrMessage(""); setCrLink(""); setCrCta("LEARN_MORE");
+    setCrImage(""); setCrVideoUrl(""); setCrVideoId(""); setCrThumbnail(""); setCrLinkDesc("");
+    setCarouselItems([{ link: "", name: "", description: "", image_url: "" }, { link: "", name: "", description: "", image_url: "" }]);
+    setAdName("");
+  }
+
+  async function handleUploadVideo() {
+    if (!crVideoUrl) return;
+    try {
+      const result = await uploadVideo.mutateAsync({ video_url: crVideoUrl, title: crName || undefined });
+      if (result?.video_id) {
+        setCrVideoId(result.video_id);
+        toast.success(`Video geüpload (ID: ${result.video_id})`);
+      }
+    } catch {}
   }
 
   async function handleCreateCreative() {
     try {
-      const result = await createCreative.mutateAsync({ name: crName, message: crMessage, link: crLink, image_url: crImage || undefined, cta_type: crCta });
+      let creativeParams: any = { name: crName, creative_type: creativeType };
+
+      if (creativeType === "link") {
+        creativeParams = { ...creativeParams, message: crMessage, link: crLink, image_url: crImage || undefined, cta_type: crCta };
+      } else if (creativeType === "video") {
+        creativeParams = { ...creativeParams, video_id: crVideoId, thumbnail_url: crThumbnail || undefined, message: crMessage || undefined, link: crLink || undefined, cta_type: crLink ? crCta : undefined, link_description: crLinkDesc || undefined };
+      } else if (creativeType === "carousel") {
+        creativeParams = { ...creativeParams, message: crMessage, link: crLink, child_attachments: carouselItems.filter(i => i.link) };
+      }
+
+      const result = await createCreative.mutateAsync(creativeParams);
       if (result?.creative_id) {
         setCreativeId(result.creative_id);
         setAdName(crName);
         setStep(2);
-        // Auto-load preview
         try {
           const prev = await adPreview.mutateAsync({ creative_id: result.creative_id, ad_format: "DESKTOP_FEED_STANDARD" });
           if (prev?.previews?.[0]?.body) setPreviewHtml(prev.previews[0].body);
@@ -715,6 +753,26 @@ function AdsList({ adsetId, onEdit }: any) {
       resetForm();
     } catch {}
   }
+
+  function updateCarouselItem(index: number, field: string, value: string) {
+    setCarouselItems(items => items.map((item, i) => i === index ? { ...item, [field]: value } : item));
+  }
+
+  function addCarouselItem() {
+    if (carouselItems.length >= 10) return;
+    setCarouselItems(items => [...items, { link: "", name: "", description: "", image_url: "" }]);
+  }
+
+  function removeCarouselItem(index: number) {
+    if (carouselItems.length <= 2) return;
+    setCarouselItems(items => items.filter((_, i) => i !== index));
+  }
+
+  const canCreateCreative = crName.trim() && (
+    (creativeType === "link" && crMessage.trim() && crLink.trim()) ||
+    (creativeType === "video" && crVideoId) ||
+    (creativeType === "carousel" && crMessage.trim() && crLink.trim() && carouselItems.filter(i => i.link).length >= 2)
+  );
 
   return (
     <div className="space-y-3">
@@ -764,25 +822,116 @@ function AdsList({ adsetId, onEdit }: any) {
       )}
 
       <Dialog open={showCreate} onOpenChange={(open) => { if (!open) { setShowCreate(false); resetForm(); } else setShowCreate(true); }}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{step === 1 ? "Stap 1: Creative aanmaken" : "Stap 2: Advertentie aanmaken"}</DialogTitle>
-            <DialogDescription>{step === 1 ? "Stel de visuele en tekstuele elementen in voor je advertentie." : "Geef de advertentie een naam en maak hem aan."}</DialogDescription>
+            <DialogDescription>{step === 1 ? "Kies het type en stel de elementen in." : "Geef de advertentie een naam en maak hem aan."}</DialogDescription>
           </DialogHeader>
 
           {step === 1 ? (
             <div className="space-y-3">
-              <div><Label>Creative naam</Label><Input value={crName} onChange={(e) => setCrName(e.target.value)} placeholder="Mijn creative" /></div>
-              <div><Label>Bericht</Label><Textarea value={crMessage} onChange={(e) => setCrMessage(e.target.value)} placeholder="Bekijk ons nieuwe product!" rows={3} /></div>
-              <div><Label>Bestemmings-URL</Label><Input value={crLink} onChange={(e) => setCrLink(e.target.value)} placeholder="https://mijnwebsite.nl/product" /></div>
-              <div><Label>Afbeelding URL (optioneel)</Label><Input value={crImage} onChange={(e) => setCrImage(e.target.value)} placeholder="https://..." /></div>
+              {/* Type selector */}
               <div>
-                <Label>Call-to-Action</Label>
-                <Select value={crCta} onValueChange={setCrCta}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CTA_TYPES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
-                </Select>
+                <Label className="mb-1.5 block">Type creative</Label>
+                <div className="flex gap-2">
+                  <Button variant={creativeType === "link" ? "default" : "outline"} size="sm" onClick={() => setCreativeType("link")}>
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" />Link
+                  </Button>
+                  <Button variant={creativeType === "video" ? "default" : "outline"} size="sm" onClick={() => setCreativeType("video")}>
+                    <Film className="h-3.5 w-3.5 mr-1" />Video
+                  </Button>
+                  <Button variant={creativeType === "carousel" ? "default" : "outline"} size="sm" onClick={() => setCreativeType("carousel")}>
+                    <LayoutGrid className="h-3.5 w-3.5 mr-1" />Carousel
+                  </Button>
+                </div>
               </div>
+
+              <div><Label>Creative naam</Label><Input value={crName} onChange={(e) => setCrName(e.target.value)} placeholder="Mijn creative" /></div>
+
+              {/* LINK type fields */}
+              {creativeType === "link" && (
+                <>
+                  <div><Label>Bericht</Label><Textarea value={crMessage} onChange={(e) => setCrMessage(e.target.value)} placeholder="Bekijk ons nieuwe product!" rows={3} /></div>
+                  <div><Label>Bestemmings-URL</Label><Input value={crLink} onChange={(e) => setCrLink(e.target.value)} placeholder="https://mijnwebsite.nl/product" /></div>
+                  <div><Label>Afbeelding URL (optioneel)</Label><Input value={crImage} onChange={(e) => setCrImage(e.target.value)} placeholder="https://..." /></div>
+                  <div>
+                    <Label>Call-to-Action</Label>
+                    <Select value={crCta} onValueChange={setCrCta}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{CTA_TYPES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
+
+              {/* VIDEO type fields */}
+              {creativeType === "video" && (
+                <>
+                  <div>
+                    <Label>Video URL (publiek toegankelijk)</Label>
+                    <div className="flex gap-2">
+                      <Input value={crVideoUrl} onChange={(e) => setCrVideoUrl(e.target.value)} placeholder="https://mijnsite.nl/video.mp4" className="flex-1" />
+                      <Button size="sm" variant="outline" onClick={handleUploadVideo} disabled={!crVideoUrl || uploadVideo.isPending}>
+                        {uploadVideo.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+                  {crVideoId && (
+                    <div className="p-2 rounded bg-muted/50 text-xs flex items-center gap-2">
+                      <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                      <span>Video geüpload — ID: {crVideoId}</span>
+                    </div>
+                  )}
+                  <div><Label>Thumbnail URL (optioneel)</Label><Input value={crThumbnail} onChange={(e) => setCrThumbnail(e.target.value)} placeholder="https://..." /></div>
+                  <div><Label>Bericht (optioneel)</Label><Textarea value={crMessage} onChange={(e) => setCrMessage(e.target.value)} placeholder="Bekijk onze nieuwe video!" rows={2} /></div>
+                  <div><Label>Bestemmings-URL (optioneel, voor CTA)</Label><Input value={crLink} onChange={(e) => setCrLink(e.target.value)} placeholder="https://..." /></div>
+                  {crLink && (
+                    <>
+                      <div><Label>Link beschrijving</Label><Input value={crLinkDesc} onChange={(e) => setCrLinkDesc(e.target.value)} placeholder="Bekijk meer op onze website" /></div>
+                      <div>
+                        <Label>Call-to-Action</Label>
+                        <Select value={crCta} onValueChange={setCrCta}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>{CTA_TYPES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* CAROUSEL type fields */}
+              {creativeType === "carousel" && (
+                <>
+                  <div><Label>Bericht</Label><Textarea value={crMessage} onChange={(e) => setCrMessage(e.target.value)} placeholder="Ontdek onze producten" rows={2} /></div>
+                  <div><Label>"Meer bekijken" URL</Label><Input value={crLink} onChange={(e) => setCrLink(e.target.value)} placeholder="https://mijnwebsite.nl" /></div>
+                  <Separator />
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-semibold">Kaarten ({carouselItems.length}/10)</Label>
+                      <Button variant="outline" size="sm" onClick={addCarouselItem} disabled={carouselItems.length >= 10}>
+                        <Plus className="h-3 w-3 mr-1" />Kaart
+                      </Button>
+                    </div>
+                    {carouselItems.map((item, idx) => (
+                      <ErpCard key={idx} className="p-3 space-y-2 relative">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">Kaart {idx + 1}</span>
+                          {carouselItems.length > 2 && (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeCarouselItem(idx)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                        <Input value={item.link} onChange={(e) => updateCarouselItem(idx, "link", e.target.value)} placeholder="Link URL *" className="text-xs" />
+                        <Input value={item.name} onChange={(e) => updateCarouselItem(idx, "name", e.target.value)} placeholder="Titel (optioneel)" className="text-xs" />
+                        <Input value={item.description} onChange={(e) => updateCarouselItem(idx, "description", e.target.value)} placeholder="Beschrijving / prijs (optioneel)" className="text-xs" />
+                        <Input value={item.image_url} onChange={(e) => updateCarouselItem(idx, "image_url", e.target.value)} placeholder="Afbeelding URL (optioneel)" className="text-xs" />
+                      </ErpCard>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -803,7 +952,7 @@ function AdsList({ adsetId, onEdit }: any) {
 
           <DialogFooter>
             {step === 1 ? (
-              <Button disabled={!crName.trim() || !crMessage.trim() || !crLink.trim() || createCreative.isPending} onClick={handleCreateCreative}>
+              <Button disabled={!canCreateCreative || createCreative.isPending} onClick={handleCreateCreative}>
                 {createCreative.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Creative aanmaken →
               </Button>
             ) : (
