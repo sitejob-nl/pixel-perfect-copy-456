@@ -854,6 +854,8 @@ function AdsList({ adsetId, onEdit }: any) {
     (creativeType === "carousel" && crMessage.trim() && crLink.trim() && carouselItems.filter(i => i.link).length >= 2)
   );
 
+  const [selectedAd, setSelectedAd] = useState<any>(null);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-end">
@@ -867,23 +869,40 @@ function AdsList({ adsetId, onEdit }: any) {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Preview</TableHead>
                 <TableHead>Naam</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Creative</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead className="w-[100px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {ads.map((a: any) => (
-                <TableRow key={a.id}>
-                  <TableCell className="font-medium text-xs">{a.name}</TableCell>
-                  <TableCell><StatusBadge status={a.status} /></TableCell>
+                <TableRow key={a.id} className="cursor-pointer" onClick={() => setSelectedAd(a)}>
                   <TableCell>
                     {a.creative?.thumbnail_url ? (
-                      <img src={a.creative.thumbnail_url} alt="" className="h-8 w-8 rounded object-cover" />
-                    ) : <span className="text-xs text-muted-foreground">—</span>}
+                      <div className="relative h-10 w-10 rounded overflow-hidden bg-muted">
+                        <img src={a.creative.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                        {a.creative?.video_id && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                            <Play className="h-4 w-4 text-white" fill="white" />
+                          </div>
+                        )}
+                      </div>
+                    ) : a.creative?.image_url ? (
+                      <img src={a.creative.image_url} alt="" className="h-10 w-10 rounded object-cover" />
+                    ) : (
+                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium text-xs">{a.name}</TableCell>
+                  <TableCell><StatusBadge status={a.status} /></TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {a.creative?.video_id ? "Video" : a.creative?.object_type === "SHARE" ? "Link" : a.creative?.object_type || "—"}
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="icon" className="h-7 w-7" disabled={updateAd.isPending}
                         onClick={() => updateAd.mutate({ ad_id: a.id, status: a.status === "ACTIVE" ? "PAUSED" : "ACTIVE" })}>
@@ -900,6 +919,17 @@ function AdsList({ adsetId, onEdit }: any) {
           </Table>
         </ErpCard>
       )}
+
+      {/* Ad Detail Sheet */}
+      <Sheet open={!!selectedAd} onOpenChange={(o) => !o && setSelectedAd(null)}>
+        <SheetContent className="sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{selectedAd?.name || "Advertentie"}</SheetTitle>
+            <SheetDescription>Details, creative en prestaties</SheetDescription>
+          </SheetHeader>
+          {selectedAd && <AdDetailContent ad={selectedAd} />}
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={showCreate} onOpenChange={(open) => { if (!open) { setShowCreate(false); resetForm(); } else setShowCreate(true); }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
