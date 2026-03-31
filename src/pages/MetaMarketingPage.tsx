@@ -37,7 +37,7 @@ import {
   Facebook, Instagram, MessageCircle, Play, Pause, Send, Plus, Trash2,
   ThumbsUp, MessageSquare, Heart, Image as ImageIcon, ExternalLink,
   ChevronRight, Settings, RefreshCw, Link2, Unlink, CheckCircle, XCircle,
-  Upload, BarChart3, Target, Megaphone, Clock
+  Upload, BarChart3, Target, Megaphone, Clock, Film, LayoutGrid
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
