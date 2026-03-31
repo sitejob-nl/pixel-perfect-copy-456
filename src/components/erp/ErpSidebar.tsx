@@ -169,6 +169,7 @@ export default function ErpSidebar() {
 
   const isModuleEnabled = (pageKey: string) => {
     const moduleKey = moduleMap[pageKey];
+    if (pageKey === "meta-ads") return true;
     if (!moduleKey || !modules) return true;
     return (modules as any)[moduleKey] === true;
   };

@@ -69,6 +69,116 @@ Deno.serve(async (req) => {
 
     if (!userToken) throw new Error("Geen Meta access token beschikbaar");
 
+    // ── AVAILABLE ASSETS ──
+    if (action === "assets") {
+      const [pagesRes, adAccountsRes] = await Promise.all([
+        fetch(
+          `https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${userToken}`
+        ),
+        fetch(
+          `https://graph.facebook.com/v25.0/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100&access_token=${userToken}`
+        ),
+      ]);
+
+      const pagesData = await pagesRes.json();
+      const adAccountsData = await adAccountsRes.json();
+
+      if (pagesData.error) throw new Error(pagesData.error.message);
+      if (adAccountsData.error) throw new Error(adAccountsData.error.message);
+
+      const pages = (pagesData.data || []).map((page: any) => ({
+        id: page.id,
+        name: page.name,
+        has_page_token: !!page.access_token,
+        instagram_account_id: page.instagram_business_account?.id || null,
+        instagram_username: page.instagram_business_account?.username || null,
+      }));
+
+      const instagramAccounts = pages
+        .filter((page: any) => page.instagram_account_id)
+        .map((page: any) => ({
+          id: page.instagram_account_id,
+          username: page.instagram_username,
+          page_id: page.id,
+          page_name: page.name,
+        }));
+
+      const adAccounts = (adAccountsData.data || []).map((account: any) => ({
+        id: account.id,
+        name: account.name,
+        account_status: account.account_status,
+        currency: account.currency || null,
+        timezone_name: account.timezone_name || null,
+      }));
+
+      return new Response(JSON.stringify({ pages, instagram_accounts: instagramAccounts, ad_accounts: adAccounts }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── SELECT ASSETS ──
+    if (action === "select_assets") {
+      const selectedPageId = params?.page_id || null;
+      const selectedInstagramId = params?.instagram_account_id || null;
+      const selectedAdAccountId = params?.ad_account_id || null;
+
+      const pagesRes = await fetch(
+        `https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&limit=100&access_token=${userToken}`
+      );
+      const pagesData = await pagesRes.json();
+      if (pagesData.error) throw new Error(pagesData.error.message);
+
+      const adAccountsRes = await fetch(
+        `https://graph.facebook.com/v25.0/me/adaccounts?fields=id,name&limit=100&access_token=${userToken}`
+      );
+      const adAccountsData = await adAccountsRes.json();
+      if (adAccountsData.error) throw new Error(adAccountsData.error.message);
+
+      const pages = pagesData.data || [];
+      const adAccounts = adAccountsData.data || [];
+
+      const selectedPage = selectedPageId
+        ? pages.find((page: any) => page.id === selectedPageId)
+        : null;
+      const selectedInstagram = selectedInstagramId
+        ? pages
+            .map((page: any) => ({
+              id: page.instagram_business_account?.id,
+              username: page.instagram_business_account?.username,
+              page_id: page.id,
+            }))
+            .find((account: any) => account.id === selectedInstagramId)
+        : null;
+      const selectedAdAccount = selectedAdAccountId
+        ? adAccounts.find((account: any) => account.id === selectedAdAccountId)
+        : null;
+
+      const updatedFields: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+        page_id: selectedPage?.id || null,
+        page_name: selectedPage?.name || null,
+        instagram_account_id: selectedInstagram?.id || null,
+        instagram_username: selectedInstagram?.username || null,
+        ad_account_id: selectedAdAccount?.id || null,
+        ad_account_name: selectedAdAccount?.name || null,
+      };
+
+      if (selectedPage?.access_token) {
+        updatedFields.page_access_token_encrypted = encrypt(selectedPage.access_token, ENC_KEY);
+      }
+
+      const { error: updateError } = await admin
+        .from("meta_config")
+        .update(updatedFields)
+        .eq("organization_id", orgId);
+
+      if (updateError) throw updateError;
+
+      return new Response(JSON.stringify({ success: true, config: updatedFields }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ── CAMPAIGNS ──
     if (action === "campaigns") {
       const adAccountId = config.ad_account_id;

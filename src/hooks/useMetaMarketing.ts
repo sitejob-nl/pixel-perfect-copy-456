@@ -99,6 +99,54 @@ export function useMetaDisconnect() {
   });
 }
 
+export function useMetaAssets(enabled = true) {
+  const { data: org } = useOrganization();
+  const orgId = org?.organization_id;
+
+  return useQuery({
+    queryKey: ["meta-assets", orgId],
+    enabled: !!orgId && enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
+        body: { action: "assets" },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return {
+        pages: data.pages || [],
+        instagramAccounts: data.instagram_accounts || [],
+        adAccounts: data.ad_accounts || [],
+      };
+    },
+  });
+}
+
+type MetaAssetSelection = {
+  page_id: string | null;
+  instagram_account_id: string | null;
+  ad_account_id: string | null;
+};
+
+export function useMetaSaveSelection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (selection: MetaAssetSelection) => {
+      const { data, error } = await supabase.functions.invoke("connect-meta-api", {
+        body: { action: "select_assets", params: selection },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-config"] });
+      qc.invalidateQueries({ queryKey: ["meta-status"] });
+      qc.invalidateQueries({ queryKey: ["meta-assets"] });
+      toast.success("Meta selectie opgeslagen");
+    },
+  });
+}
+
 export function useMetaCampaigns() {
   return useQuery({
     queryKey: ["meta-campaigns"],
