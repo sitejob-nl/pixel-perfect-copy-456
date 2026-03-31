@@ -113,6 +113,33 @@ Deno.serve(async (req) => {
 
     const GV = "v25.0";
 
+    // ── HEALTH CHECK ──
+    if (action === "health") {
+      const tokenExpiresAt = config.token_expires_at ? new Date(config.token_expires_at) : null;
+      const now = new Date();
+      const daysUntilExpiry = tokenExpiresAt ? Math.floor((tokenExpiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+
+      return ok({
+        connected: true,
+        token_health: {
+          expires_at: config.token_expires_at,
+          days_until_expiry: daysUntilExpiry,
+          is_expired: daysUntilExpiry !== null && daysUntilExpiry <= 0,
+          is_expiring_soon: daysUntilExpiry !== null && daysUntilExpiry > 0 && daysUntilExpiry <= 7,
+          last_refreshed: config.last_refreshed_at || null,
+          refresh_count: config.refresh_count || 0,
+          last_webhook: config.updated_at,
+        },
+        assets: {
+          page: config.page_id ? { id: config.page_id, name: config.page_name } : null,
+          ad_account: config.ad_account_id ? { id: config.ad_account_id, name: config.ad_account_name } : null,
+          instagram: config.instagram_account_id ? { id: config.instagram_account_id, username: config.instagram_username } : null,
+          business_id: config.business_id || null,
+        },
+        granted_scopes: config.granted_scopes ? config.granted_scopes.split(",").map((s: string) => s.trim()) : [],
+      });
+    }
+
     // ── AVAILABLE ASSETS ──
     if (action === "assets") {
       const [pagesData, adAccountsData] = await Promise.all([
