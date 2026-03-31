@@ -6102,6 +6102,207 @@ export type Database = {
           },
         ]
       }
+      meta_config: {
+        Row: {
+          ad_account_id: string | null
+          ad_account_name: string | null
+          business_id: string | null
+          granted_scopes: string | null
+          id: string
+          instagram_account_id: string | null
+          instagram_username: string | null
+          organization_id: string
+          page_access_token_encrypted: string | null
+          page_id: string | null
+          page_name: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_access_token_encrypted: string | null
+        }
+        Insert: {
+          ad_account_id?: string | null
+          ad_account_name?: string | null
+          business_id?: string | null
+          granted_scopes?: string | null
+          id?: string
+          instagram_account_id?: string | null
+          instagram_username?: string | null
+          organization_id: string
+          page_access_token_encrypted?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_access_token_encrypted?: string | null
+        }
+        Update: {
+          ad_account_id?: string | null
+          ad_account_name?: string | null
+          business_id?: string | null
+          granted_scopes?: string | null
+          id?: string
+          instagram_account_id?: string | null
+          instagram_username?: string | null
+          organization_id?: string
+          page_access_token_encrypted?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_access_token_encrypted?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_config_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_connections: {
+        Row: {
+          connect_url: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          sitejob_tenant_id: string
+          status: string
+          updated_at: string
+          webhook_secret_encrypted: string
+        }
+        Insert: {
+          connect_url?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          sitejob_tenant_id: string
+          status?: string
+          updated_at?: string
+          webhook_secret_encrypted: string
+        }
+        Update: {
+          connect_url?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          sitejob_tenant_id?: string
+          status?: string
+          updated_at?: string
+          webhook_secret_encrypted?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_connections_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meta_leads: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          campaign_name: string | null
+          contact_id: string | null
+          created_at: string
+          fields: Json | null
+          form_id: string | null
+          form_name: string | null
+          id: string
+          meta_lead_id: string | null
+          organization_id: string
+          processed_at: string | null
+          raw_data: Json | null
+          status: string
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          campaign_name?: string | null
+          contact_id?: string | null
+          created_at?: string
+          fields?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          id?: string
+          meta_lead_id?: string | null
+          organization_id: string
+          processed_at?: string | null
+          raw_data?: Json | null
+          status?: string
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          campaign_name?: string | null
+          contact_id?: string | null
+          created_at?: string
+          fields?: Json | null
+          form_id?: string | null
+          form_name?: string | null
+          id?: string
+          meta_lead_id?: string | null
+          organization_id?: string
+          processed_at?: string | null
+          raw_data?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_hot_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_leads_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_lead_pipeline"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_snapshots: {
         Row: {
           active_projects: number | null
