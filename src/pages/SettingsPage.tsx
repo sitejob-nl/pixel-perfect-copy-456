@@ -95,6 +95,7 @@ export default function SettingsPage() {
       {safeTab === "linkedin" && <LinkedInSettings />}
       {safeTab === "google" && <GoogleSettings />}
       {isAdmin && safeTab === "whatsapp" && <WhatsAppSettings />}
+      {isAdmin && safeTab === "meta" && <MetaSettings />}
 
       {safeTab === "notificaties" && <NotificationSettings />}
 
