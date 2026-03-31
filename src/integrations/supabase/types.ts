@@ -6225,6 +6225,54 @@ export type Database = {
           },
         ]
       }
+      meta_lead_stages: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_lost: boolean
+          is_won: boolean
+          name: string
+          organization_id: string
+          sort_order: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_lost?: boolean
+          is_won?: boolean
+          name: string
+          organization_id: string
+          sort_order?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_lost?: boolean
+          is_won?: boolean
+          name?: string
+          organization_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_lead_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_lead_stages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_leads: {
         Row: {
           ad_id: string | null
@@ -6241,6 +6289,7 @@ export type Database = {
           organization_id: string
           processed_at: string | null
           raw_data: Json | null
+          stage_id: string | null
           status: string
         }
         Insert: {
@@ -6258,6 +6307,7 @@ export type Database = {
           organization_id: string
           processed_at?: string | null
           raw_data?: Json | null
+          stage_id?: string | null
           status?: string
         }
         Update: {
@@ -6275,6 +6325,7 @@ export type Database = {
           organization_id?: string
           processed_at?: string | null
           raw_data?: Json | null
+          stage_id?: string | null
           status?: string
         }
         Relationships: [
@@ -6311,6 +6362,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meta_leads_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "meta_lead_stages"
             referencedColumns: ["id"]
           },
         ]
