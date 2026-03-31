@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ErpCard } from "@/components/erp/ErpPrimitives";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -325,14 +325,21 @@ function FacebookPanel() {
   const [loading, setLoading] = useState(false);
   const [newPost, setNewPost] = useState("");
   const [posting, setPosting] = useState(false);
+  const [permError, setPermError] = useState<string | null>(null);
 
   async function loadPosts() {
     setLoading(true);
+    setPermError(null);
     try {
       const data = await metaApi("page_posts");
       setPosts(data.posts || []);
     } catch (err: any) {
-      toast.error(err.message);
+      const msg = err.message || "";
+      if (msg.includes("pages_read_engagement") || msg.includes("permission") || msg.includes("Permission")) {
+        setPermError("Je Meta app mist de 'pages_read_engagement' permissie. Voeg deze toe in je Meta Developer Console om posts te kunnen laden.");
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -384,7 +391,14 @@ function FacebookPanel() {
           </Button>
         </div>
 
-        {posts.length === 0 && !loading && (
+        {permError && (
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-center space-y-2 mb-4">
+            <AlertCircle className="h-6 w-6 text-yellow-500 mx-auto" />
+            <p className="text-sm text-foreground">{permError}</p>
+          </div>
+        )}
+
+        {!permError && posts.length === 0 && !loading && (
           <p className="text-sm text-muted-foreground text-center py-8">Geen posts gevonden</p>
         )}
 
@@ -423,10 +437,12 @@ function InstagramPanel() {
   const [media, setMedia] = useState<any[]>([]);
   const [insights, setInsights] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [showPublisher, setShowPublisher] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
 
   async function loadData() {
     setLoading(true);
@@ -444,13 +460,41 @@ function InstagramPanel() {
     }
   }
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Alleen afbeeldingen zijn toegestaan");
+      return;
+    }
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
   async function publish() {
-    if (!imageUrl.trim()) return;
+    if (!selectedFile) return;
     setPublishing(true);
     try {
-      await metaApi("instagram_publish", { image_url: imageUrl.trim(), caption: caption.trim() });
+      // Upload to Supabase storage (public bucket)
+      const fileName = `ig_${Date.now()}_${selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const storagePath = `instagram/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("meta-uploads")
+        .upload(storagePath, selectedFile, { contentType: selectedFile.type, upsert: true });
+
+      if (uploadError) throw new Error("Upload mislukt: " + uploadError.message);
+
+      const { data: urlData } = supabase.storage
+        .from("meta-uploads")
+        .getPublicUrl(storagePath);
+
+      if (!urlData?.publicUrl) throw new Error("Kon publieke URL niet ophalen");
+
+      await metaApi("instagram_publish", { image_url: urlData.publicUrl, caption: caption.trim() });
       toast.success("Instagram post gepubliceerd!");
-      setImageUrl("");
+      setSelectedFile(null);
+      setPreviewUrl(null);
       setCaption("");
       setShowPublisher(false);
       loadData();
@@ -491,12 +535,37 @@ function InstagramPanel() {
         </div>
 
         {showPublisher && (
-          <div className="rounded-lg border border-border p-3 mb-4 space-y-2">
-            <Input
-              placeholder="Afbeelding URL (publiek bereikbaar)"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-            />
+          <div className="rounded-lg border border-border p-3 mb-4 space-y-3">
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                id="ig-file-upload"
+                onChange={handleFileSelect}
+              />
+              {previewUrl ? (
+                <div className="relative">
+                  <img src={previewUrl} alt="Preview" className="w-full max-h-64 object-contain rounded-lg border border-border" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="absolute top-2 right-2"
+                    onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}
+                  >
+                    Verwijderen
+                  </Button>
+                </div>
+              ) : (
+                <label
+                  htmlFor="ig-file-upload"
+                  className="flex flex-col items-center justify-center w-full h-32 rounded-lg border-2 border-dashed border-border cursor-pointer hover:border-primary/50 transition-colors"
+                >
+                  <ImageIcon className="h-8 w-8 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">Klik om een afbeelding te selecteren</span>
+                </label>
+              )}
+            </div>
             <Textarea
               placeholder="Caption..."
               value={caption}
@@ -504,8 +573,8 @@ function InstagramPanel() {
               rows={2}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowPublisher(false)}>Annuleren</Button>
-              <Button size="sm" onClick={publish} disabled={publishing || !imageUrl.trim()}>
+              <Button variant="outline" size="sm" onClick={() => { setShowPublisher(false); setSelectedFile(null); setPreviewUrl(null); }}>Annuleren</Button>
+              <Button size="sm" onClick={publish} disabled={publishing || !selectedFile}>
                 {publishing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Send className="h-3.5 w-3.5 mr-1" />}
                 Publiceren
               </Button>
