@@ -13,6 +13,7 @@ import NotificationSettings from "@/components/erp/NotificationSettings";
 import GoogleSettings from "@/components/erp/GoogleSettings";
 import IntegrationSettings from "@/components/erp/IntegrationSettings";
 import McpApiKeySettings from "@/components/erp/McpApiKeySettings";
+import MetaSettings from "@/components/erp/MetaSettings";
 
 const allTabs = [
   { key: "algemeen", label: "Algemeen", icon: "⚙️", adminOnly: true },
@@ -25,6 +26,7 @@ const allTabs = [
   { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
   { key: "google", label: "Google", icon: "📧", adminOnly: false },
   { key: "whatsapp", label: "WhatsApp", icon: "📱", adminOnly: true },
+  { key: "meta", label: "Meta", icon: "📣", adminOnly: true },
   { key: "notificaties", label: "Notificaties", icon: "🔔", adminOnly: false },
   { key: "account", label: "Account", icon: "👤", adminOnly: false },
 ] as const;
@@ -93,6 +95,7 @@ export default function SettingsPage() {
       {safeTab === "linkedin" && <LinkedInSettings />}
       {safeTab === "google" && <GoogleSettings />}
       {isAdmin && safeTab === "whatsapp" && <WhatsAppSettings />}
+      {isAdmin && safeTab === "meta" && <MetaSettings />}
 
       {safeTab === "notificaties" && <NotificationSettings />}
 
