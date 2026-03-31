@@ -22,8 +22,10 @@ import {
 } from "recharts";
 import {
   useMetaHealth, useMetaConfig, useMetaAssets, useMetaSaveSelection,
-  useMetaCampaigns, useUpdateCampaign, useMetaAdSets, useUpdateAdSet,
-  useMetaAds, useUpdateAd, useMetaInsights, useMetaCampaignInsights,
+  useMetaCampaigns, useUpdateCampaign, useCreateCampaign,
+  useMetaAdSets, useUpdateAdSet, useCreateAdSet,
+  useMetaAds, useUpdateAd, useCreateAd, useCreateAdCreative,
+  useMetaInsights, useMetaCampaignInsights,
   useMetaPagePosts, useCreatePagePost, useDeletePagePost,
   useMetaInstagramMedia, useMetaInstagramInsights, useInstagramPublish,
   useMetaLeads, useMetaImportLead,
