@@ -210,7 +210,8 @@ const App = () => (
               <Route path="calls" element={<CallsPage />} />
               <Route path="webhooks" element={<WebhooksPage />} />
               <Route path="drafts" element={<EmailDraftsPage />} />
-              <Route path="meta-ads" element={<MetaAdsPage />} />
+              <Route path="meta-ads" element={<MetaMarketingPage />} />
+              <Route path="marketing" element={<MetaMarketingPage />} />
               
               <Route path="settings" element={<SettingsPage />} />
               <Route path="admin" element={<AdminRoute />} />

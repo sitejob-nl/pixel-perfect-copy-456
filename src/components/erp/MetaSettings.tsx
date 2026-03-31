@@ -14,9 +14,10 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function MetaSettings() {
-  const { data: connection, isLoading: connLoading } = useMetaConnection();
+  const { data: health, isLoading: connLoading } = useMetaHealth();
+  const connection = health ? { status: health.connected ? "active" : "disconnected" } : null;
   const { data: config, isLoading: configLoading } = useMetaConfig();
-  const { data: assets, isLoading: assetsLoading, refetch: refetchAssets } = useMetaAssets(!!connection);
+  const { data: assets, isLoading: assetsLoading, refetch: refetchAssets } = useMetaAssets(!!health?.connected);
   const register = useMetaRegister();
   const disconnect = useMetaDisconnect();
   const saveSelection = useMetaSaveSelection();
