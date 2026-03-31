@@ -529,9 +529,10 @@ Deno.serve(async (req) => {
       const { name, objective, status: campStatus } = params || {};
       if (!name || !objective) throw new Error("name en objective vereist");
 
+      const special_ad_categories = params.special_ad_categories || [];
       const data = await graphPost(
         `https://graph.facebook.com/${GV}/${adAccountId}/campaigns?access_token=${userToken}`,
-        { name, objective, status: campStatus || "PAUSED" }
+        { name, objective, status: campStatus || "PAUSED", special_ad_categories: JSON.stringify(special_ad_categories) }
       );
       return ok({ success: true, campaign_id: data.id });
     }
