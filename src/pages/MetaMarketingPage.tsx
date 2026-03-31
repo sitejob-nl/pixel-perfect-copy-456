@@ -24,7 +24,7 @@ import {
   useMetaHealth, useMetaConfig, useMetaAssets, useMetaSaveSelection,
   useMetaCampaigns, useUpdateCampaign, useCreateCampaign,
   useMetaAdSets, useUpdateAdSet, useCreateAdSet,
-  useMetaAds, useUpdateAd, useCreateAd, useCreateAdCreative, useAdPreview,
+  useMetaAds, useUpdateAd, useCreateAd, useCreateAdCreative, useAdPreview, useUploadAdVideo,
   useMetaInsights, useMetaCampaignInsights,
   useMetaPagePosts, useCreatePagePost, useDeletePagePost,
   useMetaInstagramMedia, useMetaInstagramInsights, useInstagramPublish,
