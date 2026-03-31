@@ -223,6 +223,36 @@ function DashboardTab() {
   const totals = insightsData?.insights?.[0] || {};
   const campaigns = campaignData?.insights || [];
 
+  // Chart data
+  const spendChart = useMemo(() =>
+    campaigns.map((c: any) => ({
+      name: c.campaign_name?.length > 20 ? c.campaign_name.slice(0, 20) + "…" : c.campaign_name,
+      Uitgaven: Number(c.spend) || 0,
+      Klikken: Number(c.clicks) || 0,
+      Impressies: Number(c.impressions) || 0,
+      Bereik: Number(c.reach) || 0,
+      CTR: Number(c.ctr) || 0,
+      CPC: Number(c.cpc) || 0,
+    })).sort((a: any, b: any) => b.Uitgaven - a.Uitgaven).slice(0, 10),
+    [campaigns]
+  );
+
+  const pieData = useMemo(() =>
+    campaigns.filter((c: any) => Number(c.spend) > 0).map((c: any) => ({
+      name: c.campaign_name?.length > 25 ? c.campaign_name.slice(0, 25) + "…" : c.campaign_name,
+      value: Number(c.spend) || 0,
+    })).sort((a: any, b: any) => b.value - a.value).slice(0, 8),
+    [campaigns]
+  );
+
+  const PIE_COLORS = [
+    "hsl(var(--primary))", "hsl(var(--accent))",
+    "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"
+  ];
+
+  const euroFormatter = (v: number) => fmtEuro(v);
+  const numFormatter = (v: number) => fmtNum(v);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -237,6 +267,7 @@ function DashboardTab() {
         </Button>
       </div>
 
+      {/* KPI Cards */}
       {insightsLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
@@ -252,6 +283,81 @@ function DashboardTab() {
         </div>
       )}
 
+      {/* Charts row */}
+      {!campaignLoading && spendChart.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Spend per campaign bar chart */}
+          <ErpCard className="p-4 lg:col-span-2">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Uitgaven per campagne</h3>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={spendChart} layout="vertical" margin={{ left: 10, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis type="number" tickFormatter={euroFormatter} tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                  <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                  <RechartsTooltip
+                    formatter={(value: number) => [fmtEuro(value), "Uitgaven"]}
+                    contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
+                  />
+                  <Bar dataKey="Uitgaven" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </ErpCard>
+
+          {/* Spend distribution pie */}
+          <ErpCard className="p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Budgetverdeling</h3>
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="45%" outerRadius={80} innerRadius={40} paddingAngle={2}>
+                    {pieData.map((_: any, i: number) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip
+                    formatter={(value: number) => [fmtEuro(value), "Uitgaven"]}
+                    contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </ErpCard>
+        </div>
+      )}
+
+      {/* Performance chart: clicks vs impressions vs CTR */}
+      {!campaignLoading && spendChart.length > 1 && (
+        <ErpCard className="p-4">
+          <h3 className="text-sm font-semibold text-foreground mb-3">Prestaties per campagne</h3>
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={spendChart} margin={{ left: 10, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <XAxis dataKey="name" tick={{ fontSize: 9 }} angle={-20} textAnchor="end" height={60} className="text-muted-foreground" />
+                <YAxis yAxisId="left" tickFormatter={numFormatter} tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                <YAxis yAxisId="right" orientation="right" tickFormatter={(v) => `${v}%`} tick={{ fontSize: 10 }} className="text-muted-foreground" />
+                <RechartsTooltip
+                  contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid hsl(var(--border))", background: "hsl(var(--background))" }}
+                  formatter={(value: number, name: string) => {
+                    if (name === "CTR") return [`${Number(value).toFixed(2)}%`, name];
+                    if (name === "CPC") return [fmtEuro(value), name];
+                    return [fmtNum(value), name];
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar yAxisId="left" dataKey="Klikken" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar yAxisId="left" dataKey="Bereik" fill="#10b981" radius={[4, 4, 0, 0]} barSize={24} opacity={0.6} />
+                <Line yAxisId="right" dataKey="CTR" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+        </ErpCard>
+      )}
+
+      {/* Campaign performance table */}
       <ErpCard className="p-4">
         <h3 className="text-sm font-semibold text-foreground mb-3">Campagne prestaties</h3>
         {campaignLoading ? <LoadingTable cols={7} /> : campaigns.length === 0 ? (
