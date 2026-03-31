@@ -666,10 +666,12 @@ function AdsList({ adsetId, onEdit }: any) {
   const updateAd = useUpdateAd();
   const createCreative = useCreateAdCreative();
   const createAd = useCreateAd();
+  const adPreview = useAdPreview();
   const ads = data?.ads || [];
   const [showCreate, setShowCreate] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [creativeId, setCreativeId] = useState("");
+  const [previewHtml, setPreviewHtml] = useState("");
   // Creative fields
   const [crName, setCrName] = useState("");
   const [crMessage, setCrMessage] = useState("");
@@ -687,7 +689,7 @@ function AdsList({ adsetId, onEdit }: any) {
   ];
 
   function resetForm() {
-    setStep(1); setCreativeId(""); setCrName(""); setCrMessage(""); setCrLink(""); setCrImage(""); setCrCta("LEARN_MORE"); setAdName("");
+    setStep(1); setCreativeId(""); setPreviewHtml(""); setCrName(""); setCrMessage(""); setCrLink(""); setCrImage(""); setCrCta("LEARN_MORE"); setAdName("");
   }
 
   async function handleCreateCreative() {
