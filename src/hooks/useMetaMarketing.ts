@@ -335,6 +335,46 @@ export function useAdPreview() {
 
 
 
+// ── Lead Forms ──
+
+export function useMetaLeadForms() {
+  return useQuery({
+    queryKey: ["meta-lead-forms"],
+    queryFn: () => metaApi("lead_forms"),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useCreateLeadForm() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: {
+      name: string;
+      questions: Array<{ type: string; key?: string; label?: string }>;
+      privacy_policy_url: string;
+      follow_up_action_url?: string;
+    }) => metaApi("create_lead_form", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-lead-forms"] });
+      toast.success("Lead formulier aangemaakt");
+    },
+  });
+}
+
+export function useSyncLeads() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => metaApi("sync_leads"),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["meta-leads"] });
+      toast.success(`${data?.new_leads || 0} nieuwe leads gesynchroniseerd`);
+    },
+  });
+}
+
+// ── Leads ──
+
 export function useMetaLeads(status?: string) {
   return useQuery({
     queryKey: ["meta-leads", status],

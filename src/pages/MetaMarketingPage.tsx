@@ -28,7 +28,7 @@ import {
   useMetaInsights, useMetaCampaignInsights,
   useMetaPagePosts, useCreatePagePost, useDeletePagePost,
   useMetaInstagramMedia, useMetaInstagramInsights, useInstagramPublish,
-  useMetaLeads, useMetaImportLead,
+  useMetaLeads, useMetaImportLead, useMetaLeadForms, useCreateLeadForm, useSyncLeads,
   useMetaConversations, useMetaConversationMessages, useSendMessage,
   useMetaRegister, useMetaDisconnect, useMetaStatus,
 } from "@/hooks/useMetaMarketing";
@@ -1251,8 +1251,10 @@ function InstagramContent() {
 
 function LeadsTab() {
   const [status, setStatus] = useState<string>("");
-  const { data, isLoading } = useMetaLeads(status || undefined);
+  const [sub, setSub] = useState<"leads" | "forms">("leads");
+  const { data, isLoading, refetch } = useMetaLeads(status || undefined);
   const importLead = useMetaImportLead();
+  const syncLeads = useSyncLeads();
   const navigate = useNavigate();
 
   const leads = data?.leads || [];
@@ -1260,68 +1262,261 @@ function LeadsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Alle leads" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Alles</SelectItem>
-            <SelectItem value="new">Nieuw</SelectItem>
-            <SelectItem value="imported">Geïmporteerd</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Button variant={sub === "leads" ? "default" : "outline"} size="sm" onClick={() => setSub("leads")}>Leads</Button>
+          <Button variant={sub === "forms" ? "default" : "outline"} size="sm" onClick={() => setSub("forms")}>Formulieren</Button>
+        </div>
+        {sub === "leads" && (
+          <div className="flex items-center gap-2">
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Alle leads" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Alles</SelectItem>
+                <SelectItem value="new">Nieuw</SelectItem>
+                <SelectItem value="imported">Geïmporteerd</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" onClick={() => syncLeads.mutate()} disabled={syncLeads.isPending}>
+              {syncLeads.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
+              Sync leads
+            </Button>
+          </div>
+        )}
       </div>
 
-      {isLoading ? <LoadingTable cols={6} /> : leads.length === 0 ? (
-        <ErpCard className="p-6 text-center"><p className="text-sm text-muted-foreground">Geen leads gevonden</p></ErpCard>
+      {sub === "leads" ? (
+        <>
+          {isLoading ? <LoadingTable cols={6} /> : leads.length === 0 ? (
+            <ErpCard className="p-8 text-center space-y-2">
+              <Target className="h-8 w-8 mx-auto text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Geen leads gevonden</p>
+              <p className="text-xs text-muted-foreground">Gebruik de "Sync leads" knop om leads van Meta op te halen, of maak een Lead Ad campagne aan.</p>
+            </ErpCard>
+          ) : (
+            <ErpCard className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Naam</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Telefoon</TableHead>
+                    <TableHead>Formulier</TableHead>
+                    <TableHead>Campagne</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Datum</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leads.map((l: any) => {
+                    const fields = typeof l.fields === "object" ? l.fields : {};
+                    return (
+                      <TableRow key={l.id}>
+                        <TableCell className="text-xs font-medium">{fields.full_name || fields.name || "—"}</TableCell>
+                        <TableCell className="text-xs">{fields.email || "—"}</TableCell>
+                        <TableCell className="text-xs">{fields.phone_number || fields.phone || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{l.form_name || "—"}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{l.campaign_name || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant={l.status === "imported" ? "default" : "secondary"} className="text-[10px]">
+                            {l.status === "imported" ? "Geïmporteerd" : "Nieuw"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs">{fmtDate(l.created_at)}</TableCell>
+                        <TableCell>
+                          {l.status === "new" ? (
+                            <Button variant="outline" size="sm" className="h-7 text-[10px]" disabled={importLead.isPending}
+                              onClick={() => importLead.mutate(l.id)}>
+                              Importeer
+                            </Button>
+                          ) : l.contact_id ? (
+                            <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => navigate(`/contacts/${l.contact_id}`)}>
+                              <ExternalLink className="h-3 w-3 mr-1" /> Contact
+                            </Button>
+                          ) : null}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </ErpCard>
+          )}
+        </>
+      ) : (
+        <LeadFormsPanel />
+      )}
+    </div>
+  );
+}
+
+function LeadFormsPanel() {
+  const { data, isLoading, refetch } = useMetaLeadForms();
+  const createForm = useCreateLeadForm();
+  const [showCreate, setShowCreate] = useState(false);
+  const [formName, setFormName] = useState("");
+  const [privacyUrl, setPrivacyUrl] = useState("");
+  const [followUpUrl, setFollowUpUrl] = useState("");
+  const [questions, setQuestions] = useState([
+    { type: "FULL_NAME", key: "full_name", label: "Naam" },
+    { type: "EMAIL", key: "email", label: "E-mail" },
+    { type: "PHONE", key: "phone_number", label: "Telefoon" },
+  ]);
+
+  const forms = data?.forms || [];
+
+  const QUESTION_TYPES = [
+    { value: "FULL_NAME", label: "Volledige naam" },
+    { value: "EMAIL", label: "E-mailadres" },
+    { value: "PHONE", label: "Telefoonnummer" },
+    { value: "CITY", label: "Stad" },
+    { value: "STATE", label: "Provincie" },
+    { value: "COUNTRY", label: "Land" },
+    { value: "ZIP", label: "Postcode" },
+    { value: "STREET_ADDRESS", label: "Straat" },
+    { value: "COMPANY_NAME", label: "Bedrijfsnaam" },
+    { value: "JOB_TITLE", label: "Functie" },
+    { value: "DATE_OF_BIRTH", label: "Geboortedatum" },
+    { value: "GENDER", label: "Geslacht" },
+    { value: "MARITAL_STATUS", label: "Burgerlijke staat" },
+    { value: "WORK_EMAIL", label: "Werk e-mail" },
+    { value: "WORK_PHONE_NUMBER", label: "Werk telefoon" },
+  ];
+
+  function addQuestion() {
+    setQuestions([...questions, { type: "CUSTOM", key: "", label: "" }]);
+  }
+
+  function removeQuestion(idx: number) {
+    if (questions.length <= 1) return;
+    setQuestions(questions.filter((_, i) => i !== idx));
+  }
+
+  function updateQuestion(idx: number, field: string, value: string) {
+    setQuestions(questions.map((q, i) => {
+      if (i !== idx) return q;
+      if (field === "type") {
+        const preset = QUESTION_TYPES.find(t => t.value === value);
+        return { ...q, type: value, key: value.toLowerCase(), label: preset?.label || "" };
+      }
+      return { ...q, [field]: value };
+    }));
+  }
+
+  async function handleCreate() {
+    try {
+      await createForm.mutateAsync({
+        name: formName,
+        questions: questions.map(q => ({ type: q.type, key: q.key || undefined, label: q.label || undefined })),
+        privacy_policy_url: privacyUrl,
+        follow_up_action_url: followUpUrl || undefined,
+      });
+      setShowCreate(false);
+      setFormName("");
+      setPrivacyUrl("");
+      setFollowUpUrl("");
+      setQuestions([
+        { type: "FULL_NAME", key: "full_name", label: "Naam" },
+        { type: "EMAIL", key: "email", label: "E-mail" },
+        { type: "PHONE", key: "phone_number", label: "Telefoon" },
+      ]);
+    } catch {}
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Lead formulieren</h3>
+        <Button size="sm" onClick={() => setShowCreate(true)}><Plus className="h-3.5 w-3.5 mr-1" />Nieuw formulier</Button>
+      </div>
+
+      {isLoading ? <LoadingTable cols={4} /> : forms.length === 0 ? (
+        <ErpCard className="p-6 text-center">
+          <p className="text-sm text-muted-foreground">Geen formulieren gevonden op deze pagina</p>
+        </ErpCard>
       ) : (
         <ErpCard className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Naam</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefoon</TableHead>
-                <TableHead>Formulier</TableHead>
-                <TableHead>Campagne</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Datum</TableHead>
-                <TableHead className="w-[80px]"></TableHead>
+                <TableHead className="text-right">Leads</TableHead>
+                <TableHead>Vragen</TableHead>
+                <TableHead>Aangemaakt</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {leads.map((l: any) => {
-                const fields = typeof l.fields === "object" ? l.fields : {};
-                return (
-                  <TableRow key={l.id}>
-                    <TableCell className="text-xs font-medium">{fields.full_name || fields.name || "—"}</TableCell>
-                    <TableCell className="text-xs">{fields.email || "—"}</TableCell>
-                    <TableCell className="text-xs">{fields.phone_number || fields.phone || "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{l.form_name || "—"}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{l.campaign_name || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={l.status === "imported" ? "default" : "secondary"} className="text-[10px]">
-                        {l.status === "imported" ? "Geïmporteerd" : "Nieuw"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">{fmtDate(l.created_at)}</TableCell>
-                    <TableCell>
-                      {l.status === "new" ? (
-                        <Button variant="outline" size="sm" className="h-7 text-[10px]" disabled={importLead.isPending}
-                          onClick={() => importLead.mutate(l.id)}>
-                          Importeer
-                        </Button>
-                      ) : l.contact_id ? (
-                        <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => navigate(`/contacts/${l.contact_id}`)}>
-                          <ExternalLink className="h-3 w-3 mr-1" /> Contact
-                        </Button>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {forms.map((f: any) => (
+                <TableRow key={f.id}>
+                  <TableCell className="text-xs font-medium">{f.name}</TableCell>
+                  <TableCell>
+                    <Badge variant={f.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px]">
+                      {f.status === "ACTIVE" ? "Actief" : f.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right text-xs">{fmtNum(f.leads_count)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {f.questions?.map((q: any) => q.label || q.type).join(", ") || "—"}
+                  </TableCell>
+                  <TableCell className="text-xs">{fmtDate(f.created_time)}</TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         </ErpCard>
       )}
+
+      {/* Create form dialog */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nieuw lead formulier</DialogTitle>
+            <DialogDescription>Maak een formulier aan dat je kunt gebruiken in je Lead Ad campagnes.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Formuliernaam</Label><Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Offerte aanvraag" /></div>
+            <div><Label>Privacy Policy URL *</Label><Input value={privacyUrl} onChange={(e) => setPrivacyUrl(e.target.value)} placeholder="https://mijnsite.nl/privacy" /></div>
+            <div><Label>Follow-up URL (optioneel)</Label><Input value={followUpUrl} onChange={(e) => setFollowUpUrl(e.target.value)} placeholder="https://mijnsite.nl/bedankt" /></div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Vragen</Label>
+                <Button variant="outline" size="sm" onClick={addQuestion}><Plus className="h-3 w-3 mr-1" />Vraag</Button>
+              </div>
+              {questions.map((q, idx) => (
+                <ErpCard key={idx} className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">Vraag {idx + 1}</span>
+                    {questions.length > 1 && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeQuestion(idx)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <Select value={q.type} onValueChange={(v) => updateQuestion(idx, "type", v)}>
+                    <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {QUESTION_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                      <SelectItem value="CUSTOM">Aangepast</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {q.type === "CUSTOM" && (
+                    <Input value={q.label} onChange={(e) => updateQuestion(idx, "label", e.target.value)} placeholder="Vraaglabel" className="text-xs" />
+                  )}
+                </ErpCard>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button disabled={!formName.trim() || !privacyUrl.trim() || questions.length === 0 || createForm.isPending} onClick={handleCreate}>
+              {createForm.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Formulier aanmaken
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

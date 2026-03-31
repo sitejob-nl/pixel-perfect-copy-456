@@ -313,7 +313,96 @@ Deno.serve(async (req) => {
       return ok({ success: true, media_id: published.id });
     }
 
-    // ── LEADS ──
+    // ── LEAD FORMS ──
+    if (action === "lead_forms") {
+      const pageId = config.page_id;
+      if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
+
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${pageId}/leadgen_forms?fields=id,name,status,leads_count,created_time,questions,privacy_policy_url&limit=50&access_token=${pageToken}`);
+      return ok({ forms: data.data || [] });
+    }
+
+    // ── CREATE LEAD FORM ──
+    if (action === "create_lead_form") {
+      const pageId = config.page_id;
+      if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
+
+      const { name, questions, privacy_policy_url, follow_up_action_url } = params || {};
+      if (!name || !questions || !Array.isArray(questions) || questions.length === 0) throw new Error("name en questions vereist");
+      if (!privacy_policy_url) throw new Error("privacy_policy_url vereist");
+
+      const body: Record<string, unknown> = {
+        name,
+        questions,
+        privacy_policy: { url: privacy_policy_url },
+      };
+      if (follow_up_action_url) body.follow_up_action_url = follow_up_action_url;
+
+      const data = await graphPost(
+        `https://graph.facebook.com/${GV}/${pageId}/leadgen_forms?access_token=${pageToken}`,
+        body
+      );
+      return ok({ success: true, form_id: data.id });
+    }
+
+    // ── SYNC LEADS (Bulk read from Graph API) ──
+    if (action === "sync_leads") {
+      const pageId = config.page_id;
+      if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
+
+      // Get all lead forms
+      const formsData = await graphFetch(`https://graph.facebook.com/${GV}/${pageId}/leadgen_forms?fields=id,name&limit=50&access_token=${pageToken}`);
+      const forms = formsData.data || [];
+
+      let totalSynced = 0;
+      let totalNew = 0;
+
+      for (const form of forms) {
+        // Fetch leads for each form
+        const leadsData = await graphFetch(`https://graph.facebook.com/${GV}/${form.id}/leads?fields=id,created_time,field_data,ad_id,ad_name,campaign_id,campaign_name,form_id&limit=100&access_token=${pageToken}`);
+        const leads = leadsData.data || [];
+
+        for (const lead of leads) {
+          // Convert field_data array to object
+          const fields: Record<string, string> = {};
+          if (Array.isArray(lead.field_data)) {
+            for (const fd of lead.field_data) {
+              fields[fd.name] = Array.isArray(fd.values) ? fd.values[0] : fd.values;
+            }
+          }
+
+          // Check if lead already exists by meta_lead_id
+          const { data: existing } = await admin
+            .from("meta_leads")
+            .select("id")
+            .eq("organization_id", orgId)
+            .eq("meta_lead_id", lead.id)
+            .maybeSingle();
+
+          if (!existing) {
+            await admin.from("meta_leads").insert({
+              organization_id: orgId,
+              meta_lead_id: lead.id,
+              form_id: lead.form_id || form.id,
+              form_name: form.name,
+              ad_id: lead.ad_id || null,
+              ad_name: lead.ad_name || null,
+              campaign_id: lead.campaign_id || null,
+              campaign_name: lead.campaign_name || null,
+              fields,
+              status: "new",
+              created_at: lead.created_time || new Date().toISOString(),
+            });
+            totalNew++;
+          }
+          totalSynced++;
+        }
+      }
+
+      return ok({ success: true, total_checked: totalSynced, new_leads: totalNew, forms_checked: forms.length });
+    }
+
+    // ── LEADS (from DB) ──
     if (action === "leads") {
       const { data: leads } = await admin
         .from("meta_leads")
