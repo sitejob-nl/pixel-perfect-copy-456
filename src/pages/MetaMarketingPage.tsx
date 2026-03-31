@@ -1247,36 +1247,39 @@ function InstagramContent() {
 }
 
 // ════════════════════════════════════════════
-// TAB: LEADS
+// TAB: LEADS (Kanban)
 // ════════════════════════════════════════════
 
 function LeadsTab() {
-  const [status, setStatus] = useState<string>("");
-  const [sub, setSub] = useState<"leads" | "forms">("leads");
-  const { data, isLoading, refetch } = useMetaLeads(status || undefined);
-  const importLead = useMetaImportLead();
+  const [sub, setSub] = useState<"kanban" | "forms">("kanban");
+  const { data, isLoading } = useMetaLeads();
+  const { data: stagesData, isLoading: stagesLoading } = useMetaLeadStages();
   const syncLeads = useSyncLeads();
+  const moveLead = useMoveLead();
+  const convertLead = useConvertLead();
+  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [showSettings, setShowSettings] = useState(false);
   const navigate = useNavigate();
 
   const leads = data?.leads || [];
+  const stages = stagesData?.stages || [];
+
+  function handleDrop(leadId: string, stageId: string | null) {
+    moveLead.mutate({ lead_id: leadId, stage_id: stageId });
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          <Button variant={sub === "leads" ? "default" : "outline"} size="sm" onClick={() => setSub("leads")}>Leads</Button>
+          <Button variant={sub === "kanban" ? "default" : "outline"} size="sm" onClick={() => setSub("kanban")}>Lead Pipeline</Button>
           <Button variant={sub === "forms" ? "default" : "outline"} size="sm" onClick={() => setSub("forms")}>Formulieren</Button>
         </div>
-        {sub === "leads" && (
+        {sub === "kanban" && (
           <div className="flex items-center gap-2">
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-[140px]"><SelectValue placeholder="Alle leads" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alles</SelectItem>
-                <SelectItem value="new">Nieuw</SelectItem>
-                <SelectItem value="imported">Geïmporteerd</SelectItem>
-              </SelectContent>
-            </Select>
+            <Button variant="ghost" size="sm" onClick={() => setShowSettings(true)}>
+              <Settings className="h-3.5 w-3.5 mr-1" /> Stages
+            </Button>
             <Button variant="outline" size="sm" onClick={() => syncLeads.mutate()} disabled={syncLeads.isPending}>
               {syncLeads.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <RefreshCw className="h-3.5 w-3.5 mr-1" />}
               Sync leads
@@ -1285,73 +1288,288 @@ function LeadsTab() {
         )}
       </div>
 
-      {sub === "leads" ? (
+      {sub === "kanban" ? (
         <>
-          {isLoading ? <LoadingTable cols={6} /> : leads.length === 0 ? (
+          {(isLoading || stagesLoading) ? <LoadingTable cols={4} /> : stages.length === 0 ? (
             <ErpCard className="p-8 text-center space-y-2">
               <Target className="h-8 w-8 mx-auto text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Geen leads gevonden</p>
-              <p className="text-xs text-muted-foreground">Gebruik de "Sync leads" knop om leads van Meta op te halen, of maak een Lead Ad campagne aan.</p>
+              <p className="text-sm text-muted-foreground">Geen lead stages ingesteld</p>
+              <Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>Stages instellen</Button>
             </ErpCard>
           ) : (
-            <ErpCard className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Naam</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Telefoon</TableHead>
-                    <TableHead>Formulier</TableHead>
-                    <TableHead>Campagne</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Datum</TableHead>
-                    <TableHead className="w-[80px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leads.map((l: any) => {
-                    const fields = typeof l.fields === "object" ? l.fields : {};
-                    return (
-                      <TableRow key={l.id}>
-                        <TableCell className="text-xs font-medium">{fields.full_name || fields.name || "—"}</TableCell>
-                        <TableCell className="text-xs">{fields.email || "—"}</TableCell>
-                        <TableCell className="text-xs">{fields.phone_number || fields.phone || "—"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{l.form_name || "—"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{l.campaign_name || "—"}</TableCell>
-                        <TableCell>
-                          <Badge variant={l.status === "imported" ? "default" : "secondary"} className="text-[10px]">
-                            {l.status === "imported" ? "Geïmporteerd" : "Nieuw"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs">{fmtDate(l.created_at)}</TableCell>
-                        <TableCell>
-                          {l.status === "new" ? (
-                            <Button variant="outline" size="sm" className="h-7 text-[10px]" disabled={importLead.isPending}
-                              onClick={() => importLead.mutate(l.id)}>
-                              Importeer
-                            </Button>
-                          ) : l.contact_id ? (
-                            <Button variant="ghost" size="sm" className="h-7 text-[10px]" onClick={() => navigate(`/contacts/${l.contact_id}`)}>
-                              <ExternalLink className="h-3 w-3 mr-1" /> Contact
-                            </Button>
-                          ) : null}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </ErpCard>
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {stages.map((stage: any) => {
+                const stageLeads = leads.filter((l: any) => l.stage_id === stage.id);
+                return (
+                  <LeadKanbanColumn
+                    key={stage.id}
+                    stage={stage}
+                    leads={stageLeads}
+                    onDrop={(leadId) => handleDrop(leadId, stage.id)}
+                    onSelect={setSelectedLead}
+                    onConvert={(leadId) => convertLead.mutate(leadId)}
+                    converting={convertLead.isPending}
+                  />
+                );
+              })}
+              {/* Unsorted column */}
+              {(() => {
+                const unsorted = leads.filter((l: any) => !l.stage_id || !stages.find((s: any) => s.id === l.stage_id));
+                if (unsorted.length === 0) return null;
+                return (
+                  <LeadKanbanColumn
+                    stage={{ id: "__unsorted", name: "Niet ingedeeld", color: "#9ca3af", is_won: false, is_lost: false }}
+                    leads={unsorted}
+                    onDrop={(leadId) => handleDrop(leadId, stages[0]?.id || null)}
+                    onSelect={setSelectedLead}
+                    onConvert={(leadId) => convertLead.mutate(leadId)}
+                    converting={convertLead.isPending}
+                  />
+                );
+              })()}
+            </div>
           )}
         </>
       ) : (
         <LeadFormsPanel />
       )}
+
+      {/* Lead detail sheet */}
+      <Sheet open={!!selectedLead} onOpenChange={(o) => !o && setSelectedLead(null)}>
+        <SheetContent className="sm:max-w-lg overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Lead details</SheetTitle>
+            <SheetDescription>Alle beschikbare informatie over deze lead</SheetDescription>
+          </SheetHeader>
+          {selectedLead && <LeadDetailContent lead={selectedLead} stages={stages} onMove={handleDrop} onConvert={(id) => convertLead.mutate(id)} navigate={navigate} />}
+        </SheetContent>
+      </Sheet>
+
+      {/* Stage settings dialog */}
+      <LeadStageSettings open={showSettings} onClose={() => setShowSettings(false)} stages={stages} />
     </div>
   );
 }
 
-function LeadFormsPanel() {
+function LeadKanbanColumn({ stage, leads, onDrop, onSelect, onConvert, converting }: {
+  stage: any; leads: any[]; onDrop: (leadId: string) => void;
+  onSelect: (lead: any) => void; onConvert: (leadId: string) => void; converting: boolean;
+}) {
+  function handleDragOver(e: React.DragEvent) { e.preventDefault(); e.currentTarget.classList.add("ring-2", "ring-primary/40"); }
+  function handleDragLeave(e: React.DragEvent) { e.currentTarget.classList.remove("ring-2", "ring-primary/40"); }
+  function handleDrop2(e: React.DragEvent) {
+    e.preventDefault();
+    e.currentTarget.classList.remove("ring-2", "ring-primary/40");
+    const leadId = e.dataTransfer.getData("lead-id");
+    if (leadId) onDrop(leadId);
+  }
+
+  return (
+    <div
+      className="min-w-[260px] max-w-[300px] flex-shrink-0 rounded-lg border border-border bg-muted/30 flex flex-col"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop2}
+    >
+      <div className="px-3 py-2 flex items-center gap-2 border-b border-border">
+        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
+        <span className="text-xs font-semibold truncate">{stage.name}</span>
+        <Badge variant="secondary" className="ml-auto text-[10px] h-5">{leads.length}</Badge>
+      </div>
+      <div className="flex-1 p-2 space-y-2 max-h-[60vh] overflow-y-auto">
+        {leads.map((lead: any) => {
+          const f = typeof lead.fields === "object" ? lead.fields : {};
+          const name = f.full_name || f.name || f["full name"] || f.volledige_naam || "—";
+          return (
+            <div
+              key={lead.id}
+              draggable
+              onDragStart={(e) => e.dataTransfer.setData("lead-id", lead.id)}
+              className="rounded-md border border-border bg-background p-2.5 cursor-grab active:cursor-grabbing hover:shadow-sm transition-shadow"
+              onClick={() => onSelect(lead)}
+            >
+              <p className="text-xs font-medium truncate">{name}</p>
+              {f.email && <p className="text-[10px] text-muted-foreground truncate">{f.email}</p>}
+              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                {lead.form_name && <Badge variant="outline" className="text-[9px] h-4 px-1">{lead.form_name}</Badge>}
+                {lead.campaign_name && <Badge variant="outline" className="text-[9px] h-4 px-1 border-blue-300 text-blue-700">{lead.campaign_name}</Badge>}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">{fmtDate(lead.created_at)}</p>
+              {stage.is_won && lead.status !== "converted" && (
+                <Button variant="default" size="sm" className="w-full mt-2 h-6 text-[10px]" disabled={converting} onClick={(e) => { e.stopPropagation(); onConvert(lead.id); }}>
+                  <CheckCircle className="h-3 w-3 mr-1" /> Converteer naar klant
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function LeadDetailContent({ lead, stages, onMove, onConvert, navigate }: { lead: any; stages: any[]; onMove: (leadId: string, stageId: string | null) => void; onConvert: (id: string) => void; navigate: any }) {
+  const f = typeof lead.fields === "object" ? lead.fields : {};
+  const raw = typeof lead.raw_data === "object" ? lead.raw_data : {};
+  const name = f.full_name || f.name || f["full name"] || f.volledige_naam || "Onbekend";
+
+  return (
+    <div className="space-y-5 mt-4">
+      {/* Contact info */}
+      <div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Contactgegevens</h4>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div><span className="text-muted-foreground">Naam:</span> <span className="font-medium">{name}</span></div>
+          <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{f.email || f["e-mailadres"] || "—"}</span></div>
+          <div><span className="text-muted-foreground">Telefoon:</span> <span className="font-medium">{f.phone_number || f.phone || f.telefoonnummer || "—"}</span></div>
+          <div><span className="text-muted-foreground">Bedrijf:</span> <span className="font-medium">{f.company_name || f.bedrijfsnaam || "—"}</span></div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Ad / Campaign info */}
+      <div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Advertentie info</h4>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div><span className="text-muted-foreground">Campagne:</span> <span className="font-medium">{lead.campaign_name || "—"}</span></div>
+          <div><span className="text-muted-foreground">Advertentie:</span> <span className="font-medium">{lead.ad_name || "—"}</span></div>
+          <div><span className="text-muted-foreground">Ad Set:</span> <span className="font-medium">{raw.adset_name || "—"}</span></div>
+          <div><span className="text-muted-foreground">Formulier:</span> <span className="font-medium">{lead.form_name || "—"}</span></div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* All form answers */}
+      <div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Formulierantwoorden</h4>
+        <div className="space-y-1.5">
+          {Object.entries(f).map(([key, value]) => (
+            <div key={key} className="flex justify-between text-xs border-b border-border/50 pb-1">
+              <span className="text-muted-foreground capitalize">{key.replace(/_/g, " ")}</span>
+              <span className="font-medium text-right max-w-[200px] truncate">{String(value)}</span>
+            </div>
+          ))}
+          {Object.keys(f).length === 0 && <p className="text-xs text-muted-foreground">Geen antwoorden beschikbaar</p>}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Stage + actions */}
+      <div>
+        <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Status</h4>
+        <div className="flex items-center gap-2 mb-3">
+          <Select value={lead.stage_id || ""} onValueChange={(v) => onMove(lead.id, v || null)}>
+            <SelectTrigger className="h-8 text-xs w-[180px]"><SelectValue placeholder="Geen stage" /></SelectTrigger>
+            <SelectContent>
+              {stages.map((s: any) => (
+                <SelectItem key={s.id} value={s.id}>
+                  <span className="inline-block w-2 h-2 rounded-full mr-1.5" style={{ backgroundColor: s.color }} />
+                  {s.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Badge variant="secondary" className="text-[10px]">{lead.status}</Badge>
+        </div>
+
+        <div className="flex gap-2">
+          {lead.status !== "converted" && (
+            <Button variant="default" size="sm" className="text-xs" onClick={() => onConvert(lead.id)}>
+              <CheckCircle className="h-3.5 w-3.5 mr-1" /> Converteer (contact + deal)
+            </Button>
+          )}
+          {lead.contact_id && (
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate(`/contacts/${lead.contact_id}`)}>
+              <ExternalLink className="h-3.5 w-3.5 mr-1" /> Bekijk contact
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Metadata */}
+      <div className="text-[10px] text-muted-foreground space-y-0.5">
+        <p>Meta Lead ID: {lead.meta_lead_id}</p>
+        <p>Form ID: {lead.form_id}</p>
+        {lead.ad_id && <p>Ad ID: {lead.ad_id}</p>}
+        {lead.campaign_id && <p>Campaign ID: {lead.campaign_id}</p>}
+        {raw.adset_id && <p>Ad Set ID: {raw.adset_id}</p>}
+        <p>Aangemaakt: {fmtDate(lead.created_at)}</p>
+        {lead.processed_at && <p>Verwerkt: {fmtDate(lead.processed_at)}</p>}
+      </div>
+    </div>
+  );
+}
+
+function LeadStageSettings({ open, onClose, stages }: { open: boolean; onClose: () => void; stages: any[] }) {
+  const upsert = useUpsertLeadStages();
+  const [items, setItems] = useState<Array<{ name: string; color: string; is_won: boolean; is_lost: boolean }>>([]);
+
+  useEffect(() => {
+    if (open) {
+      setItems(stages.length > 0
+        ? stages.map((s: any) => ({ name: s.name, color: s.color, is_won: !!s.is_won, is_lost: !!s.is_lost }))
+        : [
+          { name: "Nieuw", color: "#3b82f6", is_won: false, is_lost: false },
+          { name: "Contactgelegd", color: "#f59e0b", is_won: false, is_lost: false },
+          { name: "Afspraak", color: "#8b5cf6", is_won: false, is_lost: false },
+          { name: "Gekwalificeerd", color: "#10b981", is_won: false, is_lost: false },
+          { name: "Klant", color: "#22c55e", is_won: true, is_lost: false },
+          { name: "Afgewezen", color: "#ef4444", is_won: false, is_lost: true },
+        ]
+      );
+    }
+  }, [open, stages]);
+
+  function addStage() { setItems([...items, { name: "", color: "#6b7280", is_won: false, is_lost: false }]); }
+  function removeStage(i: number) { setItems(items.filter((_, idx) => idx !== i)); }
+  function updateStage(i: number, field: string, value: any) { setItems(items.map((it, idx) => idx === i ? { ...it, [field]: value } : it)); }
+
+  function save() {
+    const valid = items.filter(i => i.name.trim());
+    upsert.mutate(valid, { onSuccess: () => onClose() });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Lead stages instellen</DialogTitle>
+          <DialogDescription>Pas de kolommen van je lead pipeline aan. Markeer één stage als "Klant" en één als "Afgewezen".</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+          {items.map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input type="color" value={item.color} onChange={(e) => updateStage(i, "color", e.target.value)} className="w-7 h-7 rounded border cursor-pointer" />
+              <Input value={item.name} onChange={(e) => updateStage(i, "name", e.target.value)} placeholder="Stage naam" className="h-8 text-xs flex-1" />
+              <label className="flex items-center gap-1 text-[10px]">
+                <input type="checkbox" checked={item.is_won} onChange={(e) => updateStage(i, "is_won", e.target.checked)} />
+                Klant
+              </label>
+              <label className="flex items-center gap-1 text-[10px]">
+                <input type="checkbox" checked={item.is_lost} onChange={(e) => updateStage(i, "is_lost", e.target.checked)} />
+                Afwijs
+              </label>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeStage(i)}><Trash2 className="h-3 w-3" /></Button>
+            </div>
+          ))}
+        </div>
+        <Button variant="outline" size="sm" onClick={addStage}><Plus className="h-3.5 w-3.5 mr-1" /> Stage toevoegen</Button>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Annuleren</Button>
+          <Button onClick={save} disabled={upsert.isPending}>
+            {upsert.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+            Opslaan
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
   const { data, isLoading, refetch } = useMetaLeadForms();
   const createForm = useCreateLeadForm();
   const archiveForm = useArchiveLeadForm();
