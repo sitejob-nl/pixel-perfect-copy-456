@@ -51,7 +51,7 @@ import BookingPage from "./pages/BookingPage";
 import BookingsPage from "./pages/BookingsPage";
 import CallsPage from "./pages/CallsPage";
 import AiAssistantPage from "./pages/AiAssistantPage";
-import MetaAdsPage from "./pages/MetaAdsPage";
+import MetaMarketingPage from "./pages/MetaMarketingPage";
 
 import ProspectingPage from "./pages/ProspectingPage";
 import ProspectPoolDetailPage from "./pages/ProspectPoolDetailPage";
