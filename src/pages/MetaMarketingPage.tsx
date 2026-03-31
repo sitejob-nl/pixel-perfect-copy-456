@@ -29,6 +29,7 @@ import {
   useMetaPagePosts, useCreatePagePost, useDeletePagePost,
   useMetaInstagramMedia, useMetaInstagramInsights, useInstagramPublish,
   useMetaLeads, useMetaImportLead, useMetaLeadForms, useCreateLeadForm, useSyncLeads, useArchiveLeadForm,
+  useMetaLeadStages, useUpsertLeadStages, useMoveLead, useConvertLead,
   useMetaConversations, useMetaConversationMessages, useSendMessage,
   useMetaRegister, useMetaDisconnect, useMetaStatus,
 } from "@/hooks/useMetaMarketing";
