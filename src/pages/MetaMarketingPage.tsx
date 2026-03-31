@@ -17,6 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, Legend, ComposedChart, Line, Area,
+} from "recharts";
+import {
   useMetaHealth, useMetaConfig, useMetaAssets, useMetaSaveSelection,
   useMetaCampaigns, useUpdateCampaign, useMetaAdSets, useUpdateAdSet,
   useMetaAds, useUpdateAd, useMetaInsights, useMetaCampaignInsights,
