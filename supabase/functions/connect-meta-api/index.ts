@@ -449,27 +449,89 @@ Deno.serve(async (req) => {
       return ok({ success: true, adset_id: data.id });
     }
 
+    // ── UPLOAD AD VIDEO ──
+    if (action === "upload_advideo") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const { video_url, title } = params || {};
+      if (!video_url) throw new Error("video_url vereist");
+
+      const body: Record<string, unknown> = { file_url: video_url };
+      if (title) body.title = title;
+
+      const data = await graphPost(
+        `https://graph.facebook.com/${GV}/${adAccountId}/advideos?access_token=${userToken}`,
+        body
+      );
+      return ok({ success: true, video_id: data.id });
+    }
+
     // ── CREATE AD CREATIVE ──
     if (action === "create_adcreative") {
       const adAccountId = config.ad_account_id;
       if (!adAccountId) throw new Error("Geen ad account gekoppeld");
 
-      const { name, message, link, image_url, cta_type } = params || {};
-      if (!name || !message || !link) throw new Error("name, message en link vereist");
-
       const pageId = config.page_id;
       if (!pageId) throw new Error("Geen Facebook pagina gekoppeld (nodig voor ad creative)");
 
-      const linkData: Record<string, unknown> = {
-        message,
-        link,
-        call_to_action: { type: cta_type || "LEARN_MORE" },
-      };
-      if (image_url) linkData.picture = image_url;
+      const { name, creative_type, message, link, image_url, cta_type, video_id, thumbnail_url, link_description, child_attachments } = params || {};
+      if (!name) throw new Error("name vereist");
+
+      const type = creative_type || "link";
+      const body: Record<string, unknown> = { name };
+
+      if (type === "video") {
+        // Video ad creative
+        if (!video_id) throw new Error("video_id vereist voor video creative");
+        const videoData: Record<string, unknown> = {
+          video_id,
+          image_url: thumbnail_url || "",
+        };
+        if (message) videoData.message = message;
+        if (link_description) videoData.link_description = link_description;
+        if (cta_type && link) {
+          videoData.call_to_action = { type: cta_type, value: { link } };
+        }
+        body.object_story_spec = { page_id: pageId, video_data: videoData };
+
+      } else if (type === "carousel") {
+        // Carousel ad creative
+        if (!child_attachments || !Array.isArray(child_attachments) || child_attachments.length < 2) {
+          throw new Error("Minimaal 2 child_attachments vereist voor carousel");
+        }
+        if (!link) throw new Error("link vereist voor carousel");
+        const linkData: Record<string, unknown> = {
+          child_attachments: child_attachments.map((ca: any) => {
+            const item: Record<string, unknown> = { link: ca.link };
+            if (ca.name) item.name = ca.name;
+            if (ca.description) item.description = ca.description;
+            if (ca.image_url) item.picture = ca.image_url;
+            if (ca.image_hash) item.image_hash = ca.image_hash;
+            if (ca.video_id) item.video_id = ca.video_id;
+            if (ca.call_to_action) item.call_to_action = ca.call_to_action;
+            return item;
+          }),
+          link,
+        };
+        if (message) linkData.message = message;
+        body.object_story_spec = { page_id: pageId, link_data: linkData };
+
+      } else {
+        // Standard link ad creative (existing behavior)
+        if (!message || !link) throw new Error("message en link vereist voor link creative");
+        const linkData: Record<string, unknown> = {
+          message,
+          link,
+          call_to_action: { type: cta_type || "LEARN_MORE" },
+        };
+        if (image_url) linkData.picture = image_url;
+        body.object_story_spec = { page_id: pageId, link_data: linkData };
+      }
 
       const data = await graphPost(
         `https://graph.facebook.com/${GV}/${adAccountId}/adcreatives?access_token=${userToken}`,
-        { name, object_story_spec: { page_id: pageId, link_data: linkData } }
+        body
       );
       return ok({ success: true, creative_id: data.id });
     }
