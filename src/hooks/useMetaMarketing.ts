@@ -333,6 +333,40 @@ export function useAdPreview() {
   });
 }
 
+// ── Ad Insights (per ad or per adset/campaign level) ──
+
+export function useAdInsights(adId?: string, datePreset = "last_30d") {
+  return useQuery({
+    queryKey: ["meta-ad-insights", adId, datePreset],
+    enabled: !!adId,
+    queryFn: () => metaApi("ad_insights", { ad_id: adId, date_preset: datePreset }),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+export function useAdSetInsights(datePreset = "last_30d", campaignId?: string, adsetId?: string) {
+  return useQuery({
+    queryKey: ["meta-adset-insights", datePreset, campaignId, adsetId],
+    enabled: !!campaignId || !!adsetId,
+    queryFn: () => metaApi("ad_insights", { date_preset: datePreset, campaign_id: campaignId, adset_id: adsetId }),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
+// ── Ad Creative Detail ──
+
+export function useAdCreativeDetail(creativeId?: string) {
+  return useQuery({
+    queryKey: ["meta-creative-detail", creativeId],
+    enabled: !!creativeId,
+    queryFn: () => metaApi("ad_creative_detail", { creative_id: creativeId }),
+    staleTime: STALE,
+    retry: 1,
+  });
+}
+
 
 
 // ── Lead Forms ──
