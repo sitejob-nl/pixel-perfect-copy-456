@@ -1570,6 +1570,8 @@ function LeadStageSettings({ open, onClose, stages }: { open: boolean; onClose: 
     </Dialog>
   );
 }
+
+function LeadFormsPanel() {
   const { data, isLoading, refetch } = useMetaLeadForms();
   const createForm = useCreateLeadForm();
   const archiveForm = useArchiveLeadForm();
