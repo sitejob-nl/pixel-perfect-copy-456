@@ -405,6 +405,15 @@ Deno.serve(async (req) => {
       const pageId = config.page_id;
       if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
 
+      // Get first stage for new leads
+      const { data: firstStage } = await admin
+        .from("meta_lead_stages")
+        .select("id")
+        .eq("organization_id", orgId)
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
       // Get all lead forms
       const formsData = await graphFetch(`https://graph.facebook.com/${GV}/${pageId}/leadgen_forms?fields=id,name&limit=50&access_token=${pageToken}`);
       const forms = formsData.data || [];
@@ -413,12 +422,10 @@ Deno.serve(async (req) => {
       let totalNew = 0;
 
       for (const form of forms) {
-        // Fetch leads for each form
-        const leadsData = await graphFetch(`https://graph.facebook.com/${GV}/${form.id}/leads?fields=id,created_time,field_data,ad_id,ad_name,campaign_id,campaign_name,form_id&limit=100&access_token=${pageToken}`);
+        const leadsData = await graphFetch(`https://graph.facebook.com/${GV}/${form.id}/leads?fields=id,created_time,field_data,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id&limit=100&access_token=${pageToken}`);
         const leads = leadsData.data || [];
 
         for (const lead of leads) {
-          // Convert field_data array to object
           const fields: Record<string, string> = {};
           if (Array.isArray(lead.field_data)) {
             for (const fd of lead.field_data) {
@@ -426,7 +433,6 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Check if lead already exists by meta_lead_id
           const { data: existing } = await admin
             .from("meta_leads")
             .select("id")
@@ -445,7 +451,9 @@ Deno.serve(async (req) => {
               campaign_id: lead.campaign_id || null,
               campaign_name: lead.campaign_name || null,
               fields,
+              raw_data: { adset_id: lead.adset_id, adset_name: lead.adset_name, form_questions: form.questions },
               status: "new",
+              stage_id: firstStage?.id || null,
               created_at: lead.created_time || new Date().toISOString(),
             });
             if (insertErr) {
