@@ -99,13 +99,13 @@ export function useMetaDisconnect() {
   });
 }
 
-export function useMetaAssets() {
+export function useMetaAssets(enabled = true) {
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
 
   return useQuery({
     queryKey: ["meta-assets", orgId],
-    enabled: !!orgId,
+    enabled: !!orgId && enabled,
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("connect-meta-api", {
         body: { action: "assets" },
