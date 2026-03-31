@@ -1,26 +1,23 @@
 import { useState, useEffect } from "react";
-import { ErpCard, ErpButton } from "@/components/erp/ErpPrimitives";
+import { ErpCard } from "@/components/erp/ErpPrimitives";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrganization } from "@/hooks/useOrganization";
 import { useMetaConfig, useMetaImportLead } from "@/hooks/useMetaMarketing";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, TrendingUp, Eye, MousePointerClick, DollarSign, Users, Download, Facebook, Instagram, Megaphone, AlertCircle } from "lucide-react";
+import { Loader2, TrendingUp, Eye, MousePointerClick, DollarSign, Download, Facebook, Megaphone, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
-const sb = supabase as any;
-
 export default function MetaAdsPage() {
-  const { data: org } = useOrganization();
   const { data: config, isLoading: configLoading } = useMetaConfig();
   const navigate = useNavigate();
 
   if (configLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-6 w-6 animate-spin text-erp-text3" />
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -29,14 +26,12 @@ export default function MetaAdsPage() {
     return (
       <div className="p-6">
         <ErpCard className="p-8 text-center space-y-3">
-          <AlertCircle className="h-10 w-10 text-erp-text3 mx-auto" />
-          <h2 className="text-lg font-semibold text-erp-text0">Meta niet gekoppeld</h2>
-          <p className="text-sm text-erp-text3 max-w-md mx-auto">
+          <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto" />
+          <h2 className="text-lg font-semibold text-foreground">Meta niet gekoppeld</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
             Ga naar Instellingen → Integraties → Meta Marketing om je Meta Business account te koppelen.
           </p>
-          <ErpButton onClick={() => navigate("/settings")}>
-            Naar Instellingen
-          </ErpButton>
+          <Button onClick={() => navigate("/settings")}>Naar Instellingen</Button>
         </ErpCard>
       </div>
     );
@@ -46,19 +41,19 @@ export default function MetaAdsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-erp-text0">Meta Marketing</h1>
-          <p className="text-sm text-erp-text3">Campagnes, leads en inzichten</p>
+          <h1 className="text-xl font-bold text-foreground">Meta Marketing</h1>
+          <p className="text-sm text-muted-foreground">Campagnes, leads en inzichten</p>
         </div>
         <div className="flex items-center gap-2">
           {config.page_name && (
             <Badge variant="outline" className="gap-1 text-xs">
-              <Facebook className="h-3 w-3 text-blue-500" />
+              <Facebook className="h-3 w-3" />
               {config.page_name}
             </Badge>
           )}
           {config.ad_account_name && (
             <Badge variant="outline" className="gap-1 text-xs">
-              <Megaphone className="h-3 w-3 text-green-500" />
+              <Megaphone className="h-3 w-3" />
               {config.ad_account_name}
             </Badge>
           )}
@@ -71,16 +66,9 @@ export default function MetaAdsPage() {
           <TabsTrigger value="campaigns">Campagnes</TabsTrigger>
           <TabsTrigger value="leads">Leads</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="overview">
-          <InsightsPanel />
-        </TabsContent>
-        <TabsContent value="campaigns">
-          <CampaignsPanel />
-        </TabsContent>
-        <TabsContent value="leads">
-          <LeadsPanel />
-        </TabsContent>
+        <TabsContent value="overview"><InsightsPanel /></TabsContent>
+        <TabsContent value="campaigns"><CampaignsPanel /></TabsContent>
+        <TabsContent value="leads"><LeadsPanel /></TabsContent>
       </Tabs>
     </div>
   );
@@ -103,7 +91,6 @@ function InsightsPanel() {
           body: { action: "campaign_insights", params: { date_preset: datePreset } },
         }),
       ]);
-
       if (accountRes.data?.insights) setInsights(accountRes.data.insights);
       if (campaignRes.data?.insights) setCampaignInsights(campaignRes.data.insights);
       if (accountRes.data?.error) toast.error(accountRes.data.error);
@@ -135,14 +122,12 @@ function InsightsPanel() {
             <SelectItem value="last_month">Vorige maand</SelectItem>
           </SelectContent>
         </Select>
-
-        <ErpButton variant="outline" size="sm" onClick={loadInsights} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={loadInsights} disabled={loading}>
           {loading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
           Vernieuwen
-        </ErpButton>
+        </Button>
       </div>
 
-      {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KpiCard icon={Eye} label="Bereik" value={formatNum(totals.reach)} />
         <KpiCard icon={TrendingUp} label="Impressies" value={formatNum(totals.impressions)} />
@@ -150,14 +135,13 @@ function InsightsPanel() {
         <KpiCard icon={DollarSign} label="Uitgaven" value={totals.spend ? `€${Number(totals.spend).toFixed(2)}` : "—"} />
       </div>
 
-      {/* Campaign breakdown */}
       {campaignInsights.length > 0 && (
         <ErpCard className="p-4">
-          <h3 className="text-sm font-semibold text-erp-text0 mb-3">Campagne prestaties</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Campagne prestaties</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-erp-border text-erp-text3">
+                <tr className="border-b border-border text-muted-foreground">
                   <th className="text-left py-2 pr-4">Campagne</th>
                   <th className="text-right py-2 px-2">Bereik</th>
                   <th className="text-right py-2 px-2">Impressies</th>
@@ -169,14 +153,14 @@ function InsightsPanel() {
               </thead>
               <tbody>
                 {campaignInsights.map((c: any, i: number) => (
-                  <tr key={i} className="border-b border-erp-border/50">
-                    <td className="py-2 pr-4 text-erp-text0 font-medium max-w-[200px] truncate">{c.campaign_name}</td>
-                    <td className="text-right py-2 px-2 text-erp-text2">{formatNum(c.reach)}</td>
-                    <td className="text-right py-2 px-2 text-erp-text2">{formatNum(c.impressions)}</td>
-                    <td className="text-right py-2 px-2 text-erp-text2">{formatNum(c.clicks)}</td>
-                    <td className="text-right py-2 px-2 text-erp-text2">{c.ctr ? `${Number(c.ctr).toFixed(2)}%` : "—"}</td>
-                    <td className="text-right py-2 px-2 text-erp-text2">{c.cpc ? `€${Number(c.cpc).toFixed(2)}` : "—"}</td>
-                    <td className="text-right py-2 pl-2 text-erp-text0 font-medium">{c.spend ? `€${Number(c.spend).toFixed(2)}` : "—"}</td>
+                  <tr key={i} className="border-b border-border/50">
+                    <td className="py-2 pr-4 text-foreground font-medium max-w-[200px] truncate">{c.campaign_name}</td>
+                    <td className="text-right py-2 px-2 text-muted-foreground">{formatNum(c.reach)}</td>
+                    <td className="text-right py-2 px-2 text-muted-foreground">{formatNum(c.impressions)}</td>
+                    <td className="text-right py-2 px-2 text-muted-foreground">{formatNum(c.clicks)}</td>
+                    <td className="text-right py-2 px-2 text-muted-foreground">{c.ctr ? `${Number(c.ctr).toFixed(2)}%` : "—"}</td>
+                    <td className="text-right py-2 px-2 text-muted-foreground">{c.cpc ? `€${Number(c.cpc).toFixed(2)}` : "—"}</td>
+                    <td className="text-right py-2 pl-2 text-foreground font-medium">{c.spend ? `€${Number(c.spend).toFixed(2)}` : "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -187,7 +171,7 @@ function InsightsPanel() {
 
       {!loading && insights.length === 0 && (
         <ErpCard className="p-8 text-center">
-          <p className="text-sm text-erp-text3">Geen data beschikbaar voor deze periode</p>
+          <p className="text-sm text-muted-foreground">Geen data beschikbaar voor deze periode</p>
         </ErpCard>
       )}
     </div>
@@ -216,41 +200,32 @@ function CampaignsPanel() {
 
   useEffect(() => { loadCampaigns(); }, []);
 
-  const statusColor: Record<string, string> = {
-    ACTIVE: "bg-green-500/10 text-green-600 border-green-500/30",
-    PAUSED: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
-    DELETED: "bg-red-500/10 text-red-600 border-red-500/30",
-    ARCHIVED: "bg-gray-500/10 text-gray-600 border-gray-500/30",
-  };
-
   return (
     <ErpCard className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-erp-text0">Campagnes</h3>
-        <ErpButton variant="outline" size="sm" onClick={loadCampaigns} disabled={loading}>
+        <h3 className="text-sm font-semibold text-foreground">Campagnes</h3>
+        <Button variant="outline" size="sm" onClick={loadCampaigns} disabled={loading}>
           {loading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
           Vernieuwen
-        </ErpButton>
+        </Button>
       </div>
 
       {campaigns.length === 0 && !loading && (
-        <p className="text-sm text-erp-text3 text-center py-8">Geen campagnes gevonden</p>
+        <p className="text-sm text-muted-foreground text-center py-8">Geen campagnes gevonden</p>
       )}
 
       <div className="space-y-2">
         {campaigns.map((c: any) => (
-          <div key={c.id} className="flex items-center justify-between rounded-lg border border-erp-border p-3">
+          <div key={c.id} className="flex items-center justify-between rounded-lg border border-border p-3">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-erp-text0 truncate">{c.name}</p>
-              <p className="text-xs text-erp-text3">{c.objective?.replace(/_/g, " ") || "—"}</p>
+              <p className="text-sm font-medium text-foreground truncate">{c.name}</p>
+              <p className="text-xs text-muted-foreground">{c.objective?.replace(/_/g, " ") || "—"}</p>
             </div>
             <div className="flex items-center gap-2 ml-3">
               {c.daily_budget && (
-                <span className="text-xs text-erp-text2">€{(Number(c.daily_budget) / 100).toFixed(0)}/dag</span>
+                <span className="text-xs text-muted-foreground">€{(Number(c.daily_budget) / 100).toFixed(0)}/dag</span>
               )}
-              <Badge variant="outline" className={`text-xs ${statusColor[c.status] || ""}`}>
-                {c.status}
-              </Badge>
+              <Badge variant="outline" className="text-xs">{c.status}</Badge>
             </div>
           </div>
         ))}
@@ -285,15 +260,15 @@ function LeadsPanel() {
   return (
     <ErpCard className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-erp-text0">Lead Ads leads</h3>
-        <ErpButton variant="outline" size="sm" onClick={loadLeads} disabled={loading}>
+        <h3 className="text-sm font-semibold text-foreground">Lead Ads leads</h3>
+        <Button variant="outline" size="sm" onClick={loadLeads} disabled={loading}>
           {loading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
           Vernieuwen
-        </ErpButton>
+        </Button>
       </div>
 
       {leads.length === 0 && !loading && (
-        <p className="text-sm text-erp-text3 text-center py-8">Nog geen leads ontvangen via Lead Ads</p>
+        <p className="text-sm text-muted-foreground text-center py-8">Nog geen leads ontvangen via Lead Ads</p>
       )}
 
       <div className="space-y-2">
@@ -305,30 +280,27 @@ function LeadsPanel() {
           const isImported = lead.status === "imported";
 
           return (
-            <div key={lead.id} className="flex items-center justify-between rounded-lg border border-erp-border p-3">
+            <div key={lead.id} className="flex items-center justify-between rounded-lg border border-border p-3">
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-erp-text0">{name}</p>
-                <div className="flex items-center gap-3 text-xs text-erp-text3">
+                <p className="text-sm font-medium text-foreground">{name}</p>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   {email && <span>{email}</span>}
                   {phone && <span>{phone}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-3">
                 {isImported ? (
-                  <Badge variant="outline" className="text-xs bg-green-500/10 text-green-600 border-green-500/30">
-                    Geïmporteerd
-                  </Badge>
+                  <Badge variant="outline" className="text-xs">Geïmporteerd</Badge>
                 ) : (
-                  <ErpButton
+                  <Button
                     size="sm"
                     variant="outline"
                     onClick={() => importLead.mutate(lead.id)}
                     disabled={importLead.isPending}
-                    className="gap-1"
                   >
-                    <Download className="h-3 w-3" />
+                    <Download className="h-3 w-3 mr-1" />
                     Importeren
-                  </ErpButton>
+                  </Button>
                 )}
               </div>
             </div>
@@ -342,11 +314,11 @@ function LeadsPanel() {
 function KpiCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
     <ErpCard className="p-4">
-      <div className="flex items-center gap-2 text-xs text-erp-text3 mb-1">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
         <Icon className="h-3.5 w-3.5" />
         {label}
       </div>
-      <p className="text-lg font-bold text-erp-text0">{value}</p>
+      <p className="text-lg font-bold text-foreground">{value}</p>
     </ErpCard>
   );
 }

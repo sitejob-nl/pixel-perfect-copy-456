@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ErpCard, ErpButton } from "@/components/erp/ErpPrimitives";
+import { ErpCard } from "@/components/erp/ErpPrimitives";
+import { Button } from "@/components/ui/button";
 import { useMetaConnection, useMetaConfig, useMetaRegister, useMetaDisconnect } from "@/hooks/useMetaMarketing";
 import { toast } from "sonner";
 import { Loader2, ExternalLink, CheckCircle2, AlertCircle, Facebook, Instagram, Megaphone, Unlink } from "lucide-react";
@@ -7,15 +8,8 @@ import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 export default function MetaSettings() {
@@ -32,17 +26,12 @@ export default function MetaSettings() {
   async function handleConnect() {
     try {
       setConnecting(true);
-
       if (connection?.connect_url) {
-        // Already registered, just open the popup
         openConnectPopup(connection.connect_url);
         return;
       }
-
       const result = await register.mutateAsync();
-      if (result.connect_url) {
-        openConnectPopup(result.connect_url);
-      }
+      if (result.connect_url) openConnectPopup(result.connect_url);
     } catch (err: any) {
       toast.error(err.message || "Koppeling mislukt");
     } finally {
@@ -56,7 +45,6 @@ export default function MetaSettings() {
       if (popup?.closed) {
         clearInterval(timer);
         setConnecting(false);
-        // Refresh data
         window.location.reload();
       }
     }, 1000);
@@ -65,7 +53,7 @@ export default function MetaSettings() {
   if (isLoading) {
     return (
       <ErpCard className="p-6">
-        <div className="flex items-center gap-2 text-erp-text3">
+        <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span className="text-sm">Meta Marketing laden...</span>
         </div>
@@ -78,23 +66,23 @@ export default function MetaSettings() {
       <ErpCard className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Facebook className="h-5 w-5 text-blue-500" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Facebook className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-erp-text0">Meta Marketing</h3>
-              <p className="text-xs text-erp-text3">Facebook Ads, Instagram & Lead Ads</p>
+              <h3 className="text-sm font-semibold text-foreground">Meta Marketing</h3>
+              <p className="text-xs text-muted-foreground">Facebook Ads, Instagram & Lead Ads</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {isConnected && (
-              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30 text-xs">
+              <Badge variant="outline" className="text-xs">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Actief
               </Badge>
             )}
             {isPending && (
-              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30 text-xs">
+              <Badge variant="outline" className="text-xs">
                 <AlertCircle className="h-3 w-3 mr-1" />
                 Wacht op koppeling
               </Badge>
@@ -104,55 +92,43 @@ export default function MetaSettings() {
 
         {!connection && (
           <div className="space-y-3">
-            <p className="text-xs text-erp-text3">
+            <p className="text-xs text-muted-foreground">
               Koppel je Meta Business account om advertentiecampagnes te beheren, leads automatisch te importeren en Instagram inzichten te bekijken.
             </p>
-            <ErpButton
-              onClick={handleConnect}
-              disabled={connecting || register.isPending}
-              className="gap-2"
-            >
-              {(connecting || register.isPending) && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              <ExternalLink className="h-3.5 w-3.5" />
+            <Button onClick={handleConnect} disabled={connecting || register.isPending} size="sm">
+              {(connecting || register.isPending) && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+              <ExternalLink className="h-3.5 w-3.5 mr-1" />
               Meta koppelen
-            </ErpButton>
+            </Button>
           </div>
         )}
 
         {isPending && (
           <div className="space-y-3">
-            <p className="text-xs text-erp-text3">
+            <p className="text-xs text-muted-foreground">
               De registratie is aangemaakt. Klik op de knop om de Facebook OAuth-koppeling te voltooien.
             </p>
             <div className="flex gap-2">
-              <ErpButton
-                onClick={handleConnect}
-                disabled={connecting}
-                className="gap-2"
-              >
-                {connecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <ExternalLink className="h-3.5 w-3.5" />
+              <Button onClick={handleConnect} disabled={connecting} size="sm">
+                {connecting && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />}
+                <ExternalLink className="h-3.5 w-3.5 mr-1" />
                 Koppeling voltooien
-              </ErpButton>
+              </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <ErpButton variant="ghost" className="text-destructive gap-2">
-                    <Unlink className="h-3.5 w-3.5" />
+                  <Button variant="ghost" size="sm" className="text-destructive">
+                    <Unlink className="h-3.5 w-3.5 mr-1" />
                     Annuleren
-                  </ErpButton>
+                  </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Registratie annuleren?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      De tenant registratie bij SiteJob Connect wordt verwijderd.
-                    </AlertDialogDescription>
+                    <AlertDialogDescription>De tenant registratie bij SiteJob Connect wordt verwijderd.</AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Terug</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => disconnect.mutate()} className="bg-destructive text-destructive-foreground">
-                      Verwijderen
-                    </AlertDialogAction>
+                    <AlertDialogAction onClick={() => disconnect.mutate()} className="bg-destructive text-destructive-foreground">Verwijderen</AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
@@ -162,73 +138,60 @@ export default function MetaSettings() {
 
         {isConnected && config && (
           <div className="space-y-4">
-            {/* Connected assets */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {config.page_name && (
-                <div className="rounded-lg border border-erp-border p-3 space-y-1">
-                  <div className="flex items-center gap-2 text-xs font-medium text-erp-text2">
-                    <Facebook className="h-3.5 w-3.5 text-blue-500" />
+                <div className="rounded-lg border border-border p-3 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Facebook className="h-3.5 w-3.5 text-primary" />
                     Facebook Pagina
                   </div>
-                  <p className="text-sm font-semibold text-erp-text0 truncate">{config.page_name}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{config.page_name}</p>
                 </div>
               )}
               {config.instagram_username && (
-                <div className="rounded-lg border border-erp-border p-3 space-y-1">
-                  <div className="flex items-center gap-2 text-xs font-medium text-erp-text2">
-                    <Instagram className="h-3.5 w-3.5 text-pink-500" />
+                <div className="rounded-lg border border-border p-3 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Instagram className="h-3.5 w-3.5 text-accent-foreground" />
                     Instagram
                   </div>
-                  <p className="text-sm font-semibold text-erp-text0 truncate">@{config.instagram_username}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">@{config.instagram_username}</p>
                 </div>
               )}
               {config.ad_account_name && (
-                <div className="rounded-lg border border-erp-border p-3 space-y-1">
-                  <div className="flex items-center gap-2 text-xs font-medium text-erp-text2">
-                    <Megaphone className="h-3.5 w-3.5 text-green-500" />
+                <div className="rounded-lg border border-border p-3 space-y-1">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Megaphone className="h-3.5 w-3.5 text-primary" />
                     Ad Account
                   </div>
-                  <p className="text-sm font-semibold text-erp-text0 truncate">{config.ad_account_name}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{config.ad_account_name}</p>
                 </div>
               )}
             </div>
 
-            {/* Token info */}
-            <div className="flex items-center justify-between text-xs text-erp-text3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>
                 Token verloopt{" "}
                 {config.token_expires_at
                   ? formatDistanceToNow(new Date(config.token_expires_at), { addSuffix: true, locale: nl })
                   : "onbekend"}
               </span>
-              {config.updated_at && (
-                <span>
-                  Laatst bijgewerkt{" "}
-                  {formatDistanceToNow(new Date(config.updated_at), { addSuffix: true, locale: nl })}
-                </span>
-              )}
             </div>
 
-            {/* Disconnect */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <ErpButton variant="ghost" size="sm" className="text-destructive gap-2">
-                  <Unlink className="h-3.5 w-3.5" />
+                <Button variant="ghost" size="sm" className="text-destructive">
+                  <Unlink className="h-3.5 w-3.5 mr-1" />
                   Ontkoppelen
-                </ErpButton>
+                </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Meta ontkoppelen?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Alle opgeslagen tokens en configuratie worden verwijderd. Je kunt later opnieuw koppelen.
-                  </AlertDialogDescription>
+                  <AlertDialogDescription>Alle opgeslagen tokens en configuratie worden verwijderd.</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Terug</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => disconnect.mutate()} className="bg-destructive text-destructive-foreground">
-                    Ontkoppelen
-                  </AlertDialogAction>
+                  <AlertDialogAction onClick={() => disconnect.mutate()} className="bg-destructive text-destructive-foreground">Ontkoppelen</AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
