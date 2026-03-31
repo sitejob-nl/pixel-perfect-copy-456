@@ -11,7 +11,7 @@ export const Icons = {
   Search, Plus, Bell, Settings, ChevDown: ChevronDown, ChevRight: ChevronRight, LogOut,
   Edit: Pencil, Trash: Trash2, Bot, Menu, Shield: ShieldCheck, Send,
   Book: BookOpen, Portal: LayoutDashboard, Mail, CheckSquare, BarChart: BarChart3,
-  More: MoreHorizontal, Copy, ExternalLink, Key, Phone, Crosshair,
+  More: MoreHorizontal, Copy, ExternalLink, Key, Phone, Crosshair, Megaphone,
 };
 
 export type IconName = keyof typeof Icons;
