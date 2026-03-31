@@ -1,0 +1,1 @@
+ALTER TABLE public.meta_leads ADD COLUMN campaign_id text;

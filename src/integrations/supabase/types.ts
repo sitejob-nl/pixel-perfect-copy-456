@@ -6229,6 +6229,7 @@ export type Database = {
         Row: {
           ad_id: string | null
           ad_name: string | null
+          campaign_id: string | null
           campaign_name: string | null
           contact_id: string | null
           created_at: string
@@ -6245,6 +6246,7 @@ export type Database = {
         Insert: {
           ad_id?: string | null
           ad_name?: string | null
+          campaign_id?: string | null
           campaign_name?: string | null
           contact_id?: string | null
           created_at?: string
@@ -6261,6 +6263,7 @@ export type Database = {
         Update: {
           ad_id?: string | null
           ad_name?: string | null
+          campaign_id?: string | null
           campaign_name?: string | null
           contact_id?: string | null
           created_at?: string
