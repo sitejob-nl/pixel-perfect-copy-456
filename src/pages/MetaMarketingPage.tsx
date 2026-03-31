@@ -790,6 +790,13 @@ function AdsList({ adsetId, onEdit }: any) {
                 <p className="font-medium">Creative aangemaakt ✓</p>
                 <p className="text-muted-foreground">ID: {creativeId}</p>
               </div>
+              {previewHtml && (
+                <div className="border rounded-md overflow-hidden">
+                  <p className="text-xs font-medium px-3 py-1.5 bg-muted/30">Voorbeeld</p>
+                  <div className="p-2" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                </div>
+              )}
+              {adPreview.isPending && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Voorbeeld laden…</div>}
               <div><Label>Advertentienaam</Label><Input value={adName} onChange={(e) => setAdName(e.target.value)} placeholder="Mijn advertentie" /></div>
             </div>
           )}
