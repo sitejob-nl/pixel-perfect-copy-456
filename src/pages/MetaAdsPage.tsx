@@ -442,7 +442,7 @@ function InstagramPanel() {
   const [showPublisher, setShowPublisher] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useState<HTMLInputElement | null>(null);
+  
 
   async function loadData() {
     setLoading(true);
