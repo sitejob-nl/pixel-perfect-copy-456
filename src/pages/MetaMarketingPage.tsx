@@ -1358,16 +1358,20 @@ function LeadFormsPanel() {
   const [formName, setFormName] = useState("");
   const [privacyUrl, setPrivacyUrl] = useState("");
   const [followUpUrl, setFollowUpUrl] = useState("");
+  const [isHigherIntent, setIsHigherIntent] = useState(false);
+  const [blockOrganic, setBlockOrganic] = useState(false);
   const [questions, setQuestions] = useState([
-    { type: "FULL_NAME", key: "full_name", label: "Naam" },
-    { type: "EMAIL", key: "email", label: "E-mail" },
-    { type: "PHONE", key: "phone_number", label: "Telefoon" },
+    { type: "FULL_NAME", key: "full_name", label: "Naam", inline_context: "", options: [] as { value: string; key: string }[] },
+    { type: "EMAIL", key: "email", label: "E-mail", inline_context: "", options: [] as { value: string; key: string }[] },
+    { type: "PHONE", key: "phone_number", label: "Telefoon", inline_context: "", options: [] as { value: string; key: string }[] },
   ]);
 
   const forms = data?.forms || [];
 
   const QUESTION_TYPES = [
     { value: "FULL_NAME", label: "Volledige naam" },
+    { value: "FIRST_NAME", label: "Voornaam" },
+    { value: "LAST_NAME", label: "Achternaam" },
     { value: "EMAIL", label: "E-mailadres" },
     { value: "PHONE", label: "Telefoonnummer" },
     { value: "CITY", label: "Stad" },
@@ -1382,10 +1386,11 @@ function LeadFormsPanel() {
     { value: "MARITAL_STATUS", label: "Burgerlijke staat" },
     { value: "WORK_EMAIL", label: "Werk e-mail" },
     { value: "WORK_PHONE_NUMBER", label: "Werk telefoon" },
+    { value: "DATE_TIME", label: "Afspraak datum/tijd" },
   ];
 
   function addQuestion() {
-    setQuestions([...questions, { type: "CUSTOM", key: "", label: "" }]);
+    setQuestions([...questions, { type: "CUSTOM", key: "", label: "", inline_context: "", options: [] }]);
   }
 
   function removeQuestion(idx: number) {
@@ -1393,34 +1398,64 @@ function LeadFormsPanel() {
     setQuestions(questions.filter((_, i) => i !== idx));
   }
 
-  function updateQuestion(idx: number, field: string, value: string) {
+  function updateQuestion(idx: number, field: string, value: any) {
     setQuestions(questions.map((q, i) => {
       if (i !== idx) return q;
       if (field === "type") {
         const preset = QUESTION_TYPES.find(t => t.value === value);
-        return { ...q, type: value, key: value.toLowerCase(), label: preset?.label || "" };
+        return { ...q, type: value, key: value.toLowerCase(), label: preset?.label || "", options: [] as { value: string; key: string }[] };
       }
       return { ...q, [field]: value };
     }));
+  }
+
+  function addOption(idx: number) {
+    const q = questions[idx];
+    updateQuestion(idx, "options", [...q.options, { value: "", key: `key${q.options.length + 1}` }]);
+  }
+
+  function updateOption(qIdx: number, oIdx: number, value: string) {
+    const q = questions[qIdx];
+    const opts = q.options.map((o, i) => i === oIdx ? { ...o, value } : o);
+    updateQuestion(qIdx, "options", opts);
+  }
+
+  function removeOption(qIdx: number, oIdx: number) {
+    const q = questions[qIdx];
+    updateQuestion(qIdx, "options", q.options.filter((_, i) => i !== oIdx));
+  }
+
+  function resetForm() {
+    setFormName("");
+    setPrivacyUrl("");
+    setFollowUpUrl("");
+    setIsHigherIntent(false);
+    setBlockOrganic(false);
+    setQuestions([
+      { type: "FULL_NAME", key: "full_name", label: "Naam", inline_context: "", options: [] },
+      { type: "EMAIL", key: "email", label: "E-mail", inline_context: "", options: [] },
+      { type: "PHONE", key: "phone_number", label: "Telefoon", inline_context: "", options: [] },
+    ]);
   }
 
   async function handleCreate() {
     try {
       await createForm.mutateAsync({
         name: formName,
-        questions: questions.map(q => ({ type: q.type, key: q.key || undefined, label: q.label || undefined })),
+        questions: questions.map(q => ({
+          type: q.type,
+          key: q.key || undefined,
+          label: q.label || undefined,
+          inline_context: q.inline_context || undefined,
+          options: q.options.length > 0 ? q.options.map(o => ({ value: o.value, key: o.key })) : undefined,
+        })),
         privacy_policy_url: privacyUrl,
         follow_up_action_url: followUpUrl || undefined,
+        is_optimized_for_quality: isHigherIntent || undefined,
+        block_display_for_non_targeted_viewer: blockOrganic || undefined,
       });
       setShowCreate(false);
-      setFormName("");
-      setPrivacyUrl("");
-      setFollowUpUrl("");
-      setQuestions([
-        { type: "FULL_NAME", key: "full_name", label: "Naam" },
-        { type: "EMAIL", key: "email", label: "E-mail" },
-        { type: "PHONE", key: "phone_number", label: "Telefoon" },
-      ]);
+      resetForm();
     } catch {}
   }
 
@@ -1431,7 +1466,7 @@ function LeadFormsPanel() {
         <Button size="sm" onClick={() => setShowCreate(true)}><Plus className="h-3.5 w-3.5 mr-1" />Nieuw formulier</Button>
       </div>
 
-      {isLoading ? <LoadingTable cols={4} /> : forms.length === 0 ? (
+      {isLoading ? <LoadingTable cols={5} /> : forms.length === 0 ? (
         <ErpCard className="p-6 text-center">
           <p className="text-sm text-muted-foreground">Geen formulieren gevonden op deze pagina</p>
         </ErpCard>
@@ -1445,6 +1480,7 @@ function LeadFormsPanel() {
                 <TableHead className="text-right">Leads</TableHead>
                 <TableHead>Vragen</TableHead>
                 <TableHead>Aangemaakt</TableHead>
+                <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1453,14 +1489,37 @@ function LeadFormsPanel() {
                   <TableCell className="text-xs font-medium">{f.name}</TableCell>
                   <TableCell>
                     <Badge variant={f.status === "ACTIVE" ? "default" : "secondary"} className="text-[10px]">
-                      {f.status === "ACTIVE" ? "Actief" : f.status}
+                      {f.status === "ACTIVE" ? "Actief" : f.status === "ARCHIVED" ? "Gearchiveerd" : f.status}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right text-xs">{fmtNum(f.leads_count)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
                     {f.questions?.map((q: any) => q.label || q.type).join(", ") || "—"}
                   </TableCell>
                   <TableCell className="text-xs">{fmtDate(f.created_time)}</TableCell>
+                  <TableCell>
+                    {f.status === "ACTIVE" ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={archiveForm.isPending}
+                            onClick={() => archiveForm.mutate({ form_id: f.id, status: "ARCHIVED" })}>
+                            <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Archiveer</TooltipContent>
+                      </Tooltip>
+                    ) : f.status === "ARCHIVED" ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={archiveForm.isPending}
+                            onClick={() => archiveForm.mutate({ form_id: f.id, status: "ACTIVE" })}>
+                            <CheckCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Heractiveer</TooltipContent>
+                      </Tooltip>
+                    ) : null}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -1469,7 +1528,7 @@ function LeadFormsPanel() {
       )}
 
       {/* Create form dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      <Dialog open={showCreate} onOpenChange={(v) => { setShowCreate(v); if (!v) resetForm(); }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Nieuw lead formulier</DialogTitle>
@@ -1479,6 +1538,27 @@ function LeadFormsPanel() {
             <div><Label>Formuliernaam</Label><Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="Offerte aanvraag" /></div>
             <div><Label>Privacy Policy URL *</Label><Input value={privacyUrl} onChange={(e) => setPrivacyUrl(e.target.value)} placeholder="https://mijnsite.nl/privacy" /></div>
             <div><Label>Follow-up URL (optioneel)</Label><Input value={followUpUrl} onChange={(e) => setFollowUpUrl(e.target.value)} placeholder="https://mijnsite.nl/bedankt" /></div>
+
+            <Separator />
+
+            {/* Advanced settings */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Geavanceerde instellingen</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-xs">Hogere intentie</Label>
+                  <p className="text-[10px] text-muted-foreground">Voegt een bevestigingsstap toe voordat het formulier wordt verzonden.</p>
+                </div>
+                <Switch checked={isHigherIntent} onCheckedChange={setIsHigherIntent} />
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-xs">Organische leads blokkeren</Label>
+                  <p className="text-[10px] text-muted-foreground">Alleen leads via advertenties, geen organisch verkeer.</p>
+                </div>
+                <Switch checked={blockOrganic} onCheckedChange={setBlockOrganic} />
+              </div>
+            </div>
 
             <Separator />
 
@@ -1504,8 +1584,29 @@ function LeadFormsPanel() {
                       <SelectItem value="CUSTOM">Aangepast</SelectItem>
                     </SelectContent>
                   </Select>
-                  {q.type === "CUSTOM" && (
+                  {(q.type === "CUSTOM" || q.type === "DATE_TIME") && (
                     <Input value={q.label} onChange={(e) => updateQuestion(idx, "label", e.target.value)} placeholder="Vraaglabel" className="text-xs" />
+                  )}
+                  {q.type === "DATE_TIME" && (
+                    <Input value={q.inline_context} onChange={(e) => updateQuestion(idx, "inline_context", e.target.value)} placeholder="Bevestigingstekst (optioneel)" className="text-xs" />
+                  )}
+                  {q.type === "CUSTOM" && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-muted-foreground">Dropdown opties (optioneel)</span>
+                        <Button variant="ghost" size="sm" className="h-5 text-[10px] px-1.5" onClick={() => addOption(idx)}>
+                          <Plus className="h-2.5 w-2.5 mr-0.5" />Optie
+                        </Button>
+                      </div>
+                      {q.options.map((o, oi) => (
+                        <div key={oi} className="flex items-center gap-1">
+                          <Input value={o.value} onChange={(e) => updateOption(idx, oi, e.target.value)} placeholder={`Optie ${oi + 1}`} className="text-xs h-7" />
+                          <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0" onClick={() => removeOption(idx, oi)}>
+                            <Trash2 className="h-2.5 w-2.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </ErpCard>
               ))}
