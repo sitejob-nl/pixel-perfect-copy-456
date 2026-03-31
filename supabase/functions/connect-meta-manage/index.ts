@@ -215,13 +215,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── META_API: proxy call to Meta Graph API ──
-    if (action === "meta_api") {
-      const { endpoint, method: httpMethod, body: apiBody } = await req.json().catch(() => ({}));
-      // We already parsed req.json above, so re-parse from the action object
-      // Actually let me restructure - the body was already parsed
-    }
-
     throw new Error(`Unknown action: ${action}`);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";
