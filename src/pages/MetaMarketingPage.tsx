@@ -448,11 +448,24 @@ function CampaignsTab() {
 function CampaignsList({ statusFilter, setStatusFilter, onSelect, onEdit }: any) {
   const { data, isLoading } = useMetaCampaigns(statusFilter || undefined);
   const updateCampaign = useUpdateCampaign();
+  const createCampaign = useCreateCampaign();
   const campaigns = data?.campaigns || [];
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newObjective, setNewObjective] = useState("OUTCOME_TRAFFIC");
+
+  const OBJECTIVES = [
+    { value: "OUTCOME_TRAFFIC", label: "Verkeer" },
+    { value: "OUTCOME_ENGAGEMENT", label: "Betrokkenheid" },
+    { value: "OUTCOME_LEADS", label: "Leads" },
+    { value: "OUTCOME_SALES", label: "Verkoop" },
+    { value: "OUTCOME_AWARENESS", label: "Merkbekendheid" },
+    { value: "OUTCOME_APP_PROMOTION", label: "App-promotie" },
+  ];
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Alle statussen" /></SelectTrigger>
           <SelectContent>
@@ -461,6 +474,7 @@ function CampaignsList({ statusFilter, setStatusFilter, onSelect, onEdit }: any)
             <SelectItem value="PAUSED">Gepauzeerd</SelectItem>
           </SelectContent>
         </Select>
+        <Button size="sm" onClick={() => setShowCreate(true)}><Plus className="h-3.5 w-3.5 mr-1" />Nieuwe campagne</Button>
       </div>
 
       {isLoading ? <LoadingTable /> : campaigns.length === 0 ? (
@@ -505,6 +519,36 @@ function CampaignsList({ statusFilter, setStatusFilter, onSelect, onEdit }: any)
           </Table>
         </ErpCard>
       )}
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nieuwe campagne</DialogTitle>
+            <DialogDescription>Maak een nieuwe advertentiecampagne aan. De campagne start als gepauzeerd.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Naam</Label><Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Mijn campagne" /></div>
+            <div>
+              <Label>Doel</Label>
+              <Select value={newObjective} onValueChange={setNewObjective}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {OBJECTIVES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button disabled={!newName.trim() || createCampaign.isPending} onClick={() => {
+              createCampaign.mutate({ name: newName, objective: newObjective }, {
+                onSuccess: () => { setShowCreate(false); setNewName(""); }
+              });
+            }}>
+              {createCampaign.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}Aanmaken
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
