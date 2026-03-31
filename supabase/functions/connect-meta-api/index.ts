@@ -327,22 +327,51 @@ Deno.serve(async (req) => {
       const pageId = config.page_id;
       if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
 
-      const { name, questions, privacy_policy_url, follow_up_action_url } = params || {};
+      const { name, questions, privacy_policy_url, follow_up_action_url, is_optimized_for_quality, block_display_for_non_targeted_viewer, tracking_parameters } = params || {};
       if (!name || !questions || !Array.isArray(questions) || questions.length === 0) throw new Error("name en questions vereist");
       if (!privacy_policy_url) throw new Error("privacy_policy_url vereist");
 
+      // Build form body with questions as JSON string (Meta API expects this)
+      const formQuestions = questions.map((q: any, idx: number) => {
+        const qObj: Record<string, unknown> = { type: q.type, key: q.key || `question${idx + 1}` };
+        if (q.label) qObj.label = q.label;
+        if (q.inline_context) qObj.inline_context = q.inline_context;
+        if (q.options && Array.isArray(q.options) && q.options.length > 0) {
+          qObj.options = q.options.map((o: any, oi: number) => ({ value: o.value || o.label, key: o.key || `key${oi + 1}` }));
+        }
+        return qObj;
+      });
+
       const body: Record<string, unknown> = {
         name,
-        questions,
+        questions: JSON.stringify(formQuestions),
         privacy_policy: { url: privacy_policy_url },
       };
       if (follow_up_action_url) body.follow_up_action_url = follow_up_action_url;
+      if (is_optimized_for_quality) body.is_optimized_for_quality = true;
+      if (block_display_for_non_targeted_viewer !== undefined) body.block_display_for_non_targeted_viewer = block_display_for_non_targeted_viewer;
+      if (tracking_parameters && typeof tracking_parameters === "object") body.tracking_parameters = tracking_parameters;
 
       const data = await graphPost(
         `https://graph.facebook.com/${GV}/${pageId}/leadgen_forms?access_token=${pageToken}`,
         body
       );
       return ok({ success: true, form_id: data.id });
+    }
+
+    // ── ARCHIVE / REACTIVATE LEAD FORM ──
+    if (action === "archive_lead_form") {
+      const pageId = config.page_id;
+      if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
+      const { form_id, status: formStatus } = params || {};
+      if (!form_id) throw new Error("form_id vereist");
+      const newStatus = formStatus === "ACTIVE" ? "ACTIVE" : "ARCHIVED";
+
+      const data = await graphPost(
+        `https://graph.facebook.com/${GV}/${form_id}?access_token=${pageToken}`,
+        { status: newStatus }
+      );
+      return ok({ success: true, result: data });
     }
 
     // ── SYNC LEADS (Bulk read from Graph API) ──

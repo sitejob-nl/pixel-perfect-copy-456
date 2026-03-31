@@ -351,13 +351,28 @@ export function useCreateLeadForm() {
   return useMutation({
     mutationFn: (params: {
       name: string;
-      questions: Array<{ type: string; key?: string; label?: string }>;
+      questions: Array<{ type: string; key?: string; label?: string; inline_context?: string; options?: Array<{ value: string; key?: string }> }>;
       privacy_policy_url: string;
       follow_up_action_url?: string;
+      is_optimized_for_quality?: boolean;
+      block_display_for_non_targeted_viewer?: boolean;
+      tracking_parameters?: Record<string, string>;
     }) => metaApi("create_lead_form", params),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["meta-lead-forms"] });
       toast.success("Lead formulier aangemaakt");
+    },
+  });
+}
+
+export function useArchiveLeadForm() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { form_id: string; status: "ARCHIVED" | "ACTIVE" }) =>
+      metaApi("archive_lead_form", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-lead-forms"] });
+      toast.success("Formulierstatus bijgewerkt");
     },
   });
 }
