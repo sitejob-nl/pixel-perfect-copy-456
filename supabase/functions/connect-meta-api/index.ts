@@ -6,6 +6,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function encrypt(text: string, key: string): string {
+  const keyBytes = new TextEncoder().encode(key);
+  const textBytes = new TextEncoder().encode(text);
+  const result = new Uint8Array(textBytes.length);
+  for (let i = 0; i < textBytes.length; i++) {
+    result[i] = textBytes[i] ^ keyBytes[i % keyBytes.length];
+  }
+  return btoa(String.fromCharCode(...result));
+}
+
 function decrypt(encoded: string, key: string): string {
   const keyBytes = new TextEncoder().encode(key);
   const data = Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
