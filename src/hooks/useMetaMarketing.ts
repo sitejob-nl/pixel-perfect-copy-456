@@ -123,6 +123,53 @@ export function useUpdateCampaign() {
   });
 }
 
+export function useCreateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { name: string; objective: string; status?: string }) =>
+      metaApi("create_campaign", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-campaigns"] });
+      toast.success("Campagne aangemaakt");
+    },
+  });
+}
+
+export function useCreateAdSet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { name: string; campaign_id: string; daily_budget: number; targeting_countries?: string[]; optimization_goal?: string }) =>
+      metaApi("create_adset", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-adsets"] });
+      toast.success("Ad set aangemaakt");
+    },
+  });
+}
+
+export function useCreateAdCreative() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { name: string; message: string; link: string; image_url?: string; cta_type?: string }) =>
+      metaApi("create_adcreative", params),
+    onSuccess: () => {
+      toast.success("Creative aangemaakt");
+    },
+  });
+}
+
+export function useCreateAd() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { name: string; adset_id: string; creative_id: string; status?: string }) =>
+      metaApi("create_ad", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-ads"] });
+      toast.success("Advertentie aangemaakt");
+    },
+  });
+}
+
 // ── Ad Sets ──
 
 export function useMetaAdSets(campaignId?: string) {
