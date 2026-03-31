@@ -376,6 +376,92 @@ Deno.serve(async (req) => {
       return ok({ success: true, message_id: data.message_id });
     }
 
+    // ── CREATE CAMPAIGN ──
+    if (action === "create_campaign") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const { name, objective, status: campStatus } = params || {};
+      if (!name || !objective) throw new Error("name en objective vereist");
+
+      const data = await graphPost(
+        `https://graph.facebook.com/${GV}/${adAccountId}/campaigns?access_token=${userToken}`,
+        { name, objective, status: campStatus || "PAUSED" }
+      );
+      return ok({ success: true, campaign_id: data.id });
+    }
+
+    // ── CREATE AD SET ──
+    if (action === "create_adset") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const { name, campaign_id, daily_budget, targeting_countries, optimization_goal, billing_event, bid_strategy, start_time, end_time } = params || {};
+      if (!name || !campaign_id || !daily_budget) throw new Error("name, campaign_id en daily_budget vereist");
+
+      const budgetCents = Math.round(Number(daily_budget) * 100);
+      const countries = targeting_countries || ["NL"];
+
+      const body: Record<string, unknown> = {
+        name,
+        campaign_id,
+        daily_budget: budgetCents,
+        targeting: { geo_locations: { countries } },
+        optimization_goal: optimization_goal || "LINK_CLICKS",
+        billing_event: billing_event || "IMPRESSIONS",
+        bid_strategy: bid_strategy || "LOWEST_COST_WITHOUT_CAP",
+        status: "PAUSED",
+      };
+      if (start_time) body.start_time = start_time;
+      if (end_time) body.end_time = end_time;
+
+      const data = await graphPost(
+        `https://graph.facebook.com/${GV}/${adAccountId}/adsets?access_token=${userToken}`,
+        body
+      );
+      return ok({ success: true, adset_id: data.id });
+    }
+
+    // ── CREATE AD CREATIVE ──
+    if (action === "create_adcreative") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const { name, message, link, image_url, cta_type } = params || {};
+      if (!name || !message || !link) throw new Error("name, message en link vereist");
+
+      const pageId = config.page_id;
+      if (!pageId) throw new Error("Geen Facebook pagina gekoppeld (nodig voor ad creative)");
+
+      const linkData: Record<string, unknown> = {
+        message,
+        link,
+        call_to_action: { type: cta_type || "LEARN_MORE" },
+      };
+      if (image_url) linkData.picture = image_url;
+
+      const data = await graphPost(
+        `https://graph.facebook.com/${GV}/${adAccountId}/adcreatives?access_token=${userToken}`,
+        { name, object_story_spec: { page_id: pageId, link_data: linkData } }
+      );
+      return ok({ success: true, creative_id: data.id });
+    }
+
+    // ── CREATE AD ──
+    if (action === "create_ad") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const { name, adset_id, creative_id, status: adStatus } = params || {};
+      if (!name || !adset_id || !creative_id) throw new Error("name, adset_id en creative_id vereist");
+
+      const data = await graphPost(
+        `https://graph.facebook.com/${GV}/${adAccountId}/ads?access_token=${userToken}`,
+        { name, adset_id, creative: { creative_id }, status: adStatus || "PAUSED" }
+      );
+      return ok({ success: true, ad_id: data.id });
+    }
+
     throw new Error(`Unknown action: ${action}`);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";
