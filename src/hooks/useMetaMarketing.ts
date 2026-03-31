@@ -147,11 +147,31 @@ export function useCreateAdSet() {
   });
 }
 
+export function useUploadAdVideo() {
+  return useMutation({
+    mutationFn: (params: { video_url: string; title?: string }) =>
+      metaApi("upload_advideo", params),
+    onSuccess: () => {
+      toast.success("Video geüpload naar Meta");
+    },
+  });
+}
+
 export function useCreateAdCreative() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (params: { name: string; message: string; link: string; image_url?: string; cta_type?: string }) =>
-      metaApi("create_adcreative", params),
+    mutationFn: (params: {
+      name: string;
+      creative_type?: "link" | "video" | "carousel";
+      message?: string;
+      link?: string;
+      image_url?: string;
+      cta_type?: string;
+      video_id?: string;
+      thumbnail_url?: string;
+      link_description?: string;
+      child_attachments?: Array<{ link: string; name?: string; description?: string; image_url?: string; image_hash?: string; video_id?: string }>;
+    }) => metaApi("create_adcreative", params),
     onSuccess: () => {
       toast.success("Creative aangemaakt");
     },
