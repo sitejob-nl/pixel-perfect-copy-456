@@ -315,29 +315,57 @@ function DashboardTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <Select value={datePreset} onValueChange={setDatePreset}>
           <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
           <SelectContent>
             {DATE_PRESETS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" onClick={() => { refetchInsights(); refetchCampaigns(); }}>
-          <RefreshCw className="h-3.5 w-3.5 mr-1" /> Vernieuwen
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowMetricPicker(v => !v)}>
+            <BarChart3 className="h-3.5 w-3.5 mr-1" /> Kolommen
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { refetchInsights(); refetchCampaigns(); }}>
+            <RefreshCw className="h-3.5 w-3.5 mr-1" /> Vernieuwen
+          </Button>
+        </div>
       </div>
+
+      {/* Metric picker */}
+      {showMetricPicker && (
+        <ErpCard className="p-3">
+          <p className="text-xs font-semibold text-foreground mb-2">Toon kolommen in tabel</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ALL_METRICS.map(m => (
+              <Badge
+                key={m.key}
+                variant={selectedMetrics.includes(m.key) ? "default" : "outline"}
+                className="cursor-pointer text-[10px]"
+                onClick={() => toggleMetric(m.key)}
+              >
+                {m.label}
+              </Badge>
+            ))}
+          </div>
+        </ErpCard>
+      )}
 
       {/* KPI Cards */}
       {insightsLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           <KpiCard icon={DollarSign} label="Uitgaven" value={fmtEuro(totals.spend)} />
           <KpiCard icon={Eye} label="Bereik" value={fmtNum(totals.reach)} />
           <KpiCard icon={TrendingUp} label="Impressies" value={fmtNum(totals.impressions)} />
           <KpiCard icon={MousePointerClick} label="Klikken" value={fmtNum(totals.clicks)} />
+          <KpiCard icon={Target} label="CTR" value={fmtPct(totals.ctr)} />
+          <KpiCard icon={DollarSign} label="CPC" value={fmtEuro(totals.cpc)} />
+          <KpiCard icon={Target} label="Conversies" value={fmtNum(totalConversions)} />
+          <KpiCard icon={Megaphone} label="Leads" value={fmtNum(totalLeads)} />
           <KpiCard icon={Target} label="CTR" value={fmtPct(totals.ctr)} />
           <KpiCard icon={DollarSign} label="CPC" value={fmtEuro(totals.cpc)} />
         </div>
