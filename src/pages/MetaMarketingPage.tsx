@@ -445,10 +445,10 @@ function DashboardTab() {
         </ErpCard>
       )}
 
-      {/* Campaign performance table */}
+      {/* Campaign performance table - dynamic columns */}
       <ErpCard className="p-4">
         <h3 className="text-sm font-semibold text-foreground mb-3">Campagne prestaties</h3>
-        {campaignLoading ? <LoadingTable cols={7} /> : campaigns.length === 0 ? (
+        {campaignLoading ? <LoadingTable cols={visibleMetrics.length + 1} /> : campaigns.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">Geen campagne data gevonden</p>
         ) : (
           <div className="overflow-x-auto">
@@ -456,24 +456,18 @@ function DashboardTab() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Campagne</TableHead>
-                  <TableHead className="text-right">Impressies</TableHead>
-                  <TableHead className="text-right">Klikken</TableHead>
-                  <TableHead className="text-right">CTR</TableHead>
-                  <TableHead className="text-right">Uitgaven</TableHead>
-                  <TableHead className="text-right">CPC</TableHead>
-                  <TableHead className="text-right">Bereik</TableHead>
+                  {visibleMetrics.map(m => (
+                    <TableHead key={m.key} className="text-right">{m.label}</TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {campaigns.map((c: any) => (
                   <TableRow key={c.campaign_id || c.campaign_name}>
                     <TableCell className="font-medium text-xs">{c.campaign_name}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtNum(c.impressions)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtNum(c.clicks)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtPct(c.ctr)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtEuro(c.spend)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtEuro(c.cpc)}</TableCell>
-                    <TableCell className="text-right text-xs">{fmtNum(c.reach)}</TableCell>
+                    {visibleMetrics.map(m => (
+                      <TableCell key={m.key} className="text-right text-xs">{formatMetricValue(m, c)}</TableCell>
+                    ))}
                   </TableRow>
                 ))}
               </TableBody>
