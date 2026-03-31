@@ -2,7 +2,7 @@ import {
   Home, Users, Building2, Kanban, Zap, FileText, Receipt, FolderOpen,
   Calendar, Globe, MessageCircle, PenLine, Search, Plus, Bell, Settings, ChevronDown, ChevronRight, LogOut,
   Pencil, Trash2, Bot, Menu, ShieldCheck, Send, BookOpen, LayoutDashboard, Mail,
-  CheckSquare, BarChart3, MoreHorizontal, Copy, ExternalLink, Key, Phone, Crosshair,
+  CheckSquare, BarChart3, MoreHorizontal, Copy, ExternalLink, Key, Phone, Crosshair, Megaphone,
 } from "lucide-react";
 
 export const Icons = {
