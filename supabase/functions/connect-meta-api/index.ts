@@ -435,7 +435,7 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (!existing) {
-            await admin.from("meta_leads").insert({
+            const { error: insertErr } = await admin.from("meta_leads").insert({
               organization_id: orgId,
               meta_lead_id: lead.id,
               form_id: lead.form_id || form.id,
@@ -448,7 +448,11 @@ Deno.serve(async (req) => {
               status: "new",
               created_at: lead.created_time || new Date().toISOString(),
             });
-            totalNew++;
+            if (insertErr) {
+              console.error("Lead insert error:", JSON.stringify(insertErr));
+            } else {
+              totalNew++;
+            }
           }
           totalSynced++;
         }
