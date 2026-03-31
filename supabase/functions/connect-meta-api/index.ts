@@ -60,6 +60,32 @@ async function graphPost(url: string, body?: Record<string, unknown>) {
   return data;
 }
 
+async function graphPostForm(url: string, body?: Record<string, unknown>) {
+  const form = new URLSearchParams();
+  for (const [key, value] of Object.entries(body || {})) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "object") {
+      form.append(key, JSON.stringify(value));
+      continue;
+    }
+    form.append(key, String(value));
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: form.toString(),
+  });
+  const data = await res.json();
+  if (data.error) {
+    const code = data.error.code;
+    const msg = data.error.message || "Graph API error";
+    if (code === 190) throw new Error("TOKEN_EXPIRED:" + msg);
+    throw new Error(msg);
+  }
+  return data;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -529,10 +555,22 @@ Deno.serve(async (req) => {
       const { name, objective, status: campStatus } = params || {};
       if (!name || !objective) throw new Error("name en objective vereist");
 
-      const special_ad_categories = params.special_ad_categories && params.special_ad_categories.length > 0 ? params.special_ad_categories : ["NONE"];
-      const data = await graphPost(
+      const rawSpecialAdCategories = Array.isArray(params?.special_ad_categories)
+        ? params.special_ad_categories.filter(Boolean)
+        : [];
+      const special_ad_categories = rawSpecialAdCategories.includes("NONE")
+        ? []
+        : rawSpecialAdCategories;
+
+      const data = await graphPostForm(
         `https://graph.facebook.com/${GV}/${adAccountId}/campaigns?access_token=${userToken}`,
-        { name, objective, status: campStatus || "PAUSED", special_ad_categories }
+        {
+          name,
+          objective,
+          buying_type: "AUCTION",
+          status: campStatus || "PAUSED",
+          special_ad_categories,
+        }
       );
       return ok({ success: true, campaign_id: data.id });
     }
