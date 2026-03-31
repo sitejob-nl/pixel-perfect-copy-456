@@ -1,62 +1,51 @@
 
 
-## Meta Marketing Dashboard — Volledige uitbreiding
+## Ad Creation toevoegen aan Meta Marketing
 
-Het huidige MetaAdsPage heeft 3 tabs (Overzicht, Campagnes, Leads). Dit wordt uitgebreid naar 6 tabs met volledige CRUD-functionaliteit.
-
----
-
-### Nieuwe tabs en functionaliteit
-
-**1. Campagnes (uitbreiding)** — Pause/Activate knoppen per campagne via nieuwe `update_campaign_status` action in de edge function (POST naar `/{campaign_id}` met `status` parameter).
-
-**2. Facebook Pagina (nieuw tab)** — Laatste posts met likes/comments tellen. Formulier om nieuwe post te plaatsen via `create_page_post` action.
-
-**3. Leads (uitbreiding)** — Formuliernaam tonen, data uit webhook. Bestaande functionaliteit blijft.
-
-**4. Instagram (nieuw tab)** — Grid van laatste 12 posts met media preview. Publisher: afbeelding uploaden via container + publish flow. Basisinsights (impressions, reach, profile_views) als KPI kaarten.
-
-**5. Messenger / DMs (nieuw tab, conditioneel)** — Inbox met gesprekken via page conversations API. Gesprek openen en reageren. Alleen zichtbaar als `pages_messaging` scope beschikbaar is (check `granted_scopes` in `meta_config`).
+Volledige CRUD-functionaliteit toevoegen: campagnes, ad sets, ad creatives en ads kunnen aanmaken vanuit het dashboard.
 
 ---
 
-### Edge function uitbreidingen (`connect-meta-api`)
+### 1. Edge function uitbreiden (`connect-meta-api`)
 
-Nieuwe actions:
+Vier nieuwe actions toevoegen:
 
-| Action | Method | Doel |
-|--------|--------|------|
-| `update_campaign_status` | POST `/{campaign_id}` | Campagne pauzeren/activeren |
-| `create_page_post` | POST `/{page_id}/feed` | Nieuwe Facebook post |
-| `instagram_insights` | GET `/{ig_id}/insights` | IG basisstatistieken |
-| `instagram_publish` | POST `/{ig_id}/media` + `/media_publish` | IG post publiceren |
-| `conversations` | GET `/{page_id}/conversations` | Messenger inbox |
-| `send_message` | POST `/{page_id}/messages` | Messenger antwoord |
+| Action | Endpoint | Beschrijving |
+|--------|----------|-------------|
+| `create_campaign` | POST `act_{ad_account_id}/campaigns` | Naam, objective, status (default PAUSED) |
+| `create_adset` | POST `act_{ad_account_id}/adsets` | campaign_id, naam, daily_budget (euro→centen), targeting (land), optimization_goal |
+| `create_adcreative` | POST `act_{ad_account_id}/adcreatives` | object_story_spec met page_id, message, link, afbeelding, CTA |
+| `create_ad` | POST `act_{ad_account_id}/ads` | adset_id, creative_id, naam, status |
 
-Alle actions gebruiken de juiste token: `page_access_token` voor Pages/Messenger, `user_access_token` voor Ads/Instagram.
-
-Token-expiry check: bij elke API call die een `OAuthException` error code 190 teruggeeft, toon een duidelijke "Token verlopen" melding met link naar instellingen.
+Budget-invoer in euro's, automatisch naar centen geconverteerd. `ad_account_id` uit `meta_config`.
 
 ---
 
-### Frontend architectuur
+### 2. Hooks toevoegen (`useMetaMarketing.ts`)
 
-`MetaAdsPage.tsx` wordt opgesplitst in subcomponenten:
+Vier nieuwe `useMutation` hooks:
+- `useCreateCampaign` — invalidates `meta-campaigns`
+- `useCreateAdSet` — invalidates `meta-adsets`
+- `useCreateAdCreative` — invalidates `meta-ad-creatives` (nieuw)
+- `useCreateAd` — invalidates `meta-ads`
 
-| Component | Tab |
-|-----------|-----|
-| `InsightsPanel` | Overzicht (bestaand) |
-| `CampaignsPanel` | Campagnes (uitgebreid met pause/activate) |
-| `FacebookPanel` | Facebook Pagina (nieuw) |
-| `InstagramPanel` | Instagram (nieuw) |
-| `LeadsPanel` | Leads (bestaand) |
-| `MessengerPanel` | Berichten (nieuw, conditioneel) |
+---
 
-Tabs worden conditioneel getoond op basis van de gekoppelde assets:
-- Facebook tab: alleen als `page_id` ingesteld
-- Instagram tab: alleen als `instagram_account_id` ingesteld
-- Messenger tab: alleen als `page_id` + `granted_scopes` bevat `pages_messaging`
-- Ads tabs: alleen als `ad_account_id` ingesteld
+### 3. Frontend: Create-dialogen in CampaignsTab
+
+Drie "Nieuw" knoppen op de juiste niveaus van de hiërarchie:
+
+**Campagne-niveau** (bovenaan CampaignsList):
+- "Nieuwe campagne" knop → Dialog met: naam, objective (dropdown: LINK_CLICKS, CONVERSIONS, REACH, BRAND_AWARENESS, etc.), status (default PAUSED)
+
+**Ad Set-niveau** (bovenaan AdSetsList):
+- "Nieuwe ad set" knop → Dialog met: naam, dagbudget (€), targeting land (dropdown NL/BE/DE/US), optimization_goal
+
+**Ad-niveau** (bovenaan AdsList):
+- "Nieuwe advertentie" knop → Wizard-achtige Dialog:
+  1. Creative aanmaken: bericht, link URL, afbeelding URL, CTA type (SHOP_NOW, LEARN_MORE, SIGN_UP, etc.)
+  2. Ad aanmaken: naam, status
+  - Stap 1 maakt de creative aan, stap 2 gebruikt het creative_id om de ad te maken
 
 ---
 
@@ -64,8 +53,7 @@ Tabs worden conditioneel getoond op basis van de gekoppelde assets:
 
 | Bestand | Wijziging |
 |---------|-----------|
-| `supabase/functions/connect-meta-api/index.ts` | 6 nieuwe actions toevoegen |
-| `src/pages/MetaAdsPage.tsx` | Uitbreiden met 3 nieuwe tabs + conditionele weergave + token-error handling |
-
-Geen database-migraties nodig — alle data komt direct van de Meta Graph API.
+| `supabase/functions/connect-meta-api/index.ts` | 4 nieuwe actions: create_campaign, create_adset, create_adcreative, create_ad |
+| `src/hooks/useMetaMarketing.ts` | 4 nieuwe mutation hooks |
+| `src/pages/MetaMarketingPage.tsx` | 3 create-dialogen + knoppen in CampaignsList, AdSetsList, AdsList |
 
