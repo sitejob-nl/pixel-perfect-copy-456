@@ -26,6 +26,7 @@ const allTabs = [
   { key: "linkedin", label: "LinkedIn", icon: "💼", adminOnly: false },
   { key: "google", label: "Google", icon: "📧", adminOnly: false },
   { key: "whatsapp", label: "WhatsApp", icon: "📱", adminOnly: true },
+  { key: "meta", label: "Meta", icon: "📣", adminOnly: true },
   { key: "notificaties", label: "Notificaties", icon: "🔔", adminOnly: false },
   { key: "account", label: "Account", icon: "👤", adminOnly: false },
 ] as const;
