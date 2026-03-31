@@ -1353,6 +1353,7 @@ function LeadsTab() {
 function LeadFormsPanel() {
   const { data, isLoading, refetch } = useMetaLeadForms();
   const createForm = useCreateLeadForm();
+  const archiveForm = useArchiveLeadForm();
   const [showCreate, setShowCreate] = useState(false);
   const [formName, setFormName] = useState("");
   const [privacyUrl, setPrivacyUrl] = useState("");
