@@ -255,14 +255,33 @@ Deno.serve(async (req) => {
       return ok({ success: true, result: data });
     }
 
+    // ── Date preset mapping ──
+    const META_DATE_PRESETS: Record<string, string> = {
+      today: "today", yesterday: "yesterday",
+      last_7d: "last_7d", last_14d: "last_14d", last_30d: "last_30d", last_90d: "last_90d",
+      this_month: "this_month", last_month: "last_month",
+    };
+
+    function resolveDatePreset(input?: string): { dateParam: string; useTimeRange: boolean; since?: string; until?: string } {
+      const preset = input || "last_30d";
+      if (META_DATE_PRESETS[preset]) return { dateParam: `date_preset=${META_DATE_PRESETS[preset]}`, useTimeRange: false };
+      // custom range: "2026-01-01_2026-01-31"
+      if (preset.includes("_") && preset.length > 10) {
+        const [since, until] = preset.split("_");
+        return { dateParam: `time_range={"since":"${since}","until":"${until}"}`, useTimeRange: true, since, until };
+      }
+      return { dateParam: `date_preset=last_30d`, useTimeRange: false };
+    }
+
     // ── INSIGHTS ──
     if (action === "insights") {
       const adAccountId = config.ad_account_id;
       if (!adAccountId) throw new Error("Geen ad account gekoppeld");
 
-      const datePreset = params?.date_preset || "last_30d";
+      const { dateParam } = resolveDatePreset(params?.date_preset);
       const level = params?.level || "account";
-      const data = await graphFetch(`https://graph.facebook.com/${GV}/${adAccountId}/insights?fields=impressions,clicks,spend,cpc,ctr,reach,actions,cost_per_action_type,frequency&date_preset=${datePreset}&level=${level}&limit=100&access_token=${userToken}`);
+      const fields = params?.fields || "impressions,clicks,spend,cpc,ctr,reach,actions,cost_per_action_type,frequency,conversions,cost_per_conversion,purchase_roas,website_purchase_roas";
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${adAccountId}/insights?fields=${fields}&${dateParam}&level=${level}&limit=100&access_token=${userToken}`);
       return ok({ insights: data.data || [] });
     }
 
@@ -271,9 +290,45 @@ Deno.serve(async (req) => {
       const adAccountId = config.ad_account_id;
       if (!adAccountId) throw new Error("Geen ad account gekoppeld");
 
-      const datePreset = params?.date_preset || "last_30d";
-      const data = await graphFetch(`https://graph.facebook.com/${GV}/${adAccountId}/insights?fields=campaign_name,campaign_id,impressions,clicks,spend,cpc,ctr,reach,actions&date_preset=${datePreset}&level=campaign&limit=100&access_token=${userToken}`);
+      const { dateParam } = resolveDatePreset(params?.date_preset);
+      const fields = params?.fields || "campaign_name,campaign_id,impressions,clicks,spend,cpc,ctr,reach,actions,conversions,cost_per_action_type,frequency";
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${adAccountId}/insights?fields=${fields}&${dateParam}&level=campaign&limit=100&access_token=${userToken}`);
       return ok({ insights: data.data || [] });
+    }
+
+    // ── AD INSIGHTS ──
+    if (action === "ad_insights") {
+      const adAccountId = config.ad_account_id;
+      if (!adAccountId) throw new Error("Geen ad account gekoppeld");
+
+      const { dateParam } = resolveDatePreset(params?.date_preset);
+      const adId = params?.ad_id;
+      let url: string;
+      if (adId) {
+        url = `https://graph.facebook.com/${GV}/${adId}/insights?fields=impressions,clicks,spend,cpc,ctr,reach,actions,conversions,cost_per_action_type,frequency&${dateParam}&access_token=${userToken}`;
+      } else {
+        const fields = params?.fields || "ad_name,ad_id,impressions,clicks,spend,cpc,ctr,reach,actions,conversions,cost_per_action_type";
+        url = `https://graph.facebook.com/${GV}/${adAccountId}/insights?fields=${fields}&${dateParam}&level=ad&limit=100&access_token=${userToken}`;
+        if (params?.campaign_id) url += `&filtering=[{"field":"campaign.id","operator":"EQUAL","value":"${params.campaign_id}"}]`;
+        if (params?.adset_id) url += `&filtering=[{"field":"adset.id","operator":"EQUAL","value":"${params.adset_id}"}]`;
+      }
+      const data = await graphFetch(url);
+      return ok({ insights: data.data || [] });
+    }
+
+    // ── AD CREATIVE DETAIL ──
+    if (action === "ad_creative_detail") {
+      const creativeId = params?.creative_id;
+      if (!creativeId) throw new Error("creative_id verplicht");
+      const data = await graphFetch(`https://graph.facebook.com/${GV}/${creativeId}?fields=id,name,body,title,link_url,image_url,thumbnail_url,video_id,object_story_spec,object_type,status,effective_object_story_id&access_token=${userToken}`);
+      // If there's a video_id, fetch video details too
+      let videoData = null;
+      if (data.video_id) {
+        try {
+          videoData = await graphFetch(`https://graph.facebook.com/${GV}/${data.video_id}?fields=id,title,description,source,picture,length,created_time&access_token=${userToken}`);
+        } catch {}
+      }
+      return ok({ creative: data, video: videoData });
     }
 
     // ── PAGE POSTS ──
