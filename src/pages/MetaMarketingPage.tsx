@@ -699,6 +699,11 @@ function AdsList({ adsetId, onEdit }: any) {
         setCreativeId(result.creative_id);
         setAdName(crName);
         setStep(2);
+        // Auto-load preview
+        try {
+          const prev = await adPreview.mutateAsync({ creative_id: result.creative_id, ad_format: "DESKTOP_FEED_STANDARD" });
+          if (prev?.previews?.[0]?.body) setPreviewHtml(prev.previews[0].body);
+        } catch {}
       }
     } catch {}
   }
