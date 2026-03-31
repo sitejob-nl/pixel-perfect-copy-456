@@ -158,6 +158,18 @@ export function useCreateAdCreative() {
   });
 }
 
+export function useCreateAd() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { name: string; adset_id: string; creative_id: string; status?: string }) =>
+      metaApi("create_ad", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-ads"] });
+      toast.success("Advertentie aangemaakt");
+    },
+  });
+}
+
 // ── Ad Sets ──
 
 export function useMetaAdSets(campaignId?: string) {
