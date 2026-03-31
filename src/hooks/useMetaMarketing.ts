@@ -388,6 +388,52 @@ export function useSyncLeads() {
   });
 }
 
+// ── Lead Stages ──
+
+export function useMetaLeadStages() {
+  return useQuery({
+    queryKey: ["meta-lead-stages"],
+    queryFn: () => metaApi("lead_stages"),
+    staleTime: STALE,
+  });
+}
+
+export function useUpsertLeadStages() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (stages: Array<{ name: string; color: string; is_won?: boolean; is_lost?: boolean }>) =>
+      metaApi("upsert_lead_stages", { stages }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-lead-stages"] });
+      toast.success("Stages opgeslagen");
+    },
+  });
+}
+
+export function useMoveLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { lead_id: string; stage_id: string | null }) =>
+      metaApi("move_lead", params),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-leads"] });
+    },
+  });
+}
+
+export function useConvertLead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (leadId: string) => metaApi("convert_lead", { lead_id: leadId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["meta-leads"] });
+      qc.invalidateQueries({ queryKey: ["contacts"] });
+      qc.invalidateQueries({ queryKey: ["deals"] });
+      toast.success("Lead geconverteerd naar contact + deal");
+    },
+  });
+}
+
 // ── Leads ──
 
 export function useMetaLeads(status?: string) {

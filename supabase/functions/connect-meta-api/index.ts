@@ -405,6 +405,15 @@ Deno.serve(async (req) => {
       const pageId = config.page_id;
       if (!pageId || !pageToken) throw new Error("Geen Facebook pagina gekoppeld");
 
+      // Get first stage for new leads
+      const { data: firstStage } = await admin
+        .from("meta_lead_stages")
+        .select("id")
+        .eq("organization_id", orgId)
+        .order("sort_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
       // Get all lead forms
       const formsData = await graphFetch(`https://graph.facebook.com/${GV}/${pageId}/leadgen_forms?fields=id,name&limit=50&access_token=${pageToken}`);
       const forms = formsData.data || [];
@@ -413,12 +422,10 @@ Deno.serve(async (req) => {
       let totalNew = 0;
 
       for (const form of forms) {
-        // Fetch leads for each form
-        const leadsData = await graphFetch(`https://graph.facebook.com/${GV}/${form.id}/leads?fields=id,created_time,field_data,ad_id,ad_name,campaign_id,campaign_name,form_id&limit=100&access_token=${pageToken}`);
+        const leadsData = await graphFetch(`https://graph.facebook.com/${GV}/${form.id}/leads?fields=id,created_time,field_data,ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,form_id&limit=100&access_token=${pageToken}`);
         const leads = leadsData.data || [];
 
         for (const lead of leads) {
-          // Convert field_data array to object
           const fields: Record<string, string> = {};
           if (Array.isArray(lead.field_data)) {
             for (const fd of lead.field_data) {
@@ -426,7 +433,6 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Check if lead already exists by meta_lead_id
           const { data: existing } = await admin
             .from("meta_leads")
             .select("id")
@@ -445,7 +451,9 @@ Deno.serve(async (req) => {
               campaign_id: lead.campaign_id || null,
               campaign_name: lead.campaign_name || null,
               fields,
+              raw_data: { adset_id: lead.adset_id, adset_name: lead.adset_name, form_questions: form.questions },
               status: "new",
+              stage_id: firstStage?.id || null,
               created_at: lead.created_time || new Date().toISOString(),
             });
             if (insertErr) {
@@ -461,6 +469,56 @@ Deno.serve(async (req) => {
       return ok({ success: true, total_checked: totalSynced, new_leads: totalNew, forms_checked: forms.length });
     }
 
+    // ── LEAD STAGES (CRUD) ──
+    if (action === "lead_stages") {
+      const { data: stages } = await admin
+        .from("meta_lead_stages")
+        .select("*")
+        .eq("organization_id", orgId)
+        .order("sort_order", { ascending: true });
+      return ok({ stages: stages || [] });
+    }
+
+    if (action === "upsert_lead_stages") {
+      const stages = params?.stages;
+      if (!Array.isArray(stages)) throw new Error("stages array vereist");
+
+      // Delete existing stages and re-insert
+      await admin.from("meta_lead_stages").delete().eq("organization_id", orgId);
+
+      if (stages.length > 0) {
+        const rows = stages.map((s: any, i: number) => ({
+          organization_id: orgId,
+          name: s.name,
+          color: s.color || "#6b7280",
+          sort_order: i,
+          is_won: !!s.is_won,
+          is_lost: !!s.is_lost,
+        }));
+        const { error } = await admin.from("meta_lead_stages").insert(rows);
+        if (error) throw error;
+      }
+
+      const { data: newStages } = await admin
+        .from("meta_lead_stages")
+        .select("*")
+        .eq("organization_id", orgId)
+        .order("sort_order", { ascending: true });
+      return ok({ stages: newStages || [] });
+    }
+
+    if (action === "move_lead") {
+      const { lead_id, stage_id } = params || {};
+      if (!lead_id) throw new Error("lead_id vereist");
+      const { error } = await admin
+        .from("meta_leads")
+        .update({ stage_id: stage_id || null })
+        .eq("id", lead_id)
+        .eq("organization_id", orgId);
+      if (error) throw error;
+      return ok({ success: true });
+    }
+
     // ── LEADS (from DB) ──
     if (action === "leads") {
       const { data: leads } = await admin
@@ -468,12 +526,98 @@ Deno.serve(async (req) => {
         .select("*")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(200);
 
       return ok({ leads: leads || [] });
     }
 
-    // ── IMPORT LEAD AS CONTACT ──
+    // ── CONVERT LEAD (Contact + Deal) ──
+    if (action === "convert_lead") {
+      const { lead_id } = params || {};
+      if (!lead_id) throw new Error("lead_id vereist");
+
+      const { data: lead } = await admin
+        .from("meta_leads")
+        .select("*")
+        .eq("id", lead_id)
+        .eq("organization_id", orgId)
+        .single();
+
+      if (!lead) throw new Error("Lead niet gevonden");
+
+      const fields = lead.fields as Record<string, string>;
+      const fullName = fields.full_name || fields.name || fields["full name"] || fields.volledige_naam || "";
+      const firstName = fields.first_name || (fullName.trim().split(/\s+/)[0] || "Lead");
+      const lastName = fields.last_name || (fullName.trim().split(/\s+/).slice(1).join(" ") || null);
+      const email = fields.email || fields["e-mailadres"] || fields.work_email || null;
+      const phone = fields.phone_number || fields.phone || fields.telefoonnummer || fields.work_phone_number || null;
+      const companyName = fields.company_name || fields.bedrijfsnaam || null;
+
+      // Create contact
+      const { data: contact, error: contactErr } = await admin
+        .from("contacts")
+        .insert({
+          organization_id: orgId,
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          phone,
+          source: "meta_lead_ads",
+          lead_status: "new",
+          lifecycle_stage: "lead",
+          custom_fields: {
+            ...(companyName ? { company_name: companyName } : {}),
+            meta_lead_form: lead.form_name,
+            meta_campaign: lead.campaign_name,
+            meta_ad: lead.ad_name,
+          },
+        })
+        .select("id")
+        .single();
+
+      if (contactErr) throw contactErr;
+
+      // Create deal
+      const dealTitle = `Lead: ${fullName || email || "Meta Lead"}`;
+      const { data: deal, error: dealErr } = await admin
+        .from("deals")
+        .insert({
+          organization_id: orgId,
+          title: dealTitle,
+          contact_id: contact.id,
+          source: "meta_lead_ads",
+          stage: "new",
+          status: "open",
+          value: 0,
+          probability: 10,
+        })
+        .select("id")
+        .single();
+
+      if (dealErr) throw dealErr;
+
+      // Find won stage and update lead
+      const { data: wonStage } = await admin
+        .from("meta_lead_stages")
+        .select("id")
+        .eq("organization_id", orgId)
+        .eq("is_won", true)
+        .maybeSingle();
+
+      await admin
+        .from("meta_leads")
+        .update({
+          contact_id: contact.id,
+          status: "converted",
+          stage_id: wonStage?.id || null,
+          processed_at: new Date().toISOString(),
+        })
+        .eq("id", lead_id);
+
+      return ok({ success: true, contact_id: contact.id, deal_id: deal.id });
+    }
+
+    // ── IMPORT LEAD AS CONTACT (legacy) ──
     if (action === "import_lead") {
       const { lead_id } = params || {};
       if (!lead_id) throw new Error("lead_id vereist");
