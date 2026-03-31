@@ -263,11 +263,25 @@ export default function MetaMarketingPage() {
 
 function DashboardTab() {
   const [datePreset, setDatePreset] = useState("last_30d");
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(DEFAULT_METRICS);
+  const [showMetricPicker, setShowMetricPicker] = useState(false);
   const { data: insightsData, isLoading: insightsLoading, refetch: refetchInsights } = useMetaInsights(datePreset);
   const { data: campaignData, isLoading: campaignLoading, refetch: refetchCampaigns } = useMetaCampaignInsights(datePreset);
 
   const totals = insightsData?.insights?.[0] || {};
   const campaigns = campaignData?.insights || [];
+
+  const totalConversions = getAction(totals.actions, "offsite_conversion.fb_pixel_purchase") + getAction(totals.actions, "lead");
+  const totalLeads = getAction(totals.actions, "lead");
+  const totalLinkClicks = getAction(totals.actions, "link_click");
+
+  const visibleMetrics = ALL_METRICS.filter(m => selectedMetrics.includes(m.key));
+
+  function toggleMetric(key: string) {
+    setSelectedMetrics(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  }
 
   // Chart data
   const spendChart = useMemo(() =>
