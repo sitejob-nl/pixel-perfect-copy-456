@@ -816,8 +816,8 @@ Deno.serve(async (req) => {
 
     throw new Error(`Unknown action: ${action}`);
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Unknown error";
-    console.error("connect-meta-api error:", msg);
+    const msg = error instanceof Error ? error.message : (typeof error === "string" ? error : JSON.stringify(error) || "Unknown error");
+    console.error("connect-meta-api error:", msg, error);
     const isTokenExpired = msg.startsWith("TOKEN_EXPIRED:");
     return new Response(
       JSON.stringify({ error: isTokenExpired ? msg.replace("TOKEN_EXPIRED:", "") : msg, token_expired: isTokenExpired }),
