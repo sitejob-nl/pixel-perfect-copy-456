@@ -304,7 +304,16 @@ export function useInstagramPublish() {
   });
 }
 
-// ── Leads ──
+// ── Ad Preview ──
+
+export function useAdPreview() {
+  return useMutation({
+    mutationFn: (params: { creative_id: string; ad_format?: string }) =>
+      metaApi("ad_preview", params),
+  });
+}
+
+
 
 export function useMetaLeads(status?: string) {
   return useQuery({

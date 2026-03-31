@@ -24,7 +24,7 @@ import {
   useMetaHealth, useMetaConfig, useMetaAssets, useMetaSaveSelection,
   useMetaCampaigns, useUpdateCampaign, useCreateCampaign,
   useMetaAdSets, useUpdateAdSet, useCreateAdSet,
-  useMetaAds, useUpdateAd, useCreateAd, useCreateAdCreative,
+  useMetaAds, useUpdateAd, useCreateAd, useCreateAdCreative, useAdPreview,
   useMetaInsights, useMetaCampaignInsights,
   useMetaPagePosts, useCreatePagePost, useDeletePagePost,
   useMetaInstagramMedia, useMetaInstagramInsights, useInstagramPublish,
@@ -666,10 +666,12 @@ function AdsList({ adsetId, onEdit }: any) {
   const updateAd = useUpdateAd();
   const createCreative = useCreateAdCreative();
   const createAd = useCreateAd();
+  const adPreview = useAdPreview();
   const ads = data?.ads || [];
   const [showCreate, setShowCreate] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [creativeId, setCreativeId] = useState("");
+  const [previewHtml, setPreviewHtml] = useState("");
   // Creative fields
   const [crName, setCrName] = useState("");
   const [crMessage, setCrMessage] = useState("");
@@ -687,7 +689,7 @@ function AdsList({ adsetId, onEdit }: any) {
   ];
 
   function resetForm() {
-    setStep(1); setCreativeId(""); setCrName(""); setCrMessage(""); setCrLink(""); setCrImage(""); setCrCta("LEARN_MORE"); setAdName("");
+    setStep(1); setCreativeId(""); setPreviewHtml(""); setCrName(""); setCrMessage(""); setCrLink(""); setCrImage(""); setCrCta("LEARN_MORE"); setAdName("");
   }
 
   async function handleCreateCreative() {
@@ -697,6 +699,11 @@ function AdsList({ adsetId, onEdit }: any) {
         setCreativeId(result.creative_id);
         setAdName(crName);
         setStep(2);
+        // Auto-load preview
+        try {
+          const prev = await adPreview.mutateAsync({ creative_id: result.creative_id, ad_format: "DESKTOP_FEED_STANDARD" });
+          if (prev?.previews?.[0]?.body) setPreviewHtml(prev.previews[0].body);
+        } catch {}
       }
     } catch {}
   }
@@ -783,6 +790,13 @@ function AdsList({ adsetId, onEdit }: any) {
                 <p className="font-medium">Creative aangemaakt ✓</p>
                 <p className="text-muted-foreground">ID: {creativeId}</p>
               </div>
+              {previewHtml && (
+                <div className="border rounded-md overflow-hidden">
+                  <p className="text-xs font-medium px-3 py-1.5 bg-muted/30">Voorbeeld</p>
+                  <div className="p-2" dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                </div>
+              )}
+              {adPreview.isPending && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3 w-3 animate-spin" />Voorbeeld laden…</div>}
               <div><Label>Advertentienaam</Label><Input value={adName} onChange={(e) => setAdName(e.target.value)} placeholder="Mijn advertentie" /></div>
             </div>
           )}
