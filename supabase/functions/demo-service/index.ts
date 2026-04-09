@@ -36,8 +36,8 @@ async function getUser(req: Request) {
 // Platforms/portals → Claude Opus 4.6 (best voor complexe dashboards)
 const MODEL_MAP: Record<string, { provider: "gemini" | "claude"; model: string }> = {
   website: { provider: "gemini", model: "gemini-3.1-pro-preview" },
-  platform: { provider: "claude", model: "claude-opus-4-20250918" },
-  portal: { provider: "claude", model: "claude-opus-4-20250918" },
+  platform: { provider: "claude", model: "claude-opus-4-6" },
+  portal: { provider: "claude", model: "claude-opus-4-6" },
 };
 
 function getModelForCategory(category: string): { provider: "gemini" | "claude"; model: string } {
@@ -48,7 +48,7 @@ function getModelForCategory(category: string): { provider: "gemini" | "claude";
 async function callClaude(
   systemPrompt: string,
   userPrompt: string,
-  model = "claude-opus-4-20250918",
+  model = "claude-opus-4-6",
   maxTokens = 16000
 ): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -85,7 +85,7 @@ async function callGemini(
 ): Promise<string> {
   if (!GOOGLE_GEMINI_API_KEY) {
     console.warn("No GOOGLE_GEMINI_API_KEY, falling back to Claude");
-    return callClaude(systemPrompt, userPrompt, "claude-sonnet-4-20250514", maxTokens);
+    return callClaude(systemPrompt, userPrompt, "claude-sonnet-4-6", maxTokens);
   }
 
   const res = await fetch(
@@ -106,7 +106,7 @@ async function callGemini(
     console.error("Gemini API error:", res.status, err);
     // Fallback to Claude on Gemini failure
     console.warn("Gemini failed, falling back to Claude");
-    return callClaude(systemPrompt, userPrompt, "claude-sonnet-4-20250514", maxTokens);
+    return callClaude(systemPrompt, userPrompt, "claude-sonnet-4-6", maxTokens);
   }
 
   const data = await res.json();
@@ -848,19 +848,112 @@ async function handleAnalyze(params: any) {
 
   if (!url) return json({ error: "url is verplicht" }, 400);
 
+  // Strategy 1: Use Firecrawl /v1/scrape (headless browser, beats Cloudflare)
+  if (FIRECRAWL_API_KEY) {
+    try {
+      console.log("Analyze: trying Firecrawl scrape for", url);
+      const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+        },
+        body: JSON.stringify({
+          url,
+          formats: ["markdown"],
+        }),
+      });
+
+      if (scrapeRes.ok) {
+        const scrapeData = await scrapeRes.json();
+        const markdown = scrapeData.data?.markdown || "";
+        const metadata = scrapeData.data?.metadata || {};
+
+        if (markdown.length > 100) {
+          // Extract images from markdown
+          const rawImages: string[] = [];
+          if (metadata.ogImage) rawImages.push(metadata.ogImage);
+          for (const match of markdown.matchAll(/!\[([^\]]*)\]\(([^)]+)\)/g)) {
+            if (match[2]) rawImages.push(match[2]);
+          }
+          const crawledImages = [...new Set(rawImages)].filter((u: string) =>
+            u.startsWith("http") && !u.includes("pixel") && !u.includes("favicon") &&
+            !u.includes("data:") && !u.endsWith(".svg") && !u.includes("1x1")
+          ).slice(0, 20);
+
+          const analysisPrompt = `Analyseer de volgende website content van ${url} en extraheer de bedrijfsinformatie.
+
+${markdown.substring(0, 10000)}
+
+${crawledImages.length > 0 ? `Gevonden afbeeldingen:\n${crawledImages.join("\n")}\n\nCategoriseer de meest bruikbare (max 10): hero, logo, team, product, gallery, background.` : ""}
+
+Retourneer een JSON object met:
+{
+  "company_name": "naam",
+  "industry": "branche",
+  "location": "locatie",
+  "description": "korte beschrijving (max 200 woorden)",
+  "services": ["dienst 1", "dienst 2"],
+  "usps": ["usp 1", "usp 2"],
+  "target_audience": "doelgroep",
+  "primary_color": "#hexkleur (hoofdkleur van de website)",
+  "secondary_color": "#hexkleur",
+  "accent_color": "#hexkleur",
+  "font": "font naam als herkenbaar",
+  "nav_items": [{"label": "Menu item", "description": "beschrijving"}],
+  "images": [{"url": "https://...", "category": "hero|logo|team|product|gallery|background", "alt": "beschrijving"}]
+}
+
+Retourneer ALLEEN valid JSON.`;
+
+          const text = await callClaude(
+            "Je bent een website-analist. Extraheer bedrijfsinformatie en categoriseer afbeeldingen. Retourneer alleen valid JSON.",
+            analysisPrompt,
+            undefined,
+            4000
+          );
+
+          let analysis;
+          try {
+            const cleaned = text.replace(/^```json?\n?/i, "").replace(/\n?```$/i, "").trim();
+            analysis = JSON.parse(cleaned);
+          } catch {
+            analysis = { company_name: metadata.title || "", error: "Kon analyse niet parsen" };
+          }
+
+          if (!analysis.images?.length && crawledImages.length) {
+            analysis.images = crawledImages.slice(0, 10).map((u: string) => ({
+              url: u, category: "gallery", alt: "Website afbeelding",
+            }));
+          }
+
+          return json({ status: "completed", analysis, pages_found: 1, page_limit: 1 });
+        }
+      } else {
+        const errText = await scrapeRes.text();
+        console.error("Firecrawl scrape failed:", scrapeRes.status, errText);
+        return json({ status: "completed", analysis: { company_name: "", error: `Firecrawl scrape failed: ${scrapeRes.status} - ${errText.substring(0, 200)}` } });
+      }
+    } catch (err: any) {
+      console.error("Firecrawl scrape error:", err);
+      return json({ status: "completed", analysis: { company_name: "", error: `Firecrawl scrape exception: ${err.message}` } });
+    }
+  }
+
+  // Strategy 2: Direct fetch (works for sites without Cloudflare)
   try {
-    // Simple fetch of the page
+    console.log("Analyze: trying direct fetch for", url);
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; SiteJobBot/1.0)",
-        Accept: "text/html",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml",
       },
     });
 
     if (!res.ok) {
       return json({
         status: "completed",
-        analysis: { company_name: "", error: "Kon website niet bereiken" },
+        analysis: { company_name: "", error: "Kon website niet bereiken (HTTP " + res.status + ")" },
       });
     }
 
@@ -884,7 +977,8 @@ Retourneer een JSON object met:
   "secondary_color": "#hex",
   "accent_color": "#hex",
   "font": "font naam",
-  "nav_items": [{"label": "item", "description": ""}]
+  "nav_items": [{"label": "item", "description": ""}],
+  "images": [{"url": "https://...", "category": "hero|logo|team|product|gallery|background", "alt": "beschrijving"}]
 }
 
 Retourneer ALLEEN valid JSON.`;
@@ -906,10 +1000,10 @@ Retourneer ALLEEN valid JSON.`;
 
     return json({ status: "completed", analysis, pages_found: 1, page_limit: 1 });
   } catch (err) {
-    console.error("Analyze error:", err);
+    console.error("Direct fetch error:", err);
     return json({
       status: "completed",
-      analysis: { company_name: "", error: "Website niet bereikbaar" },
+      analysis: { company_name: "", error: "Website niet bereikbaar. Vul de gegevens handmatig in." },
     });
   }
 }
@@ -1031,6 +1125,23 @@ Deno.serve(async (req) => {
         return await handleTrackView(params);
       case "verify-password":
         return await handleVerifyPassword(params);
+      case "debug-scrape": {
+        // Temporary debug: test Firecrawl scrape directly and return raw response
+        const { url: debugUrl } = params;
+        if (!FIRECRAWL_API_KEY) return json({ error: "No FIRECRAWL_API_KEY" });
+        try {
+          const r = await fetch("https://api.firecrawl.dev/v1/scrape", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${FIRECRAWL_API_KEY}` },
+            body: JSON.stringify({ url: debugUrl, formats: ["markdown"] }),
+          });
+          const status = r.status;
+          const body = await r.text();
+          return json({ firecrawl_status: status, body_length: body.length, body_preview: body.substring(0, 1000) });
+        } catch (e: any) {
+          return json({ error: e.message });
+        }
+      }
       default:
         return json({ error: `Onbekende actie: ${action}` }, 400);
     }
