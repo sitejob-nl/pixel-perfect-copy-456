@@ -520,6 +520,16 @@ Genereer ALLEEN de volledige HTML code. Begin met <!DOCTYPE html> en eindig met 
           .eq("slug", page.slug);
 
         generatedPages.push({ slug: page.slug, html_content: cleanHtml });
+
+        // Update demo status after each page so frontend can detect completion
+        const allDone = generatedPages.length === page_config.length;
+        if (allDone || generatedPages.length === 1) {
+          await supabase.from("demos").update({
+            generation_status: allDone ? "completed" : "generating",
+            demo_html: generatedPages[0]?.html_content || null,
+            ...(allDone ? { generation_duration_seconds: Math.round((Date.now() - startTime) / 1000) } : {}),
+          }).eq("id", demo.id);
+        }
       } catch (err) {
         console.error(`Failed to generate page ${page.slug}:`, err);
         await supabase

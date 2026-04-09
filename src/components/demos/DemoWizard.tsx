@@ -254,15 +254,22 @@ export default function DemoWizard({ onClose }: Props) {
     if (demo?.generation_status === "completed" || allPagesReady) {
       setGenerationDone(true);
       setResultDemo(demo);
-      setResultPages(pagesData);
-      if (pagesData.length) setActivePage(pagesData[0].slug);
+      setResultPages(pagesData.filter((p: any) => p.html_content));
+      if (pagesData.find((p: any) => p.html_content)) setActivePage(pagesData.find((p: any) => p.html_content).slug);
       setTimeout(() => setStep(4), 500);
     } else if (demo?.generation_status === "failed") {
       setGenerationError("Generatie mislukt");
     }
 
-    // Timeout fallback: 3 minutes
-    if (genStartedAt && Date.now() - genStartedAt > 180_000 && !generationDone) {
+    // After 10 minutes, if some pages are done, offer to continue with those
+    const somePagesReady = pagesData.some((p: any) => p.html_content);
+    if (genStartedAt && Date.now() - genStartedAt > 600_000 && !generationDone && somePagesReady) {
+      setGenerationDone(true);
+      setResultDemo(demo);
+      setResultPages(pagesData.filter((p: any) => p.html_content));
+      if (pagesData.find((p: any) => p.html_content)) setActivePage(pagesData.find((p: any) => p.html_content).slug);
+      setTimeout(() => setStep(4), 500);
+    } else if (genStartedAt && Date.now() - genStartedAt > 600_000 && !generationDone) {
       setGenerationError("Generatie duurt te lang. Probeer het opnieuw.");
     }
   }, [genStatus, genStartedAt, generationDone]);
