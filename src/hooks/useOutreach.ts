@@ -10,14 +10,15 @@ type PreCallReport = Database["public"]["Tables"]["pre_call_reports"]["Row"];
 const OUTREACH_API = "http://204.168.221.107:8100";
 
 export type LeadStatus =
-  | "new" | "researching" | "qualified" | "outreach_active"
-  | "connected" | "interested" | "demo_sent"
+  | "new" | "researching" | "qualified" | "no_decision_maker"
+  | "outreach_active" | "connected" | "interested" | "demo_sent"
   | "appointment_booked" | "converted";
 
 export const LEAD_STATUSES: { key: LeadStatus; label: string; color: string }[] = [
   { key: "new", label: "Nieuw", color: "#6b7280" },
   { key: "researching", label: "Research", color: "hsl(263,86%,77%)" },
   { key: "qualified", label: "Gekwalificeerd", color: "hsl(225,93%,64%)" },
+  { key: "no_decision_maker", label: "Geen beslisser", color: "#ef4444" },
   { key: "outreach_active", label: "Outreach actief", color: "hsl(187,92%,53%)" },
   { key: "connected", label: "Verbonden", color: "hsl(43,96%,56%)" },
   { key: "interested", label: "Geïnteresseerd", color: "hsl(27,96%,61%)" },
