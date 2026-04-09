@@ -43,6 +43,7 @@ const nav: NavSection[] = [
       { k: "contacts", l: "Contacten", i: "Users" },
       { k: "deals", l: "Deals", i: "Kanban" },
       { k: "prospecting", l: "Prospecting", i: "Crosshair" },
+      { k: "outreach", l: "Outreach", i: "Send" },
     ],
   },
   {
@@ -93,6 +94,7 @@ const nav: NavSection[] = [
 
 const moduleMap: Record<string, string> = {
   prospecting: "mod_prospecting",
+  outreach: "mod_outreach",
   projects: "mod_projects",
   quotes: "mod_quotes",
   invoices: "mod_invoices",
