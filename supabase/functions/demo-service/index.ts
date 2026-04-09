@@ -430,46 +430,48 @@ async function handleGenerate(params: any) {
   const systemPrompt = buildSystemPrompt(templateCtx, branding, page_config);
 
   // Determine model routing based on category
-  // Websites → Gemini 2.5 Pro (best voor UI/visual design)
-  // Platforms/portals → Claude Opus 4.6 (best voor complexe dashboards)
   const category = templateCtx.platformType?.categorie || "website";
   const autoModel = getModelForCategory(category);
   console.log(`Demo generation: type=${demo_type}, category=${category}, provider=${autoModel.provider}, model=${autoModel.model}`);
 
-  // Generate each page with cross-page consistency
-  const generatedPages: any[] = [];
-  const startTime = Date.now();
-  let sharedHeader = "";
-  let sharedFooter = "";
-  const images: any[] = branding.images || [];
+  // Update model_used with the actual model
+  await supabase.from("demos").update({ model_used: autoModel.model }).eq("id", demo.id);
 
-  for (const page of page_config) {
-    // Mark page as generating
-    await supabase
-      .from("demo_pages")
-      .update({ generation_status: "generating" })
-      .eq("demo_id", demo.id)
-      .eq("slug", page.slug);
+  // Return demo_id immediately — pages generate in background
+  // The frontend polls demo_pages every 3 seconds to track progress
+  const backgroundTask = async () => {
+    const generatedPages: any[] = [];
+    const startTime = Date.now();
+    let sharedHeader = "";
+    let sharedFooter = "";
+    const images: any[] = branding.images || [];
 
-    // Match images to this page's context
-    const pageSlugLower = page.slug.toLowerCase();
-    const isHome = pageSlugLower === "home" || pageSlugLower === "index";
-    const isAbout = pageSlugLower.includes("over") || pageSlugLower.includes("about") || pageSlugLower.includes("team");
-    const isContact = pageSlugLower.includes("contact");
-    const isServices = pageSlugLower.includes("dienst") || pageSlugLower.includes("service") || pageSlugLower.includes("product");
+    for (const page of page_config) {
+      await supabase
+        .from("demo_pages")
+        .update({ generation_status: "generating" })
+        .eq("demo_id", demo.id)
+        .eq("slug", page.slug);
 
-    let imageHint = "";
-    if (images.length > 0) {
-      const heroImgs = images.filter((i: any) => i.category === "hero");
-      const teamImgs = images.filter((i: any) => i.category === "team");
-      const productImgs = images.filter((i: any) => i.category === "product" || i.category === "gallery");
+      // Match images to this page's context
+      const pageSlugLower = page.slug.toLowerCase();
+      const isHome = pageSlugLower === "home" || pageSlugLower === "index";
+      const isAbout = pageSlugLower.includes("over") || pageSlugLower.includes("about") || pageSlugLower.includes("team");
+      const isContact = pageSlugLower.includes("contact");
+      const isServices = pageSlugLower.includes("dienst") || pageSlugLower.includes("service") || pageSlugLower.includes("product");
 
-      if (isHome && heroImgs.length) imageHint = `Gebruik voor de hero sectie: ${heroImgs[0].url}`;
-      else if (isAbout && teamImgs.length) imageHint = `Gebruik voor team foto's: ${teamImgs.map((i: any) => i.url).join(", ")}`;
-      else if (isServices && productImgs.length) imageHint = `Gebruik voor diensten/producten: ${productImgs.map((i: any) => i.url).join(", ")}`;
-    }
+      let imageHint = "";
+      if (images.length > 0) {
+        const heroImgs = images.filter((i: any) => i.category === "hero");
+        const teamImgs = images.filter((i: any) => i.category === "team");
+        const productImgs = images.filter((i: any) => i.category === "product" || i.category === "gallery");
 
-    const userPrompt = `Genereer de "${page.title}" pagina voor ${company_name}.
+        if (isHome && heroImgs.length) imageHint = `Gebruik voor de hero sectie: ${heroImgs[0].url}`;
+        else if (isAbout && teamImgs.length) imageHint = `Gebruik voor team foto's: ${teamImgs.map((i: any) => i.url).join(", ")}`;
+        else if (isServices && productImgs.length) imageHint = `Gebruik voor diensten/producten: ${productImgs.map((i: any) => i.url).join(", ")}`;
+      }
+
+      const userPrompt = `Genereer de "${page.title}" pagina voor ${company_name}.
 
 OVER DIT BEDRIJF:
 - Bedrijfsnaam: ${company_name}
@@ -491,82 +493,81 @@ ${extra_instructions ? `\nEXTRA INSTRUCTIES: ${extra_instructions}` : ""}
 
 Genereer ALLEEN de volledige HTML code. Begin met <!DOCTYPE html> en eindig met </html>. Geen uitleg, geen markdown.`;
 
-    try {
-      const { text: html } = await callLLM(systemPrompt, userPrompt, category);
+      try {
+        const { text: html } = await callLLM(systemPrompt, userPrompt, category);
 
-      // Extract just the HTML if wrapped in markdown code blocks
-      let cleanHtml = html
-        .replace(/^```html?\n?/i, "")
-        .replace(/\n?```$/i, "")
-        .trim();
+        let cleanHtml = html
+          .replace(/^```html?\n?/i, "")
+          .replace(/\n?```$/i, "")
+          .trim();
 
-      // Remove any remaining markdown wrapper
-      if (cleanHtml.startsWith("```")) {
-        cleanHtml = cleanHtml.replace(/^```[^\n]*\n/, "").replace(/\n```$/, "").trim();
+        if (cleanHtml.startsWith("```")) {
+          cleanHtml = cleanHtml.replace(/^```[^\n]*\n/, "").replace(/\n```$/, "").trim();
+        }
+
+        // Extract shared header/footer from first page for consistency
+        if (!sharedHeader && cleanHtml) {
+          const headerMatch = cleanHtml.match(/<header[\s\S]*?<\/header>/i);
+          const footerMatch = cleanHtml.match(/<footer[\s\S]*?<\/footer>/i);
+          if (headerMatch) sharedHeader = headerMatch[0];
+          if (footerMatch) sharedFooter = footerMatch[0];
+        }
+
+        await supabase
+          .from("demo_pages")
+          .update({ html_content: cleanHtml, generation_status: "completed" })
+          .eq("demo_id", demo.id)
+          .eq("slug", page.slug);
+
+        generatedPages.push({ slug: page.slug, html_content: cleanHtml });
+      } catch (err) {
+        console.error(`Failed to generate page ${page.slug}:`, err);
+        await supabase
+          .from("demo_pages")
+          .update({ generation_status: "failed" })
+          .eq("demo_id", demo.id)
+          .eq("slug", page.slug);
       }
-
-      // Extract shared header/footer from first page for consistency
-      if (!sharedHeader && cleanHtml) {
-        const headerMatch = cleanHtml.match(/<header[\s\S]*?<\/header>/i);
-        const footerMatch = cleanHtml.match(/<footer[\s\S]*?<\/footer>/i);
-        if (headerMatch) sharedHeader = headerMatch[0];
-        if (footerMatch) sharedFooter = footerMatch[0];
-      }
-
-      await supabase
-        .from("demo_pages")
-        .update({ html_content: cleanHtml, generation_status: "completed" })
-        .eq("demo_id", demo.id)
-        .eq("slug", page.slug);
-
-      generatedPages.push({ slug: page.slug, title: page.title, html_content: cleanHtml });
-    } catch (err) {
-      console.error(`Failed to generate page ${page.slug}:`, err);
-      await supabase
-        .from("demo_pages")
-        .update({
-          generation_status: "failed",
-        })
-        .eq("demo_id", demo.id)
-        .eq("slug", page.slug);
     }
-  }
 
-  const durationSeconds = Math.round((Date.now() - startTime) / 1000);
-  const allSuccess = generatedPages.length === page_config.length;
-  const firstPageHtml = generatedPages[0]?.html_content || "";
+    // Final status update
+    const durationSeconds = Math.round((Date.now() - startTime) / 1000);
+    const firstPageHtml = generatedPages[0]?.html_content || "";
 
-  // Update demo record
-  await supabase
-    .from("demos")
-    .update({
-      generation_status: allSuccess ? "completed" : generatedPages.length > 0 ? "completed" : "failed",
-      generation_duration_seconds: durationSeconds,
-      demo_html: firstPageHtml,
-      generation_error: allSuccess ? null : `${page_config.length - generatedPages.length} pagina('s) mislukt`,
-      model_used: autoModel.model,
-    })
-    .eq("id", demo.id);
+    await supabase
+      .from("demos")
+      .update({
+        generation_status: generatedPages.length > 0 ? "completed" : "failed",
+        generation_duration_seconds: durationSeconds,
+        demo_html: firstPageHtml || null,
+        generation_error: generatedPages.length === page_config.length
+          ? null
+          : `${page_config.length - generatedPages.length} pagina('s) mislukt`,
+      })
+      .eq("id", demo.id);
 
-  // Create initial version
-  await supabase.from("demo_versions").insert({
-    demo_id: demo.id,
-    organization_id,
-    version_number: 1,
-    html_content: firstPageHtml,
-    change_description: "Initiële generatie",
-    model_used: autoModel.model,
-  });
+    if (firstPageHtml) {
+      await supabase.from("demo_versions").insert({
+        demo_id: demo.id,
+        organization_id,
+        version_number: 1,
+        html_content: firstPageHtml,
+        change_description: "Initiële generatie",
+        model_used: autoModel.model,
+      });
+    }
+  };
+
+  // Run generation in background — response returns immediately
+  // EdgeRuntime.waitUntil keeps the function alive after responding
+  (globalThis as any).EdgeRuntime?.waitUntil?.(backgroundTask()) ?? backgroundTask();
 
   return json({
-    id: demo.id,
     demo_id: demo.id,
+    id: demo.id,
     public_slug: slug,
     is_public: true,
-    generation_status: allSuccess ? "completed" : "partial",
-    pages: generatedPages,
-    demo_html: firstPageHtml,
-    duration_seconds: durationSeconds,
+    generation_status: "generating",
   });
 }
 
