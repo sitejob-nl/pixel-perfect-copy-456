@@ -166,7 +166,7 @@ export default function PublicDemoPage() {
           srcDoc={activeHtml}
           className="bg-white rounded-lg shadow-lg w-full"
           style={{ height: "calc(100vh - 120px)", maxWidth: "100%", border: "none" }}
-          sandbox="allow-scripts"
+          sandbox="allow-scripts allow-same-origin"
           title={demo.title || "Demo"}
         />
       </div>

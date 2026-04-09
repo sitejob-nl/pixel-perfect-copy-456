@@ -98,8 +98,8 @@ export default function DemoEditPage() {
           <iframe
             srcDoc={activeHtml}
             className="bg-white rounded-lg shadow-xl transition-all duration-300"
-            style={{ width: activeWidth, height: "calc(100vh - 160px)", maxWidth: "100%", border: "none" }}
-            sandbox="allow-scripts"
+            style={{ width: activeWidth, height: "calc(100vh - 120px)", maxWidth: "100%", border: "none" }}
+            sandbox="allow-scripts allow-same-origin"
             title="Demo editor"
           />
         </div>

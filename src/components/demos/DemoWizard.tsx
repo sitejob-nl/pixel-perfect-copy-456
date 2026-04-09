@@ -840,7 +840,7 @@ export default function DemoWizard({ onClose }: Props) {
                   srcDoc={activeHtml}
                   className="bg-white rounded-lg shadow-xl transition-all duration-300"
                   style={{ width: activeWidth, height: "calc(100vh - 160px)", maxWidth: "100%", border: "none" }}
-                  sandbox="allow-scripts"
+                  sandbox="allow-scripts allow-same-origin"
                   title="Demo preview"
                 />
               </div>

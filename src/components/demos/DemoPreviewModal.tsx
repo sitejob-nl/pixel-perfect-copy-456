@@ -65,7 +65,7 @@ export default function DemoPreviewModal({ open, onOpenChange, html, title }: Pr
             srcDoc={html}
             className="bg-white rounded-lg shadow-lg transition-all duration-300"
             style={{ width: activeDevice.width, height: "100%", maxWidth: "100%", border: "none" }}
-            sandbox="allow-scripts"
+            sandbox="allow-scripts allow-same-origin"
             title="Demo preview"
           />
         </div>
