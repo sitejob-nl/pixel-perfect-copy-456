@@ -33,7 +33,7 @@ export default function KlantenPage() {
     queryKey: ["klanten", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("v_klanten")
         .select("*")
         .eq("organization_id", orgId)

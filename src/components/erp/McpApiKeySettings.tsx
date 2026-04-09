@@ -29,7 +29,7 @@ export default function McpApiKeySettings() {
     queryKey: ["mcp-keys", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("mcp_api_keys")
         .select("*")
         .order("created_at", { ascending: false });
@@ -42,7 +42,7 @@ export default function McpApiKeySettings() {
     queryKey: ["mcp-audit", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("mcp_audit_log")
         .select("*")
         .order("created_at", { ascending: false })
@@ -54,7 +54,7 @@ export default function McpApiKeySettings() {
 
   const toggleKey = useMutation({
     mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("mcp_api_keys")
         .update({ is_active: isActive })
         .eq("id", id);
@@ -68,7 +68,7 @@ export default function McpApiKeySettings() {
 
   const deleteKey = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).from("mcp_api_keys").delete().eq("id", id);
+      const { error } = await supabase.from("mcp_api_keys").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

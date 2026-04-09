@@ -48,7 +48,7 @@ export default function CommentsSection({ entityType, entityId }: Props) {
     queryKey: ["comments", entityType, entityId],
     enabled: !!entityId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("v_comments")
         .select("*")
         .eq("entity_type", entityType)
@@ -88,7 +88,7 @@ export default function CommentsSection({ entityType, entityId }: Props) {
         if (found) mentionIds.push(found.user_id);
       }
 
-      const { error } = await (supabase as any).from("comments").insert({
+      const { error } = await supabase.from("comments").insert({
         organization_id: orgId,
         entity_type: entityType,
         entity_id: entityId,
@@ -215,7 +215,7 @@ function CommentItem({
     queryKey: ["comment-replies", comment.id],
     enabled: expanded,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("v_comments")
         .select("*")
         .eq("parent_id", comment.id)

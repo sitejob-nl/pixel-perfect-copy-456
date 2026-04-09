@@ -99,7 +99,7 @@ export default function CrmContextPanel({ thread, emailIds }: Props) {
     queryKey: ["gmail-calls", companyId],
     enabled: !!companyId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("call_log")
         .select("id, direction, duration_seconds, created_at")
         .eq("matched_company_id", companyId)

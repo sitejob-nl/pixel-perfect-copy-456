@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Plus, Trash2, Loader2, Save, Clock, Calendar, Shield, Palette, GripVertical } from "lucide-react";
 
-const sb = supabase as any;
+const sb = supabase;
 
 const DAY_LABELS: Record<string, string> = {
   monday: "Maandag", tuesday: "Dinsdag", wednesday: "Woensdag",

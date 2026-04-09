@@ -1242,6 +1242,54 @@ export type Database = {
           },
         ]
       }
+      browseruse_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          execution_layer: string | null
+          id: string
+          lead_id: string | null
+          linkedin_url: string
+          payload: Json | null
+          result: Json | null
+          scheduled_for: string
+          started_at: string | null
+          status: string
+          task_type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          execution_layer?: string | null
+          id?: string
+          lead_id?: string | null
+          linkedin_url: string
+          payload?: Json | null
+          result?: Json | null
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+          task_type: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          execution_layer?: string | null
+          id?: string
+          lead_id?: string | null
+          linkedin_url?: string
+          payload?: Json | null
+          result?: Json | null
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+          task_type?: string
+        }
+        Relationships: []
+      }
       calendar_events: {
         Row: {
           attendee_emails: string[] | null
@@ -5749,6 +5797,146 @@ export type Database = {
           },
         ]
       }
+      lead_research: {
+        Row: {
+          company_summary: string | null
+          created_at: string
+          current_tools: string | null
+          google_reviews_summary: string | null
+          growth_signals: string[] | null
+          id: string
+          lead_id: string
+          linkedin_data: Json | null
+          pain_points: string[] | null
+          pitch_angle: string | null
+          recommended_product: string | null
+          relevance_score: number | null
+          research_model: string | null
+          vacancies: Json | null
+          website_content: string | null
+        }
+        Insert: {
+          company_summary?: string | null
+          created_at?: string
+          current_tools?: string | null
+          google_reviews_summary?: string | null
+          growth_signals?: string[] | null
+          id?: string
+          lead_id: string
+          linkedin_data?: Json | null
+          pain_points?: string[] | null
+          pitch_angle?: string | null
+          recommended_product?: string | null
+          relevance_score?: number | null
+          research_model?: string | null
+          vacancies?: Json | null
+          website_content?: string | null
+        }
+        Update: {
+          company_summary?: string | null
+          created_at?: string
+          current_tools?: string | null
+          google_reviews_summary?: string | null
+          growth_signals?: string[] | null
+          id?: string
+          lead_id?: string
+          linkedin_data?: Json | null
+          pain_points?: string[] | null
+          pitch_angle?: string | null
+          recommended_product?: string | null
+          relevance_score?: number | null
+          research_model?: string | null
+          vacancies?: Json | null
+          website_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_research_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          city: string | null
+          company_name: string
+          contact_name: string | null
+          contact_title: string | null
+          created_at: string
+          discovery_reason: string | null
+          email: string | null
+          employee_count_estimate: number | null
+          id: string
+          industry: string | null
+          kvk_number: string | null
+          last_contacted_at: string | null
+          linkedin_company_url: string | null
+          linkedin_contact_url: string | null
+          phone: string | null
+          province: string | null
+          relevance_score: number | null
+          revenue_estimate: string | null
+          sbi_code: string | null
+          source: string
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          city?: string | null
+          company_name: string
+          contact_name?: string | null
+          contact_title?: string | null
+          created_at?: string
+          discovery_reason?: string | null
+          email?: string | null
+          employee_count_estimate?: number | null
+          id?: string
+          industry?: string | null
+          kvk_number?: string | null
+          last_contacted_at?: string | null
+          linkedin_company_url?: string | null
+          linkedin_contact_url?: string | null
+          phone?: string | null
+          province?: string | null
+          relevance_score?: number | null
+          revenue_estimate?: string | null
+          sbi_code?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          city?: string | null
+          company_name?: string
+          contact_name?: string | null
+          contact_title?: string | null
+          created_at?: string
+          discovery_reason?: string | null
+          email?: string | null
+          employee_count_estimate?: number | null
+          id?: string
+          industry?: string | null
+          kvk_number?: string | null
+          last_contacted_at?: string | null
+          linkedin_company_url?: string | null
+          linkedin_contact_url?: string | null
+          phone?: string | null
+          province?: string | null
+          relevance_score?: number | null
+          revenue_estimate?: string | null
+          sbi_code?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       linkedin_connections: {
         Row: {
           access_token_encrypted: string
@@ -7444,6 +7632,50 @@ export type Database = {
           },
         ]
       }
+      outreach_messages: {
+        Row: {
+          browseruse_task_id: string | null
+          channel: string
+          classification: string | null
+          content: string | null
+          created_at: string
+          direction: string
+          id: string
+          lead_id: string
+          message_type: string | null
+        }
+        Insert: {
+          browseruse_task_id?: string | null
+          channel?: string
+          classification?: string | null
+          content?: string | null
+          created_at?: string
+          direction: string
+          id?: string
+          lead_id: string
+          message_type?: string | null
+        }
+        Update: {
+          browseruse_task_id?: string | null
+          channel?: string
+          classification?: string | null
+          content?: string | null
+          created_at?: string
+          direction?: string
+          id?: string
+          lead_id?: string
+          message_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       outreach_sequences: {
         Row: {
           created_at: string
@@ -7506,6 +7738,69 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outreach_steps: {
+        Row: {
+          action: string
+          browseruse_task_id: string | null
+          condition: string | null
+          created_at: string
+          error: string | null
+          executed_at: string | null
+          id: string
+          lead_id: string
+          message_text: string | null
+          scheduled_for: string
+          sequence_id: string
+          status: string
+          step_index: number
+        }
+        Insert: {
+          action: string
+          browseruse_task_id?: string | null
+          condition?: string | null
+          created_at?: string
+          error?: string | null
+          executed_at?: string | null
+          id?: string
+          lead_id: string
+          message_text?: string | null
+          scheduled_for: string
+          sequence_id: string
+          status?: string
+          step_index: number
+        }
+        Update: {
+          action?: string
+          browseruse_task_id?: string | null
+          condition?: string | null
+          created_at?: string
+          error?: string | null
+          executed_at?: string | null
+          id?: string
+          lead_id?: string
+          message_text?: string | null
+          scheduled_for?: string
+          sequence_id?: string
+          status?: string
+          step_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outreach_steps_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outreach_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "outreach_sequences"
             referencedColumns: ["id"]
           },
         ]
@@ -7974,6 +8269,56 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "v_project_overview"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_call_reports: {
+        Row: {
+          appointment_at: string | null
+          company_profile: string
+          conversation_approach: string
+          created_at: string
+          generated_by: string | null
+          id: string
+          interaction_history: string
+          lead_id: string
+          pain_points: string
+          pricing_indication: string | null
+          proposed_solution: string
+        }
+        Insert: {
+          appointment_at?: string | null
+          company_profile: string
+          conversation_approach: string
+          created_at?: string
+          generated_by?: string | null
+          id?: string
+          interaction_history: string
+          lead_id: string
+          pain_points: string
+          pricing_indication?: string | null
+          proposed_solution: string
+        }
+        Update: {
+          appointment_at?: string | null
+          company_profile?: string
+          conversation_approach?: string
+          created_at?: string
+          generated_by?: string | null
+          id?: string
+          interaction_history?: string
+          lead_id?: string
+          pain_points?: string
+          pricing_indication?: string | null
+          proposed_solution?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_call_reports_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
             referencedColumns: ["id"]
           },
         ]
@@ -11868,6 +12213,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sdr_daily_stats: {
+        Row: {
+          day: string | null
+          interested: number | null
+          received: number | null
+          sent: number | null
+        }
+        Relationships: []
+      }
+      sdr_pipeline: {
+        Row: {
+          avg_score: number | null
+          high_score: number | null
+          status: string | null
+          total: number | null
+        }
+        Relationships: []
       }
       v_call_log: {
         Row: {

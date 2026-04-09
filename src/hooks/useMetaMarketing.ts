@@ -51,7 +51,7 @@ export function useMetaHealth() {
 export function useMetaConfig() {
   const { data: org } = useOrganization();
   const orgId = org?.organization_id;
-  const sb = supabase as any;
+  const sb = supabase;
 
   return useQuery({
     queryKey: ["meta-config", orgId],

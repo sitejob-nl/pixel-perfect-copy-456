@@ -25,7 +25,7 @@ export function useGoogleConnections() {
     queryKey: ["google-connections", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("google_connections")
         .select("id, organization_id, user_id, connection_level, email, display_name, is_active, scopes, connected_at, last_sync_at")
         .eq("organization_id", orgId)
@@ -70,7 +70,7 @@ export function useDisconnectGoogle() {
 
   return useMutation({
     mutationFn: async (connectionId: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("google_connections")
         .update({ is_active: false })
         .eq("id", connectionId);

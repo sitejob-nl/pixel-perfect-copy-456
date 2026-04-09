@@ -10,7 +10,7 @@ export function useSnelstartConfig() {
     queryKey: ["snelstart-config", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("snelstart_config")
         .select("*")
         .eq("organization_id", orgId!)
@@ -37,7 +37,7 @@ export function useSaveSnelstartConfig() {
       const orgId = org?.organization_id;
       if (!orgId) throw new Error("No organization");
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("snelstart_config")
         .upsert(
           {
@@ -84,7 +84,7 @@ export function useSnelstartSyncLog() {
     queryKey: ["snelstart-sync-log", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("snelstart_sync_log")
         .select("*")
         .eq("organization_id", orgId!)

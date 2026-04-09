@@ -66,7 +66,7 @@ export function useMemberModuleOverrides() {
     queryKey: ["member-module-overrides", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("member_module_overrides")
         .select("id, user_id, module_key, is_enabled")
         .eq("organization_id", orgId!);
@@ -171,7 +171,7 @@ export function useSetModuleOverride() {
       if (!orgId) throw new Error("Geen organisatie");
 
       if (isEnabled === null) {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from("member_module_overrides")
           .delete()
           .eq("organization_id", orgId)
@@ -179,7 +179,7 @@ export function useSetModuleOverride() {
           .eq("module_key", moduleKey);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from("member_module_overrides")
           .upsert(
             {

@@ -43,7 +43,7 @@ export function useEmailInbox(category?: string) {
     queryKey: ["email-inbox", orgId, category],
     enabled: !!orgId,
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = supabase
         .from("email_inbox")
         .select("*, companies(name), projects(name)")
         .eq("organization_id", orgId)
@@ -77,7 +77,7 @@ export function useEmailInboxMap() {
     queryKey: ["email-inbox-map", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("email_inbox")
         .select("gmail_thread_id, ai_summary, ai_sentiment, ai_action, category, confidence, draft_status, draft_body, id")
         .eq("organization_id", orgId)
@@ -108,7 +108,7 @@ export function useEmailInboxByThread(threadId: string | null) {
     queryKey: ["email-inbox-thread", orgId, threadId],
     enabled: !!orgId && !!threadId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("email_inbox")
         .select("*, companies(name), projects(name)")
         .eq("organization_id", orgId)
@@ -131,7 +131,7 @@ export function useEmailInboxStats() {
     queryKey: ["email-inbox-stats", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("email_inbox")
         .select("category, ai_action, ai_sentiment, draft_status")
         .eq("organization_id", orgId);

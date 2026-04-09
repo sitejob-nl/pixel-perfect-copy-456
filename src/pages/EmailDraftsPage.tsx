@@ -32,7 +32,7 @@ export default function EmailDraftsPage() {
     queryKey: ["email-drafts", orgId, filter],
     enabled: !!orgId,
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = supabase
         .from("v_email_drafts")
         .select("*")
         .eq("organization_id", orgId)
@@ -56,7 +56,7 @@ export default function EmailDraftsPage() {
 
   const approveMut = useMutation({
     mutationFn: async (draftId: string) => {
-      const { error } = await (supabase as any).rpc("fn_approve_email_draft", {
+      const { error } = await supabase.rpc("fn_approve_email_draft", {
         p_email_id: draftId,
         p_user_id: user?.id,
       });
@@ -71,7 +71,7 @@ export default function EmailDraftsPage() {
 
   const deleteMut = useMutation({
     mutationFn: async (draftId: string) => {
-      const { error } = await (supabase as any).from("email_sends").delete().eq("id", draftId);
+      const { error } = await supabase.from("email_sends").delete().eq("id", draftId);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -83,7 +83,7 @@ export default function EmailDraftsPage() {
 
   const saveDraft = async () => {
     if (!editDraft) return;
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("email_sends")
       .update({ subject: editSubject, body_html: editBody })
       .eq("id", editDraft.id);

@@ -58,6 +58,9 @@ import ProspectPoolDetailPage from "./pages/ProspectPoolDetailPage";
 import ProjectPlansPage from "./pages/ProjectPlansPage";
 import ProjectPlanBuilderPage from "./pages/ProjectPlanBuilderPage";
 import ProjectPlanPublicPage from "./pages/ProjectPlanPublicPage";
+import OutreachPage from "./pages/OutreachPage";
+import OutreachLeadDetailPage from "./pages/OutreachLeadDetailPage";
+import OutreachSettingsPage from "./pages/OutreachSettingsPage";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -198,6 +201,9 @@ const App = () => (
               <Route path="aiagent" element={<AIAgentPage />} />
               <Route path="prospecting" element={<ProspectingPage />} />
               <Route path="prospecting/:poolId" element={<ProspectPoolDetailPage />} />
+              <Route path="outreach" element={<OutreachPage />} />
+              <Route path="outreach/settings" element={<OutreachSettingsPage />} />
+              <Route path="outreach/:id" element={<OutreachLeadDetailPage />} />
               <Route path="demos" element={<DemosPage />} />
               <Route path="demos/:id/edit" element={<DemoEditPage />} />
               <Route path="content" element={<ContentPage />} />

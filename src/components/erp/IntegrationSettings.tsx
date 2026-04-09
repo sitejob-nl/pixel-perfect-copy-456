@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { formatDistanceToNow } from "date-fns";
 import { nl } from "date-fns/locale";
 
-const sb = supabase as any;
+const sb = supabase;
 
 function useIntegrations(orgId: string | undefined) {
   return useQuery({
