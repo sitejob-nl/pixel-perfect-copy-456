@@ -294,6 +294,26 @@ export default function DemoWizard({ onClose }: Props) {
         const a = result.analysis;
         if (a.company_name) setCompanyName(a.company_name);
         if (a.industry) setIndustry(a.industry || "");
+        if (a.location) setLocation(a.location || "");
+        if (a.description) setDescription(a.description || "");
+        if (a.services) setServices(Array.isArray(a.services) ? a.services.join(", ") : a.services || "");
+        if (a.target_audience) setTarget(a.target_audience || "");
+        if (a.usps) setUsps(Array.isArray(a.usps) ? a.usps.join(", ") : a.usps || "");
+        if (a.primary_color) setPrimaryColor(a.primary_color);
+        if (a.secondary_color) setSecondaryColor(a.secondary_color);
+        if (a.accent_color) setAccentColor(a.accent_color);
+        if (a.font) setFont(a.font);
+        if (a.images && Array.isArray(a.images)) setImages(a.images);
+        if (a.nav_items && Array.isArray(a.nav_items) && a.nav_items.length > 0) {
+          const navPages = a.nav_items.map((item: any, i: number) => ({
+            title: typeof item === "string" ? item : item.label || item.title || `Pagina ${i + 1}`,
+            slug: (typeof item === "string" ? item : item.label || item.title || `pagina-${i + 1}`)
+              .toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            description: typeof item === "string" ? "" : item.description || "",
+            enabled: i < 5,
+          }));
+          setPages(navPages);
+        }
         setStep(1);
       }
     } catch {
