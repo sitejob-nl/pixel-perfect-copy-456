@@ -82,9 +82,14 @@ export default function PublicDemoPage() {
     return (
       <DemoPasswordGate
         hint={null}
-        onUnlock={(pw) => {
-          if (pw === demo.password_hash) {
-            setUnlocked(true);
+        onUnlock={async (pw) => {
+          try {
+            const result = await callDemoService("verify-password", { demo_id: demo.id, password: pw });
+            if (result?.valid) {
+              setUnlocked(true);
+            }
+          } catch {
+            // Fallback for edge cases
           }
         }}
       />
@@ -146,12 +151,12 @@ export default function PublicDemoPage() {
           )}
         </div>
         <a
-          href="https://sitejob.nl"
+          href="https://sitejob.nl/?ref=demo"
           target="_blank"
           rel="noopener noreferrer"
           className="text-[11px] text-slate-400 hover:text-slate-600 shrink-0 transition-colors"
         >
-          Gebouwd door <span className="font-semibold">SiteJob</span> ↗
+          Gemaakt met <span className="font-semibold">SiteJob</span> ↗
         </a>
       </header>
 

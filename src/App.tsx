@@ -34,7 +34,6 @@ import ContractSigningPage from "./pages/ContractSigningPage";
 import ScrapersPage from "./pages/ScrapersPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import DemosPage from "./pages/DemosPage";
-import DemoViewPage from "./pages/DemoViewPage";
 import PublicDemoPage from "./pages/PublicDemoPage";
 import DemoEditPage from "./pages/DemoEditPage";
 import PortalAdminPage from "./pages/PortalAdminPage";

@@ -120,7 +120,8 @@ export function usePublicDemo(slug: string | undefined) {
         .eq("public_slug", slug!)
         .single();
       if (error) throw error;
-      return data;
+      // Don't expose raw password hash to client — convert to boolean flag
+      return { ...data, password_hash: data.password_hash ? "protected" : null };
     },
   });
 }

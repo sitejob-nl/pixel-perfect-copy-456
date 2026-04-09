@@ -83,6 +83,7 @@ export default function DemoWizard({ onClose }: Props) {
   const [accentColor, setAccentColor] = useState("#dc2626");
   const [font, setFont] = useState("");
   const [tone, setTone] = useState("friendly");
+  const [images, setImages] = useState<{ url: string; category: string; alt: string }[]>([]);
 
   // Step 3 state
   const [demoType, setDemoType] = useState("website");
@@ -224,6 +225,7 @@ export default function DemoWizard({ onClose }: Props) {
       if (a.secondary_color) setSecondaryColor(a.secondary_color);
       if (a.accent_color) setAccentColor(a.accent_color);
       if (a.font) setFont(a.font);
+      if (a.images && Array.isArray(a.images)) setImages(a.images);
       if (a.nav_items && Array.isArray(a.nav_items) && a.nav_items.length > 0) {
         const navPages = a.nav_items.map((item: any, i: number) => ({
           title: typeof item === "string" ? item : item.label || item.title || `Pagina ${i + 1}`,
@@ -326,6 +328,7 @@ export default function DemoWizard({ onClose }: Props) {
           usps,
           description,
           location,
+          images,
         },
       });
       if (result?.id && (result?.demo_html || result?.pages)) {
@@ -697,7 +700,22 @@ export default function DemoWizard({ onClose }: Props) {
             {generationError ? (
               <Card className="p-4 space-y-3 border-destructive/30">
                 <p className="text-sm text-destructive">{generationError}</p>
-                <Button onClick={handleGenerate}>Opnieuw proberen</Button>
+                <div className="flex gap-2">
+                  <Button onClick={handleGenerate}>Opnieuw proberen</Button>
+                  {genStatus?.pages?.some((p: any) => p.html_content) && (
+                    <Button variant="outline" onClick={() => {
+                      setGenerationDone(true);
+                      setResultDemo(genStatus.demo);
+                      setResultPages(genStatus.pages.filter((p: any) => p.html_content));
+                      if (genStatus.pages.find((p: any) => p.html_content)) {
+                        setActivePage(genStatus.pages.find((p: any) => p.html_content).slug);
+                      }
+                      setStep(4);
+                    }}>
+                      Doorgaan met voltooide pagina's
+                    </Button>
+                  )}
+                </div>
               </Card>
             ) : (
               <>
@@ -705,22 +723,30 @@ export default function DemoWizard({ onClose }: Props) {
                   {enabledPages.map((page, i) => {
                     const dbPage = genStatus?.pages?.find((ps: any) => ps.slug === page.slug);
                     const isDone = !!dbPage?.html_content;
+                    const isFailed = dbPage?.generation_status === "failed";
                     const isActive = dbPage?.generation_status === "generating";
 
                     return (
-                      <div key={i} className="flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-card border border-border">
+                      <div key={i} className={cn(
+                        "flex items-center justify-between text-sm px-3 py-2 rounded-lg bg-card border",
+                        isFailed ? "border-destructive/30" : "border-border"
+                      )}>
                         <div className="flex items-center gap-2">
                           {isDone ? (
                             <Check className="h-4 w-4 text-primary" />
+                          ) : isFailed ? (
+                            <X className="h-4 w-4 text-destructive" />
                           ) : isActive ? (
                             <Loader2 className="h-4 w-4 animate-spin text-primary" />
                           ) : (
                             <div className="h-4 w-4 rounded-full border border-muted-foreground/30" />
                           )}
-                          <span className={cn(isDone ? "text-foreground" : "text-muted-foreground")}>{page.title}</span>
+                          <span className={cn(
+                            isDone ? "text-foreground" : isFailed ? "text-destructive" : "text-muted-foreground"
+                          )}>{page.title}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {isDone ? "klaar" : isActive ? "bezig..." : "wachtend"}
+                        <span className={cn("text-xs", isFailed ? "text-destructive" : "text-muted-foreground")}>
+                          {isDone ? "klaar" : isFailed ? "mislukt" : isActive ? "bezig..." : "wachtend"}
                         </span>
                       </div>
                     );

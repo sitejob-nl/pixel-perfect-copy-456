@@ -1,6 +1,9 @@
 project_id = "fuvpmxxihmpustftzvgk"
 
-# ── Public functions (webhooks, OAuth callbacks, signing, portal, bookings) ──
+# ── Public functions (webhooks, OAuth callbacks, signing, portal, bookings, demo-service) ──
+
+[functions.demo-service]
+verify_jwt = false
 
 [functions.whatsapp-webhook]
 verify_jwt = false
