@@ -682,7 +682,7 @@ function SendContractDialog({ open, onClose, contract }: { open: boolean; onClos
       });
 
       // Update sessions expiry
-      await (supabase as any).from("contract_signing_sessions")
+      await supabase.from("contract_signing_sessions")
         .update({ expires_at: expiryDate.toISOString() })
         .eq("contract_id", contract.id);
 
@@ -869,7 +869,7 @@ function CancelDialog({ open, onClose, contract }: { open: boolean; onClose: () 
         cancelled_reason: reason,
       });
       // Expire unsigned sessions
-      await (supabase as any).from("contract_signing_sessions")
+      await supabase.from("contract_signing_sessions")
         .update({ status: "expired" })
         .eq("contract_id", contract.id)
         .neq("status", "signed");

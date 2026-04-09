@@ -25,7 +25,7 @@ export function useKBDocuments() {
     queryKey: ["kb-documents", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("knowledge_base_documents")
         .select("*, profiles:uploaded_by(full_name)")
         .eq("organization_id", orgId)
@@ -75,7 +75,7 @@ export function useUploadKBDocument() {
       // Since bucket is private, we'll store the path and use signed URLs
       const { data: user } = await supabase.auth.getUser();
 
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("knowledge_base_documents")
         .insert({
           organization_id: orgId,
@@ -101,7 +101,7 @@ export function useUpdateKBDocument() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; category?: string }) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("knowledge_base_documents")
         .update(updates)
         .eq("id", id);
@@ -118,7 +118,7 @@ export function useDeleteKBDocument() {
       // Delete from storage
       await supabase.storage.from("knowledge-base").remove([fileUrl]);
       // Delete from DB
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("knowledge_base_documents")
         .delete()
         .eq("id", id);

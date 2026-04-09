@@ -65,7 +65,7 @@ export function useEmailThreads(category?: string, connectionId?: string | null)
     enabled: !!orgId,
     refetchInterval: 60000,
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = supabase
         .from("v_email_threads")
         .select("*")
         .eq("organization_id", orgId)
@@ -89,7 +89,7 @@ export function useThreadEmails(threadId: string | null) {
     queryKey: ["thread-emails", threadId],
     enabled: !!threadId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("google_emails")
         .select("id, gmail_message_id, thread_id, connection_id, subject, snippet, from_email, from_name, to_emails, received_at, body_html, body_preview, direction, has_attachments, is_read, ai_processed, contact_id, company_id")
         .eq("thread_id", threadId)
@@ -128,7 +128,7 @@ export function useThreadSuggestions(emailIds: string[]) {
     queryKey: ["thread-suggestions", emailIds],
     enabled: emailIds.length > 0 && !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("ai_suggestions")
         .select("*")
         .eq("source_type", "email")
@@ -149,7 +149,7 @@ export function usePendingSuggestionCount() {
     enabled: !!orgId,
     refetchInterval: 30000,
     queryFn: async () => {
-      const { count, error } = await (supabase as any)
+      const { count, error } = await supabase
         .from("ai_suggestions")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", orgId)
@@ -165,7 +165,7 @@ export function usePendingSuggestionsByThread(orgId?: string) {
     queryKey: ["pending-suggestions-by-thread", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("ai_suggestions")
         .select("source_id")
         .eq("organization_id", orgId)
@@ -183,7 +183,7 @@ export function useApproveSuggestion() {
 
   return useMutation({
     mutationFn: async (suggestionId: string) => {
-      const { data, error } = await (supabase as any).rpc("fn_approve_suggestion", {
+      const { data, error } = await supabase.rpc("fn_approve_suggestion", {
         p_suggestion_id: suggestionId,
         p_user_id: user?.id,
       });
@@ -204,7 +204,7 @@ export function useRejectSuggestion() {
 
   return useMutation({
     mutationFn: async (suggestionId: string) => {
-      const { data, error } = await (supabase as any).rpc("fn_reject_suggestion", {
+      const { data, error } = await supabase.rpc("fn_reject_suggestion", {
         p_suggestion_id: suggestionId,
         p_user_id: user?.id,
       });
@@ -224,7 +224,7 @@ export function useGenerateSuggestions() {
 
   return useMutation({
     mutationFn: async (emailId: string) => {
-      const { data, error } = await (supabase as any).rpc("fn_email_generate_suggestions", {
+      const { data, error } = await supabase.rpc("fn_email_generate_suggestions", {
         p_email_id: emailId,
       });
       if (error) throw error;
@@ -246,7 +246,7 @@ export function useSuggestionStats() {
     enabled: !!orgId,
     refetchInterval: 60000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("v_suggestion_counts")
         .select("*")
         .eq("organization_id", orgId);

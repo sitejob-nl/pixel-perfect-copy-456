@@ -10,7 +10,7 @@ export function useLeadPipeline() {
     queryKey: ["lead-pipeline", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("v_lead_pipeline")
         .select("*")
         .eq("organization_id", orgId!)
@@ -30,7 +30,7 @@ export function useHotLeads() {
     queryKey: ["hot-leads", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("v_hot_leads")
         .select("*")
         .eq("organization_id", orgId!)

@@ -82,7 +82,7 @@ export default function AutomationsPage() {
   }, []);
 
   const fetchAutomations = async () => {
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("whatsapp_automations")
       .select("*")
       .order("created_at", { ascending: false });
@@ -176,11 +176,11 @@ export default function AutomationsPage() {
 
     try {
       if (editing) {
-        const { error } = await (supabase as any).from("whatsapp_automations").update(record).eq("id", editing.id);
+        const { error } = await supabase.from("whatsapp_automations").update(record).eq("id", editing.id);
         if (error) throw error;
         toast.success("Automatisering bijgewerkt");
       } else {
-        const { error } = await (supabase as any).from("whatsapp_automations").insert(record);
+        const { error } = await supabase.from("whatsapp_automations").insert(record);
         if (error) throw error;
         toast.success("Automatisering aangemaakt");
       }
@@ -193,7 +193,7 @@ export default function AutomationsPage() {
   };
 
   const handleToggle = async (id: string, active: boolean) => {
-    const { error } = await (supabase as any).from("whatsapp_automations").update({ is_active: active }).eq("id", id);
+    const { error } = await supabase.from("whatsapp_automations").update({ is_active: active }).eq("id", id);
     if (error) {
       toast.error("Schakelen mislukt");
     } else {
@@ -202,7 +202,7 @@ export default function AutomationsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    const { error } = await (supabase as any).from("whatsapp_automations").delete().eq("id", id);
+    const { error } = await supabase.from("whatsapp_automations").delete().eq("id", id);
     if (error) {
       toast.error("Verwijderen mislukt");
     } else {

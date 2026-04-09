@@ -9,7 +9,7 @@ export function useContractTemplates() {
     queryKey: ["contract-templates", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("contract_templates")
         .select("*")
         .eq("is_active", true)
@@ -24,7 +24,7 @@ export function useContractVariableSources() {
   return useQuery({
     queryKey: ["contract-variable-sources"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("contract_variable_sources")
         .select("*")
         .order("category, display_label");
@@ -41,7 +41,7 @@ export function useContracts() {
     queryKey: ["contracts", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("contracts")
         .select("*, contacts(first_name, last_name, email), companies(name), contract_templates(name), contract_signing_sessions(id, signer_name, signer_role, status, signed_at)")
         .order("created_at", { ascending: false });
@@ -56,7 +56,7 @@ export function useContract(id: string | null) {
     queryKey: ["contract", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("contracts")
         .select("*, contacts(*), companies(*), deals(*), projects(*), quotes(*), contract_templates(*), contract_signing_sessions(*), contract_audit_logs(*)")
         .eq("id", id)
@@ -77,7 +77,7 @@ export function useResolveVariables(params: {
     queryKey: ["resolve-variables", orgId, params],
     enabled: !!orgId && Object.values(params).some(Boolean),
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("resolve_contract_variables", {
+      const { data, error } = await supabase.rpc("resolve_contract_variables", {
         p_org_id: orgId,
         p_contact_id: params.contactId || null,
         p_company_id: params.companyId || null,
@@ -96,7 +96,7 @@ export function useCreateContract() {
   const { data: org } = useOrganization();
   return useMutation({
     mutationFn: async (contract: Record<string, any>) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("contracts")
         .insert({ ...contract, organization_id: org!.organization_id })
         .select("*")
@@ -112,7 +112,7 @@ export function useUpdateContract() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, any>) => {
-      const { error } = await (supabase as any).from("contracts").update(updates).eq("id", id);
+      const { error } = await supabase.from("contracts").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -130,7 +130,7 @@ export function useCreateSigningSession() {
       contract_id: string; signer_name: string; signer_email: string;
       signer_phone: string; signer_role: string; signing_order?: number;
     }) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("contract_signing_sessions")
         .insert({
           ...session,
@@ -151,7 +151,7 @@ export function useCreateTemplate() {
   const { data: org } = useOrganization();
   return useMutation({
     mutationFn: async (template: Record<string, any>) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("contract_templates")
         .insert({ ...template, organization_id: org!.organization_id })
         .select("*")
@@ -167,7 +167,7 @@ export function useUpdateTemplate() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, any>) => {
-      const { error } = await (supabase as any).from("contract_templates").update(updates).eq("id", id);
+      const { error } = await supabase.from("contract_templates").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["contract-templates"] }),

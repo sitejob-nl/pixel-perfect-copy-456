@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 
-const sb = supabase as any;
+const sb = supabase;
 
 const FILTERS = [
   { key: "all", label: "Alle" },

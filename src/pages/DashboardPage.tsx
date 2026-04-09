@@ -391,7 +391,7 @@ function AiEmailSuggestionsCard({ navigate }: { navigate: any }) {
     enabled: !!orgId,
     refetchInterval: 60000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("v_suggestion_counts")
         .select("*")
         .eq("organization_id", orgId);
@@ -404,7 +404,7 @@ function AiEmailSuggestionsCard({ navigate }: { navigate: any }) {
     queryKey: ["dashboard-pending-suggestions", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("ai_suggestions")
         .select("id, title, suggestion_type, confidence")
         .eq("organization_id", orgId)
@@ -476,7 +476,7 @@ function EmailDraftsWidget({ orgId, navigate }: { orgId?: string; navigate: any 
     queryKey: ["dashboard-email-drafts", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("email_sends")
         .select("id, subject, to_address, created_at")
         .eq("organization_id", orgId)

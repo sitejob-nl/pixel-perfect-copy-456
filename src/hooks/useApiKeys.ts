@@ -104,7 +104,7 @@ export function useAiModels() {
   return useQuery({
     queryKey: ["ai-models"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("ai_models")
         .select("*")
         .eq("is_available", true)
@@ -133,7 +133,7 @@ export function useUpdateSelectedModel() {
 
   return useMutation({
     mutationFn: async (modelId: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("organization_api_keys")
         .update({ selected_model: modelId })
         .eq("organization_id", org!.organization_id);

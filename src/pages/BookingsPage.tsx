@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Copy, ExternalLink, Loader2, Settings } from "lucide-react";
 import BookingPageSettings from "@/components/bookings/BookingPageSettings";
 
-const sb = supabase as any;
+const sb = supabase;
 
 export default function BookingsPage() {
   const { data: org } = useOrganization();

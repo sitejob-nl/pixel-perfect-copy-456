@@ -97,7 +97,7 @@ export default function ReportingPage() {
     queryKey: ["report-open-tasks", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { count, error } = await (supabase as any)
+      const { count, error } = await supabase
         .from("tasks")
         .select("id", { count: "exact", head: true })
         .eq("organization_id", orgId!)
@@ -112,7 +112,7 @@ export default function ReportingPage() {
     queryKey: ["report-snapshots", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("monthly_snapshots")
         .select("*")
         .eq("organization_id", orgId!)

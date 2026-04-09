@@ -9,7 +9,7 @@ export function useWebhookEndpoints() {
     queryKey: ["webhook-endpoints", orgId],
     enabled: !!orgId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("webhook_endpoints")
         .select("*")
         .order("created_at", { ascending: false });
@@ -23,7 +23,7 @@ export function useWebhookTemplates() {
   return useQuery({
     queryKey: ["webhook-templates"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("webhook_source_templates")
         .select("*")
         .order("display_name");
@@ -38,7 +38,7 @@ export function useWebhookTargetFields(targetTable: string) {
     queryKey: ["webhook-target-fields", targetTable],
     enabled: !!targetTable,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("webhook_target_fields")
         .select("*")
         .eq("target_table", targetTable)
@@ -56,7 +56,7 @@ export function useWebhookLogs(endpointId?: string) {
     queryKey: ["webhook-logs", orgId, endpointId],
     enabled: !!orgId,
     queryFn: async () => {
-      let query = (supabase as any)
+      let query = supabase
         .from("webhook_logs")
         .select("*")
         .order("created_at", { ascending: false })
@@ -74,7 +74,7 @@ export function useCreateEndpoint() {
   const { data: org } = useOrganization();
   return useMutation({
     mutationFn: async (endpoint: Record<string, any>) => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("webhook_endpoints")
         .insert({ ...endpoint, organization_id: org!.organization_id })
         .select()
@@ -90,7 +90,7 @@ export function useUpdateEndpoint() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Record<string, any>) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("webhook_endpoints")
         .update(updates)
         .eq("id", id);
@@ -104,7 +104,7 @@ export function useDeleteEndpoint() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("webhook_endpoints")
         .delete()
         .eq("id", id);

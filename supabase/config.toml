@@ -1,30 +1,23 @@
 project_id = "fuvpmxxihmpustftzvgk"
 
-[functions.ai-agent]
+# ── Public functions (webhooks, OAuth callbacks, signing, portal, bookings) ──
+
+[functions.whatsapp-webhook]
 verify_jwt = false
 
-[functions.manage-api-keys]
+[functions.voys-webhook]
 verify_jwt = false
 
 [functions.snelstart-webhook]
 verify_jwt = false
 
-[functions.snelstart-sync]
+[functions.linkedin-webhook]
 verify_jwt = false
 
-[functions.client-portal]
+[functions.connect-meta-webhook]
 verify_jwt = false
 
-[functions.manage-resend]
-verify_jwt = false
-
-[functions.send-email]
-verify_jwt = false
-
-[functions.send-invite]
-verify_jwt = false
-
-[functions.accept-invite]
+[functions.webhook-receiver]
 verify_jwt = false
 
 [functions.contract-signing]
@@ -33,77 +26,100 @@ verify_jwt = false
 [functions.sign-pdf]
 verify_jwt = false
 
-[functions.linkedin-oauth]
-verify_jwt = false
-
-[functions.linkedin-post]
-verify_jwt = false
-
-[functions.linkedin-webhook]
-verify_jwt = false
-
-[functions.whatsapp-webhook]
-verify_jwt = false
-
-[functions.whatsapp-config]
-verify_jwt = false
-
-[functions.whatsapp-send]
-verify_jwt = false
-
-[functions.whatsapp-templates]
-verify_jwt = false
-
-[functions.whatsapp-business-profile]
-verify_jwt = false
-
-[functions.whatsapp-phone-quality]
-verify_jwt = false
-
-[functions.whatsapp-mark-read]
-verify_jwt = false
-
-[functions.run-scraper]
-verify_jwt = false
-
-[functions.create-organization]
-verify_jwt = false
-
-[functions.send-push]
-verify_jwt = false
-
-[functions.push-config]
-verify_jwt = false
-
-[functions.google-oauth-callback]
-verify_jwt = false
-
-[functions.google-api]
-verify_jwt = false
-
-[functions.voys-webhook]
+[functions.client-portal]
 verify_jwt = false
 
 [functions.booking-service]
 verify_jwt = false
 
+[functions.google-oauth-callback]
+verify_jwt = false
+
+[functions.accept-invite]
+verify_jwt = false
+
+[functions.linkedin-oauth]
+verify_jwt = false
+
+# ── Protected functions (require JWT) ──
+
+[functions.ai-agent]
+verify_jwt = true
+
 [functions.ask-sitejob]
-verify_jwt = false
-
-[functions.test-cloudflare]
-verify_jwt = false
-
-[functions.prospect-engine]
-verify_jwt = false
-
-[functions.generate-plan-section]
-verify_jwt = false
+verify_jwt = true
 
 [functions.email-agent]
-verify_jwt = false
+verify_jwt = true
 
-[functions.webhook-receiver]
-verify_jwt = false
+[functions.generate-plan-section]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.manage-resend]
+verify_jwt = true
+
+[functions.manage-api-keys]
+verify_jwt = true
 
 [functions.manage-webhooks]
-verify_jwt = false
+verify_jwt = true
+
+[functions.create-organization]
+verify_jwt = true
+
+[functions.send-invite]
+verify_jwt = true
+
+[functions.whatsapp-send]
+verify_jwt = true
+
+[functions.whatsapp-config]
+verify_jwt = true
+
+[functions.whatsapp-templates]
+verify_jwt = true
+
+[functions.whatsapp-business-profile]
+verify_jwt = true
+
+[functions.whatsapp-phone-quality]
+verify_jwt = true
+
+[functions.whatsapp-mark-read]
+verify_jwt = true
+
+[functions.run-scraper]
+verify_jwt = true
+
+[functions.prospect-engine]
+verify_jwt = true
+
+[functions.google-api]
+verify_jwt = true
+
+[functions.snelstart-sync]
+verify_jwt = true
+
+[functions.push-config]
+verify_jwt = true
+
+[functions.send-push]
+verify_jwt = true
+
+[functions.connect-meta-api]
+verify_jwt = true
+
+[functions.connect-meta-manage]
+verify_jwt = true
+
+[functions.linkedin-post]
+verify_jwt = true
+
+[functions.kvk-search]
+verify_jwt = true
+
+[functions.test-cloudflare]
+verify_jwt = true

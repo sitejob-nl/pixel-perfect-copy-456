@@ -45,7 +45,7 @@ export default function NotificationBell() {
     enabled: !!user?.id,
     refetchInterval: 30000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("fn_unread_notification_count", { p_user_id: user!.id });
+      const { data, error } = await supabase.rpc("fn_unread_notification_count", { p_user_id: user!.id });
       if (error) throw error;
       return (data as number) ?? 0;
     },
@@ -55,7 +55,7 @@ export default function NotificationBell() {
     queryKey: ["notifications", user?.id],
     enabled: !!user?.id && open,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("notifications")
         .select("*")
         .eq("user_id", user!.id)
@@ -88,7 +88,7 @@ export default function NotificationBell() {
     mutationFn: async () => {
       const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
       if (unreadIds.length === 0) return;
-      const { error } = await (supabase as any).rpc("fn_mark_notifications_read", { p_ids: unreadIds });
+      const { error } = await supabase.rpc("fn_mark_notifications_read", { p_ids: unreadIds });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -99,7 +99,7 @@ export default function NotificationBell() {
 
   const markOneRead = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await (supabase as any).rpc("fn_mark_notifications_read", { p_ids: [id] });
+      const { error } = await supabase.rpc("fn_mark_notifications_read", { p_ids: [id] });
       if (error) throw error;
     },
     onSuccess: () => {

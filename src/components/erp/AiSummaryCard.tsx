@@ -27,7 +27,7 @@ export default function AiSummaryCard({ entityType, entityId }: Props) {
     queryKey: ["ai-summary", entityType, entityId],
     enabled: !!entityId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("ai_summaries")
         .select("*")
         .eq("entity_type", entityType)
