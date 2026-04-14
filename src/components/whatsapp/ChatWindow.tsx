@@ -72,10 +72,6 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
     return () => window.removeEventListener("wa-insert-emoji", handler);
   }, []);
 
-  // Determine if this is a new conversation (no messages yet or no outbound messages)
-  const hasOutboundMessage = messages && messages.some(m => m.direction === "outbound");
-  const isNewConversation = !isLoading && (!messages || messages.length === 0 || !hasOutboundMessage);
-
   // Check if last inbound message is within 24h (customer service window)
   const hasActiveWindow = (() => {
     if (!messages || messages.length === 0) return false;
@@ -85,7 +81,8 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
     return diff < 24 * 60 * 60 * 1000;
   })();
 
-  const requiresTemplate = isNewConversation && !hasActiveWindow;
+  // Only require template when there's no active 24h service window
+  const requiresTemplate = !isLoading && !hasActiveWindow;
 
   const handleSend = async () => {
     if (!text.trim() || !phoneNumber) return;
