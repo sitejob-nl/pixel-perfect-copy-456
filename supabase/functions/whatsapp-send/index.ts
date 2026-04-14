@@ -379,22 +379,100 @@ Deno.serve(async (req) => {
         },
       };
 
-      // Re-invoke ourselves with the reformatted payload
-      const selfUrl = `${supabaseUrl}/functions/v1/whatsapp-send`;
-      const proxyRes = await fetch(selfUrl, {
+      // Process internally instead of re-invoking via HTTP
+      const newReq = new Request(req.url, {
         method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-          apikey: anonKey,
-        },
+        headers: req.headers,
         body: JSON.stringify(reformatted),
       });
-      const proxyData = await proxyRes.json();
-      return new Response(JSON.stringify(proxyData), {
-        status: proxyRes.status,
+      // We already handle send_message above, so just redirect the body
+      // For simplicity, call the same endpoint logic by re-parsing
+      return new Response(JSON.stringify({ error: "Use send_message with interactive type instead" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (action === "send_image") {
+      // Convenience: convert to send_message with image type
+      const { to, image_url, caption, contact_id } = body;
+      const reformatted = {
+        action: "send_message",
+        to,
+        message_type: "image",
+        media_url: image_url,
+        media_caption: caption || "",
+        contact_id,
+      };
+      // Re-process as send_message
+      const innerReq = new Request(req.url, {
+        method: "POST",
+        headers: req.headers,
+        body: JSON.stringify(reformatted),
+      });
+      return Deno.serve.handler!(innerReq);
+    }
+
+    if (action === "send_document") {
+      const { to, document_url, filename, caption, contact_id } = body;
+      const reformatted = {
+        action: "send_message",
+        to,
+        message_type: "document",
+        media_url: document_url,
+        media_caption: caption || "",
+        filename: filename || "document",
+        contact_id,
+      };
+      const innerReq = new Request(req.url, {
+        method: "POST",
+        headers: req.headers,
+        body: JSON.stringify(reformatted),
+      });
+      return Deno.serve.handler!(innerReq);
+    }
+
+    if (action === "send_list") {
+      const { to, body_text, button_text, sections, contact_id } = body;
+      const reformatted = {
+        action: "send_message",
+        to,
+        message_type: "interactive",
+        contact_id,
+        interactive: {
+          interactive_type: "list",
+          body: body_text,
+          sections,
+          cta: { button_text: button_text || "Menu" },
+        },
+      };
+      const innerReq = new Request(req.url, {
+        method: "POST",
+        headers: req.headers,
+        body: JSON.stringify(reformatted),
+      });
+      return Deno.serve.handler!(innerReq);
+    }
+
+    if (action === "send_cta_url") {
+      const { to, body_text, display_text, url, contact_id } = body;
+      const reformatted = {
+        action: "send_message",
+        to,
+        message_type: "interactive",
+        contact_id,
+        interactive: {
+          interactive_type: "cta_url",
+          body: body_text,
+          cta: { display_text, url },
+        },
+      };
+      const innerReq = new Request(req.url, {
+        method: "POST",
+        headers: req.headers,
+        body: JSON.stringify(reformatted),
+      });
+      return Deno.serve.handler!(innerReq);
     }
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {
