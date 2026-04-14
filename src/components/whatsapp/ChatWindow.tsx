@@ -47,21 +47,20 @@ export default function ChatWindow({ phoneNumber, contactName, contactId, onBack
   }, [messages]);
 
   // Mark unread inbound messages as read when opening chat
+  const markReadRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!messages || !phoneNumber) return;
+    if (!messages || !phoneNumber || markReadRef.current === phoneNumber) return;
     const unreadInbound = messages.filter(m => m.direction === "inbound" && m.whatsapp_msg_id && m.status !== "read");
     if (unreadInbound.length === 0) return;
 
-    // Mark the latest inbound message as read via Meta API
+    markReadRef.current = phoneNumber;
     const latestInbound = unreadInbound[unreadInbound.length - 1];
     if (latestInbound?.whatsapp_msg_id) {
       supabase.functions.invoke("whatsapp-mark-read", {
         body: { message_id: latestInbound.whatsapp_msg_id },
-      }).catch(() => {
-        // Non-critical, ignore errors
-      });
+      }).catch(() => {});
     }
-  }, [messages, phoneNumber]);
+  }, [phoneNumber, messages]);
 
   useEffect(() => {
     const handler = (e: Event) => {
