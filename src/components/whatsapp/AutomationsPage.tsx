@@ -139,11 +139,11 @@ export default function AutomationsPage() {
     setFormStatusId(auto.trigger_config?.status_id || "");
     setFormHoursBefore(String(auto.trigger_config?.hours_before || "2"));
     setFormDaysInactive(String(auto.trigger_config?.days_inactive || "7"));
-    setFormPipeline(auto.conditions?.pipeline || "");
-    setFormCustomerType(auto.conditions?.customer_type || "");
+    setFormPipeline((auto.trigger_config as any)?.pipeline || "");
+    setFormCustomerType((auto.trigger_config as any)?.customer_type || "");
     setFormTemplateName(auto.template_name);
     setFormTemplateLanguage(auto.template_language || "nl");
-    setFormMapping(auto.variable_mapping || {});
+    setFormMapping(auto.variable_mappings || {});
     setShowDialog(true);
   };
 
