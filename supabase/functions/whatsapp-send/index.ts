@@ -52,7 +52,54 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action } = body;
+    let { action } = body;
+
+    // Normalize convenience actions into send_message
+    if (action === "send_image") {
+      body.action = "send_message";
+      body.message_type = "image";
+      body.media_url = body.image_url;
+      body.media_caption = body.caption || "";
+      action = "send_message";
+    } else if (action === "send_document") {
+      body.action = "send_message";
+      body.message_type = "document";
+      body.media_url = body.document_url;
+      body.media_caption = body.caption || "";
+      body.filename = body.filename || "document";
+      action = "send_message";
+    } else if (action === "send_buttons") {
+      body.action = "send_message";
+      body.message_type = "interactive";
+      body.interactive = {
+        interactive_type: "button",
+        body: body.body_text,
+        buttons: (body.buttons || []).map((b: { id?: string; title: string }, i: number) => ({
+          id: b.id || `btn_${i}`,
+          title: b.title,
+        })),
+      };
+      action = "send_message";
+    } else if (action === "send_list") {
+      body.action = "send_message";
+      body.message_type = "interactive";
+      body.interactive = {
+        interactive_type: "list",
+        body: body.body_text,
+        sections: body.sections,
+        cta: { button_text: body.button_text || "Menu" },
+      };
+      action = "send_message";
+    } else if (action === "send_cta_url") {
+      body.action = "send_message";
+      body.message_type = "interactive";
+      body.interactive = {
+        interactive_type: "cta_url",
+        body: body.body_text,
+        cta: { display_text: body.display_text, url: body.url },
+      };
+      action = "send_message";
+    }
 
     // Get user's organization
     const { data: membership } = await supabase
@@ -361,41 +408,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === "send_buttons") {
-      // Convenience wrapper: convert send_buttons into send_message with interactive buttons
-      const { to: rawTo, body_text, buttons, contact_id } = body;
-      const reformatted = {
-        action: "send_message",
-        to: rawTo,
-        message_type: "interactive",
-        contact_id,
-        interactive: {
-          interactive_type: "button",
-          body: body_text,
-          buttons: (buttons || []).map((b: { id?: string; title: string }, i: number) => ({
-            id: b.id || `btn_${i}`,
-            title: b.title,
-          })),
-        },
-      };
-
-      // Re-invoke ourselves with the reformatted payload
-      const selfUrl = `${supabaseUrl}/functions/v1/whatsapp-send`;
-      const proxyRes = await fetch(selfUrl, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-          apikey: anonKey,
-        },
-        body: JSON.stringify(reformatted),
-      });
-      const proxyData = await proxyRes.json();
-      return new Response(JSON.stringify(proxyData), {
-        status: proxyRes.status,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // All convenience actions (send_buttons, send_image, send_document, send_list, send_cta_url)
+    // are normalized to send_message at the top of the handler.
 
     return new Response(JSON.stringify({ error: "Unknown action" }), {
       status: 400,

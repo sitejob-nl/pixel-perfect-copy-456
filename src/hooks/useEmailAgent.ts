@@ -89,8 +89,8 @@ export function useEmailInboxMap() {
       const map: Record<string, EmailInboxItem> = {};
       for (const item of data || []) {
         // Keep the most recent per thread
-        if (!map[item.gmail_thread_id]) {
-          map[item.gmail_thread_id] = item;
+        if (!map[item.gmail_thread_id!]) {
+          map[item.gmail_thread_id!] = item as unknown as EmailInboxItem;
         }
       }
       return map;
