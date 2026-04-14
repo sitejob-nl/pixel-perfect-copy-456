@@ -33,10 +33,9 @@ interface Automation {
   name: string;
   trigger_type: string;
   trigger_config: Record<string, any>;
-  conditions: Record<string, any>;
   template_name: string;
   template_language: string;
-  variable_mapping: Record<string, string>;
+  variable_mappings: Record<string, string>;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -86,7 +85,7 @@ export default function AutomationsPage() {
       .from("whatsapp_automations")
       .select("*")
       .order("created_at", { ascending: false });
-    if (!error && data) setAutomations(data as Automation[]);
+    if (!error && data) setAutomations(data as unknown as Automation[]);
     setLoading(false);
   };
 
@@ -168,11 +167,10 @@ export default function AutomationsPage() {
       name: formName.trim(),
       trigger_type: formTriggerType,
       trigger_config: triggerConfig,
-      conditions,
       template_name: formTemplateName,
       template_language: formTemplateLanguage,
-      variable_mapping: formMapping,
-    };
+      variable_mappings: formMapping,
+    } as any;
 
     try {
       if (editing) {

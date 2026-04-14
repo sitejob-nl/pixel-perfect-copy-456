@@ -86,11 +86,11 @@ export function useEmailInboxMap() {
 
       if (error) throw error;
 
-      const map: Record<string, EmailInboxItem> = {};
+      const map: Record<string, Partial<EmailInboxItem>> = {};
       for (const item of data || []) {
         // Keep the most recent per thread
-        if (!map[item.gmail_thread_id]) {
-          map[item.gmail_thread_id] = item;
+        if (!map[item.gmail_thread_id!]) {
+          map[item.gmail_thread_id!] = item as any;
         }
       }
       return map;

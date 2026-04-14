@@ -27,11 +27,11 @@ export function useKBDocuments() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("knowledge_base_documents")
-        .select("*, profiles:uploaded_by(full_name)")
+        .select("*")
         .eq("organization_id", orgId)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as KBDocument[];
+      return data as unknown as KBDocument[];
     },
   });
 }

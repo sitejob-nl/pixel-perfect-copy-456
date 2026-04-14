@@ -98,7 +98,7 @@ export function useCreateContract() {
     mutationFn: async (contract: Record<string, any>) => {
       const { data, error } = await supabase
         .from("contracts")
-        .insert({ ...contract, organization_id: org!.organization_id })
+        .insert({ ...contract, organization_id: org!.organization_id } as any)
         .select("*")
         .single();
       if (error) throw error;
@@ -153,7 +153,7 @@ export function useCreateTemplate() {
     mutationFn: async (template: Record<string, any>) => {
       const { data, error } = await supabase
         .from("contract_templates")
-        .insert({ ...template, organization_id: org!.organization_id })
+        .insert({ ...template, organization_id: org!.organization_id } as any)
         .select("*")
         .single();
       if (error) throw error;
